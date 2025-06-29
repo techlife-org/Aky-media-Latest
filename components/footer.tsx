@@ -10,7 +10,7 @@ export default function Footer() {
           <div className="space-y-6">
             <Link href="/">
               <Image
-                src="/placeholder.svg?height=60&width=200"
+                src="/pictures/logo.png"
                 alt="AKY Media Logo"
                 width={200}
                 height={60}
