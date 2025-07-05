@@ -79,11 +79,11 @@ export default function NewsletterSection() {
               <Download className="w-8 h-8 text-white" />
             </div>
             <h2 className="text-4xl font-bold text-white mb-4">
-              Don't miss!
+              Stay Connected
               <br />
-              Our latest updates
+              with Governor's Updates
             </h2>
-            <p className="text-xl text-white/90">Subscribe to our newsletter for exclusive content</p>
+            <p className="text-xl text-white/90">Join our community to receive exclusive insights, updates, and initiatives from the governor's office</p>
           </div>
 
           {isSuccess ? (
@@ -131,7 +131,7 @@ export default function NewsletterSection() {
             </form>
           )}
 
-          <p className="text-white/70 text-sm mt-4">Join over 10,000+ subscribers. No spam, unsubscribe anytime.</p>
+          <p className="text-white/70 text-sm mt-4">Join over 2,000+ subscribers.</p>
         </div>
       </div>
     </section>

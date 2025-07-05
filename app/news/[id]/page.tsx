@@ -146,13 +146,7 @@ export default function NewsDetailPage() {
       <Header />
 
       {/* Breadcrumb Section */}
-      <section
-        className="py-20 relative bg-cover bg-center bg-no-repeat"
-        style={{
-          backgroundImage:
-            "linear-gradient(rgba(0, 0, 0, 0.7), rgba(0, 0, 0, 0.7)), url(/placeholder.svg?height=400&width=1200)",
-        }}
-      >
+      <section className="py-20 relative bg-gradient-to-r from-red-600 via-red-700 to-red-800">
         <div className="container mx-auto px-4">
           <div className="grid lg:grid-cols-2 gap-12 items-center">
             <div className="text-white">
@@ -171,7 +165,7 @@ export default function NewsDetailPage() {
             </div>
             <div className="relative">
               <Image
-                src="/placeholder.svg?height=400&width=500"
+                src="/pictures/assets/img/he/6.png"
                 alt="News Detail"
                 width={500}
                 height={400}

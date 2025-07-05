@@ -22,13 +22,11 @@ import {
   X,
   Maximize2,
   Minimize2,
-  MoreVertical,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import Header from "@/components/header"
 import Footer from "@/components/footer"
 import NewsletterSection from "@/components/newsletter-section"
@@ -69,7 +67,7 @@ const tracks: Track[] = [
     duration: "11:03",
     file: "abbaBilly",
     artist: "AKY Media",
-    genre: "Billy-o",
+    genre: "Billy-o" ,
     color: "from-red-500 to-red-800",
   },
   {
@@ -228,10 +226,24 @@ const tracks: Track[] = [
 ]
 
 const genreColors = {
-  "Tijjani Gandu": "bg-red-600 text-red-200",
-  "Billy-o": "bg-blue-600 text-blue-200",
-  "Kosan Waka": "bg-green-600 text-green-200",
-  "Ali Jita & Ado Gwanja": "bg-purple-600 text-purple-200",
+  Music: "bg-gradient-to-r from-red-100 to-red-800 text-red-800 border border-red-200",
+  // Music: "bg-gradient-to-r from-purple-100 to-pink-100 text-purple-800 border border-purple-200",
+  // Music: "bg-gradient-to-r from-blue-100 to-red-100 text-blue-800 border border-blue-200",
+  // Music: "bg-gradient-to-r from-green-100 to-red-100 text-green-800 border border-green-200",
+  // Music: "bg-gradient-to-r from-indigo-100 to-red-100 text-indigo-800 border border-indigo-200",
+  // Music: "bg-gradient-to-r from-yellow-100 to-orange-100 text-yellow-800 border border-yellow-200",
+  // Music: "bg-gradient-to-r from-teal-100 to-green-100 text-teal-800 border border-teal-200",
+  // Music: "bg-gradient-to-r from-cyan-100 to-blue-100 text-cyan-800 border border-cyan-200",
+  // Music: "bg-gradient-to-r from-red-100 to-rose-100 text-red-800 border border-red-200",
+  // Music: "bg-gradient-to-r from-pink-100 to-rose-100 text-pink-800 border border-pink-200",
+  // Music: "bg-gradient-to-r from-orange-100 to-red-100 text-orange-800 border border-orange-200",
+  // Music: "bg-gradient-to-r from-emerald-100 to-green-100 text-emerald-800 border border-emerald-200",
+  // Music: "bg-gradient-to-r from-violet-100 to-purple-100 text-violet-800 border border-violet-200",
+  // Music: "bg-gradient-to-r from-slate-100 to-gray-100 text-slate-800 border border-slate-200",
+  // Music: "bg-gradient-to-r from-amber-100 to-yellow-100 text-amber-800 border border-amber-200",
+  // Music: "bg-gradient-to-r from-rose-100 to-pink-100 text-rose-800 border border-rose-200",
+  // Music: "bg-gradient-to-r from-indigo-100 to-purple-100 text-indigo-800 border border-indigo-200",
+  // Music: "bg-gradient-to-r from-lime-100 to-green-100 text-lime-800 border border-lime-200",
 }
 
 // Enhanced ads with real-world examples
@@ -297,8 +309,10 @@ const AudioVisualizer = ({
         audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)()
         const source = audioContextRef.current.createMediaElementSource(audioRef.current!)
         analyserRef.current = audioContextRef.current.createAnalyser()
+
         source.connect(analyserRef.current)
         analyserRef.current.connect(audioContextRef.current.destination)
+
         analyserRef.current.fftSize = 256
         const bufferLength = analyserRef.current.frequencyBinCount
         dataArrayRef.current = new Uint8Array(bufferLength)
@@ -324,6 +338,7 @@ const AudioVisualizer = ({
 
       for (let i = 0; i < dataArrayRef.current.length; i++) {
         barHeight = (dataArrayRef.current[i] / 255) * height * 0.8
+
         const r = Math.floor((barHeight + 25) * (i / dataArrayRef.current.length) * 255)
         const g = Math.floor(250 * (i / dataArrayRef.current.length))
         const b = Math.floor(50)
@@ -379,9 +394,6 @@ export default function AudioPage() {
   const [downloadTrack, setDownloadTrack] = useState<Track | null>(null)
   const [adDisplayMode, setAdDisplayMode] = useState<"modal" | "page">("modal")
   const [showVisualizer, setShowVisualizer] = useState(true)
-  const [audioError, setAudioError] = useState<string | null>(null)
-  const [isLoaded, setIsLoaded] = useState(false)
-
   const audioRef = useRef<HTMLAudioElement>(null)
   const mediaPath = "https://archive.org/download/aky_20250624/"
 
@@ -426,7 +438,7 @@ export default function AudioPage() {
       // Enhanced action handlers for better mobile support
       navigator.mediaSession.setActionHandler("play", () => {
         if (audioRef.current) {
-          audioRef.current.play().catch(console.error)
+          audioRef.current.play()
           setIsPlaying(true)
         }
       })
@@ -480,17 +492,6 @@ export default function AudioPage() {
     const audio = audioRef.current
     if (!audio) return
 
-    // iOS-specific audio setup
-    const setupiOSAudio = () => {
-      // Enable playsinline for iOS
-      audio.setAttribute("playsinline", "true")
-      audio.setAttribute("webkit-playsinline", "true")
-      audio.preload = "metadata"
-      audio.crossOrigin = "anonymous"
-    }
-
-    setupiOSAudio()
-
     const updateTime = () => {
       setCurrentTime(audio.currentTime)
       // Enhanced position state for mobile controls
@@ -507,15 +508,12 @@ export default function AudioPage() {
       }
     }
 
-    const updateDuration = () => {
-      setDuration(audio.duration)
-      setIsLoaded(true)
-    }
+    const updateDuration = () => setDuration(audio.duration)
 
     const handleEnded = () => {
       if (isRepeating) {
         audio.currentTime = 0
-        audio.play().catch(console.error)
+        audio.play()
       } else if (currentTrack < tracks.length - 1) {
         setCurrentTrack(currentTrack + 1)
       } else {
@@ -526,40 +524,11 @@ export default function AudioPage() {
     const handlePlay = () => setIsPlaying(true)
     const handlePause = () => setIsPlaying(false)
 
-    const handleError = (e: Event) => {
-      console.error("Audio error:", e)
-      setAudioError("Failed to load audio. Please try again.")
-      setIsPlaying(false)
-    }
-
-    const handleCanPlay = () => {
-      setAudioError(null)
-      setIsLoaded(true)
-    }
-
-    const handleLoadStart = () => {
-      setIsLoaded(false)
-      setAudioError(null)
-    }
-
-    const handleWaiting = () => {
-      console.log("Audio buffering...")
-    }
-
-    const handleCanPlayThrough = () => {
-      console.log("Audio ready to play through")
-    }
-
     audio.addEventListener("timeupdate", updateTime)
     audio.addEventListener("loadedmetadata", updateDuration)
     audio.addEventListener("ended", handleEnded)
     audio.addEventListener("play", handlePlay)
     audio.addEventListener("pause", handlePause)
-    audio.addEventListener("error", handleError)
-    audio.addEventListener("canplay", handleCanPlay)
-    audio.addEventListener("loadstart", handleLoadStart)
-    audio.addEventListener("waiting", handleWaiting)
-    audio.addEventListener("canplaythrough", handleCanPlayThrough)
 
     return () => {
       audio.removeEventListener("timeupdate", updateTime)
@@ -567,29 +536,15 @@ export default function AudioPage() {
       audio.removeEventListener("ended", handleEnded)
       audio.removeEventListener("play", handlePlay)
       audio.removeEventListener("pause", handlePause)
-      audio.removeEventListener("error", handleError)
-      audio.removeEventListener("canplay", handleCanPlay)
-      audio.removeEventListener("loadstart", handleLoadStart)
-      audio.removeEventListener("waiting", handleWaiting)
-      audio.removeEventListener("canplaythrough", handleCanPlayThrough)
     }
   }, [currentTrack, isRepeating])
 
   useEffect(() => {
     if (audioRef.current) {
-      const audioUrl = `${mediaPath}${encodeURIComponent(tracks[currentTrack].file)}.mp3`
-      audioRef.current.src = audioUrl
+      audioRef.current.src = `${mediaPath}${encodeURIComponent(tracks[currentTrack].file)}.mp3`
       audioRef.current.load() // Ensure proper loading
-
       if (isPlaying) {
-        // Add a small delay to ensure the audio is ready
-        setTimeout(() => {
-          audioRef.current?.play().catch((error) => {
-            console.error("Play failed:", error)
-            setAudioError("Failed to play audio. Please try again.")
-            setIsPlaying(false)
-          })
-        }, 100)
+        audioRef.current.play().catch(console.error)
       }
     }
   }, [currentTrack])
@@ -623,11 +578,7 @@ export default function AudioPage() {
       if (isPlaying) {
         audioRef.current.pause()
       } else {
-        audioRef.current.play().catch((error) => {
-          console.error("Play failed:", error)
-          setAudioError("Failed to play audio. Please try again.")
-          setIsPlaying(false)
-        })
+        audioRef.current.play().catch(console.error)
       }
     }
   }, [isPlaying])
@@ -635,7 +586,6 @@ export default function AudioPage() {
   const playTrack = (index: number) => {
     setCurrentTrack(index)
     setIsPlaying(true)
-    setAudioError(null)
   }
 
   const previousTrack = useCallback(() => {
@@ -722,6 +672,7 @@ export default function AudioPage() {
   // Enhanced Ad Modal Component
   const AdModal = () => {
     if (!showAds || adDisplayMode !== "modal") return null
+
     const currentAd = ads[currentAdIndex % ads.length]
 
     return (
@@ -798,6 +749,7 @@ export default function AudioPage() {
   // Enhanced Ad Page Component
   const AdPage = () => {
     if (!showAds || adDisplayMode !== "page") return null
+
     const currentAd = ads[currentAdIndex % ads.length]
 
     return (
@@ -914,6 +866,9 @@ export default function AudioPage() {
                     <div className="absolute -top-4 -right-4 bg-gradient-to-r from-red-500 to-pink-500 text-white px-6 py-3 rounded-full text-lg font-bold shadow-lg">
                       {tracks.length} Tracks
                     </div>
+                    {/* <div className="absolute -bottom-4 -left-4 bg-gradient-to-r from-orange-500 to-red-500 text-white px-6 py-3 rounded-full text-sm font-semibold shadow-lg">
+                      Political Collection
+                    </div> */}
                   </div>
                 </div>
               </div>
@@ -927,14 +882,14 @@ export default function AudioPage() {
             <Card className="mb-12 overflow-hidden border-0 shadow-2xl bg-gradient-to-br from-slate-800/90 to-slate-900/90 backdrop-blur-xl">
               <CardContent className="p-0">
                 <div
-                  className={`bg-gradient-to-r ${tracks[currentTrack].color || "from-red-500 to-pink-500"} p-4 md:p-8 relative overflow-hidden`}
+                  className={`bg-gradient-to-r ${tracks[currentTrack].color || "from-red-500 to-pink-500"} p-8 relative overflow-hidden`}
                 >
                   <div className="absolute inset-0 bg-black/20"></div>
                   <div className="relative z-10">
                     {/* Enhanced Now Playing Header */}
-                    <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-6 gap-4">
+                    <div className="flex items-center justify-between mb-6">
                       <div className="flex items-center space-x-4">
-                        <div className="w-16 h-16 md:w-20 md:h-20 bg-white/20 rounded-full flex items-center justify-center backdrop-blur-sm overflow-hidden border-2 border-white/30 shadow-xl">
+                        <div className="w-20 h-20 bg-white/20 rounded-full flex items-center justify-center backdrop-blur-sm overflow-hidden border-2 border-white/30 shadow-xl">
                           <Image
                             src="/pictures/logo.png"
                             alt="Now Playing"
@@ -944,46 +899,38 @@ export default function AudioPage() {
                           />
                         </div>
                         <div>
-                          <h2 className="text-2xl md:text-3xl font-bold text-white">
-                            {isPlaying ? "Now Playing" : "Paused"}
-                          </h2>
-                          <p className="text-white/80 text-sm md:text-lg">AKY Media Center</p>
+                          <h2 className="text-3xl font-bold text-white">{isPlaying ? "Now Playing" : "Paused"}</h2>
+                          <p className="text-white/80 text-lg">AKY Media Center</p>
                         </div>
                       </div>
-                      <div className="flex items-center space-x-2 md:space-x-3">
+                      <div className="flex items-center space-x-3">
                         <Button
                           onClick={() => toggleFavorite(currentTrack)}
-                          className={`bg-white/20 hover:bg-white/30 border-0 transition-all duration-300 p-2 md:p-3 ${favorites.includes(currentTrack) ? "text-red-400 scale-110" : "text-white"}`}
-                          size="sm"
+                          className={`bg-white/20 hover:bg-white/30 border-0 transition-all duration-300 ${favorites.includes(currentTrack) ? "text-red-400 scale-110" : "text-white"}`}
+                          size="lg"
                         >
-                          <Heart
-                            className={`w-4 h-4 md:w-6 md:h-6 ${favorites.includes(currentTrack) ? "fill-current" : ""}`}
-                          />
+                          <Heart className={`w-6 h-6 ${favorites.includes(currentTrack) ? "fill-current" : ""}`} />
                         </Button>
                         <Button
                           onClick={() => handleShare(tracks[currentTrack])}
-                          className="bg-white/20 hover:bg-white/30 border-0 text-white transition-all duration-300 hover:scale-105 p-2 md:p-3"
-                          size="sm"
+                          className="bg-white/20 hover:bg-white/30 border-0 text-white transition-all duration-300 hover:scale-105"
+                          size="lg"
                         >
-                          <Share2 className="w-4 h-4 md:w-6 md:h-6" />
+                          <Share2 className="w-6 h-6" />
                         </Button>
                         <Button
                           onClick={() => handleDownload(tracks[currentTrack])}
-                          className="bg-white/20 hover:bg-white/30 border-0 text-white transition-all duration-300 hover:scale-105 p-2 md:p-3"
-                          size="sm"
+                          className="bg-white/20 hover:bg-white/30 border-0 text-white transition-all duration-300 hover:scale-105"
+                          size="lg"
                         >
-                          <Download className="w-4 h-4 md:w-6 md:h-6" />
+                          <Download className="w-6 h-6" />
                         </Button>
                         <Button
                           onClick={() => setShowVisualizer(!showVisualizer)}
-                          className="bg-white/20 hover:bg-white/30 border-0 text-white transition-all duration-300 p-2 md:p-3"
-                          size="sm"
+                          className="bg-white/20 hover:bg-white/30 border-0 text-white transition-all duration-300"
+                          size="lg"
                         >
-                          {showVisualizer ? (
-                            <Minimize2 className="w-4 h-4 md:w-6 md:h-6" />
-                          ) : (
-                            <Maximize2 className="w-4 h-4 md:w-6 md:h-6" />
-                          )}
+                          {showVisualizer ? <Minimize2 className="w-6 h-6" /> : <Maximize2 className="w-6 h-6" />}
                         </Button>
                       </div>
                     </div>
@@ -997,92 +944,80 @@ export default function AudioPage() {
 
                     {/* Enhanced Track Info */}
                     <div className="mb-8">
-                      <h3 className="text-2xl md:text-4xl font-bold text-white mb-3">{tracks[currentTrack].name}</h3>
-                      <div className="flex flex-col md:flex-row md:items-center space-y-2 md:space-y-0 md:space-x-4">
-                        <p className="text-white/90 text-lg md:text-xl">{tracks[currentTrack].artist}</p>
+                      <h3 className="text-4xl font-bold text-white mb-3">{tracks[currentTrack].name}</h3>
+                      <div className="flex items-center space-x-4">
+                        <p className="text-white/90 text-xl">{tracks[currentTrack].artist}</p>
                         <Badge
-                          className={`${genreColors[tracks[currentTrack].genre as keyof typeof genreColors] || "bg-white/20 text-white"} text-sm px-3 py-1 self-start`}
+                          className={`${genreColors[tracks[currentTrack].genre as keyof typeof genreColors] || "bg-white/20 text-white"} text-sm px-3 py-1`}
                         >
                           {tracks[currentTrack].genre}
                         </Badge>
                       </div>
                     </div>
 
-                    {/* Error Display */}
-                    {audioError && (
-                      <div className="mb-4 p-3 bg-red-500/20 border border-red-500/30 rounded-lg">
-                        <p className="text-red-300 text-sm">{audioError}</p>
-                      </div>
-                    )}
-
                     {/* Enhanced Progress Bar */}
                     <div className="mb-8">
                       <div
-                        className="w-full h-3 md:h-4 bg-white/20 rounded-full cursor-pointer backdrop-blur-sm border border-white/30 shadow-inner"
+                        className="w-full h-4 bg-white/20 rounded-full cursor-pointer backdrop-blur-sm border border-white/30 shadow-inner"
                         onClick={handleProgressClick}
                       >
                         <div
                           className="h-full bg-gradient-to-r from-white to-red-200 rounded-full transition-all duration-300 shadow-lg relative"
                           style={{ width: duration ? `${(currentTime / duration) * 100}%` : "0%" }}
                         >
-                          <div className="absolute right-0 top-1/2 transform -translate-y-1/2 w-3 h-3 md:w-4 md:h-4 bg-white rounded-full shadow-lg"></div>
+                          <div className="absolute right-0 top-1/2 transform -translate-y-1/2 w-4 h-4 bg-white rounded-full shadow-lg"></div>
                         </div>
                       </div>
-                      <div className="flex justify-between text-white/80 text-sm md:text-lg mt-4 font-mono">
+                      <div className="flex justify-between text-white/80 text-lg mt-4 font-mono">
                         <span>{formatTime(currentTime)}</span>
                         <span>{formatTime(duration)}</span>
                       </div>
                     </div>
 
                     {/* Enhanced Controls */}
-                    <div className="flex items-center justify-center space-x-4 md:space-x-8 mb-8">
+                    <div className="flex items-center justify-center space-x-8 mb-8">
                       <Button
                         onClick={() => setIsShuffled(!isShuffled)}
-                        className={`bg-white/20 hover:bg-white/30 border-0 transition-all duration-300 p-2 md:p-3 ${isShuffled ? "text-red-400 scale-110" : "text-white"}`}
-                        size="sm"
+                        className={`bg-white/20 hover:bg-white/30 border-0 transition-all duration-300 ${isShuffled ? "text-red-400 scale-110" : "text-white"}`}
+                        size="lg"
                       >
-                        <Shuffle size={20} className="md:w-6 md:h-6" />
+                        <Shuffle size={24} />
                       </Button>
                       <Button
                         onClick={previousTrack}
                         disabled={currentTrack === 0}
-                        className="bg-white/20 hover:bg-white/30 border-0 text-white disabled:opacity-50 transition-all duration-300 hover:scale-105 p-2 md:p-3"
-                        size="sm"
+                        className="bg-white/20 hover:bg-white/30 border-0 text-white disabled:opacity-50 transition-all duration-300 hover:scale-105"
+                        size="lg"
                       >
-                        <SkipBack size={24} className="md:w-7 md:h-7" />
+                        <SkipBack size={28} />
                       </Button>
                       <Button
                         onClick={togglePlay}
-                        disabled={!isLoaded}
-                        className="w-16 h-16 md:w-24 md:h-24 rounded-full bg-white text-gray-900 hover:bg-white/90 shadow-2xl transform hover:scale-110 transition-all duration-300 border-4 border-white/30 disabled:opacity-50"
+                        className="w-24 h-24 rounded-full bg-white text-gray-900 hover:bg-white/90 shadow-2xl transform hover:scale-110 transition-all duration-300 border-4 border-white/30"
                         size="lg"
                       >
-                        {isPlaying ? (
-                          <Pause size={28} className="md:w-9 md:h-9" />
-                        ) : (
-                          <Play size={28} className="md:w-9 md:h-9" />
-                        )}
+                        {isPlaying ? <Pause size={36} /> : <Play size={36} />}
                       </Button>
                       <Button
                         onClick={nextTrack}
                         disabled={currentTrack === tracks.length - 1}
-                        className="bg-white/20 hover:bg-white/30 border-0 text-white disabled:opacity-50 transition-all duration-300 hover:scale-105 p-2 md:p-3"
-                        size="sm"
+                        className="bg-white/20 hover:bg-white/30 border-0 text-white disabled:opacity-50 transition-all duration-300 hover:scale-105"
+                        size="lg"
                       >
-                        <SkipForward size={24} className="md:w-7 md:h-7" />
+                        <SkipForward size={28} />
                       </Button>
                       <Button
                         onClick={() => setIsRepeating(!isRepeating)}
-                        className={`bg-white/20 hover:bg-white/30 border-0 transition-all duration-300 p-2 md:p-3 ${isRepeating ? "text-red-400 scale-110" : "text-white"}`}
-                        size="sm"
+                        className={`bg-white/20 hover:bg-white/30 border-0 transition-all duration-300 ${isRepeating ? "text-red-400 scale-110" : "text-white"}`}
+                        size="lg"
                       >
-                        <Repeat size={20} className="md:w-6 md:h-6" />
+                        <Repeat size={24} />
                       </Button>
                     </div>
 
                     {/* Enhanced Volume Control */}
-                    <div className="flex items-center justify-center space-x-4 md:space-x-6">
-                      <Volume2 className="text-white" size={20} />
+                    <div className="flex items-center justify-center space-x-6">
+                      <Volume2 className="text-white" size={24} />
                       <div className="relative">
                         <input
                           type="range"
@@ -1097,64 +1032,51 @@ export default function AudioPage() {
                               audioRef.current.volume = newVolume
                             }
                           }}
-                          className="w-32 md:w-40 h-2 md:h-3 bg-white/20 rounded-lg appearance-none cursor-pointer slider border border-white/30"
+                          className="w-40 h-3 bg-white/20 rounded-lg appearance-none cursor-pointer slider border border-white/30"
                         />
                       </div>
-                      <span className="text-white/80 text-sm md:text-lg font-mono w-10 md:w-12">
-                        {Math.round(volume * 100)}%
-                      </span>
+                      <span className="text-white/80 text-lg font-mono w-12">{Math.round(volume * 100)}%</span>
                     </div>
                   </div>
                 </div>
-                <audio
-                  ref={audioRef}
-                  preload="metadata"
-                  crossOrigin="anonymous"
-                  playsInline
-                  webkit-playsinline="true"
-                  controls={false}
-                />
+
+                <audio ref={audioRef} preload="metadata" crossOrigin="anonymous" />
               </CardContent>
             </Card>
 
-            {/* Enhanced Responsive Playlist */}
+            {/* Enhanced Playlist */}
             <Card className="overflow-hidden border-0 shadow-2xl bg-slate-800/90 backdrop-blur-xl">
               <CardContent className="p-0">
-                <div className="bg-gradient-to-r from-red-700 to-red-800 p-4 md:p-8 border-b border-red-600">
-                  <h2 className="text-xl md:text-3xl font-bold text-white flex items-center">
-                    <Music className="w-6 h-6 md:w-8 md:h-8 mr-2 md:mr-4 text-red-400" />
+                <div className="bg-gradient-to-r from-red-700 to-red-800 p-8 border-b border-red-600">
+                  <h2 className="text-3xl font-bold text-white flex items-center">
+                    <Music className="w-8 h-8 mr-4 text-red-400" />
                     Political Audio Collection ({tracks.length} tracks)
                   </h2>
-                  <p className="text-white/80 mt-2 text-sm md:text-base">
-                    Leadership messages and political content from Kano State
-                  </p>
+                  <p className="text-white/80 mt-2">Leadership messages and political content from Kano State</p>
                 </div>
 
-                <div className="max-h-96 md:max-h-[500px] overflow-y-auto">
+                <div className="max-h-96 overflow-y-auto">
                   {tracks.map((track, index) => (
                     <div
                       key={track.track}
-                      className={`flex flex-col md:flex-row items-start md:items-center justify-between p-3 md:p-6 border-b border-slate-700/50 last:border-b-0 cursor-pointer transition-all duration-300 hover:bg-slate-700/50 ${
+                      className={`flex items-center justify-between p-6 border-b border-slate-700/50 last:border-b-0 cursor-pointer transition-all duration-300 hover:bg-slate-700/50 ${
                         index === currentTrack
                           ? "bg-gradient-to-r from-red-900/50 to-pink-900/50 border-l-4 border-l-red-400"
                           : ""
                       }`}
                     >
-                      {/* Main track info - clickable area */}
-                      <div
-                        className="flex items-center space-x-3 md:space-x-6 flex-1 w-full md:w-auto"
-                        onClick={() => playTrack(index)}
-                      >
-                        <div className="relative flex-shrink-0">
-                          <span className="text-slate-400 font-mono text-sm md:text-lg w-8 md:w-10 block text-center">
+                      <div className="flex items-center space-x-6 flex-1" onClick={() => playTrack(index)}>
+                        <div className="relative">
+                          <span className="text-slate-400 font-mono text-lg w-10 block text-center">
                             {track.track.toString().padStart(2, "0")}
                           </span>
                           {index === currentTrack && isPlaying && (
-                            <div className="absolute -top-1 -right-1 w-3 h-3 md:w-4 md:h-4 bg-red-400 rounded-full animate-pulse" />
+                            <div className="absolute -top-1 -right-1 w-4 h-4 bg-red-400 rounded-full animate-pulse" />
                           )}
                         </div>
+
                         <div
-                          className={`w-12 h-12 md:w-16 md:h-16 rounded-lg md:rounded-xl bg-gradient-to-br ${track.color || "from-red-600 to-red-700"} flex items-center justify-center overflow-hidden border-2 border-white/20 shadow-lg flex-shrink-0`}
+                          className={`w-16 h-16 rounded-xl bg-gradient-to-br ${track.color || "from-red-600 to-red-700"} flex items-center justify-center overflow-hidden border-2 border-white/20 shadow-lg`}
                         >
                           <Image
                             src="/pictures/logo.png"
@@ -1164,119 +1086,57 @@ export default function AudioPage() {
                             className="w-full h-full object-cover rounded-lg"
                           />
                         </div>
-                        <div className="flex-1 min-w-0">
-                          <h4 className="font-bold text-white text-sm md:text-xl mb-1 truncate">{track.name}</h4>
-                          <div className="flex flex-col md:flex-row md:items-center md:space-x-4 mt-1 md:mt-2">
-                            <p className="text-slate-400 text-xs md:text-lg truncate">{track.artist}</p>
+
+                        <div className="flex-1">
+                          <h4 className="font-bold text-white text-xl mb-1">{track.name}</h4>
+                          <div className="flex items-center space-x-4 mt-2">
+                            <p className="text-slate-400 text-lg">{track.artist}</p>
                             <Badge
-                              className={`${genreColors[track.genre as keyof typeof genreColors] || "bg-slate-600 text-slate-200"} text-xs md:text-sm mt-1 md:mt-0 self-start md:self-auto`}
+                              className={`${genreColors[track.genre as keyof typeof genreColors] || "bg-slate-600 text-slate-200"} text-sm`}
                             >
                               {track.genre}
                             </Badge>
                           </div>
                         </div>
-                        {/* Duration - visible on mobile in main area */}
-                        <span className="text-slate-400 text-xs md:hidden font-mono flex-shrink-0">
-                          {track.duration}
-                        </span>
                       </div>
 
-                      {/* Action buttons and duration */}
-                      <div className="flex items-center justify-between w-full md:w-auto mt-3 md:mt-0 md:space-x-4">
-                        {/* Mobile: Show favorite + dots menu */}
-                        <div className="flex md:hidden items-center space-x-2">
-                          <Button
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              toggleFavorite(index)
-                            }}
-                            className={`bg-transparent hover:bg-slate-700 border-0 transition-all duration-300 p-2 ${favorites.includes(index) ? "text-red-400" : "text-slate-400"}`}
-                            size="sm"
-                          >
-                            <Heart className={`w-4 h-4 ${favorites.includes(index) ? "fill-current" : ""}`} />
-                          </Button>
-
-                          {/* Three dots dropdown menu for mobile */}
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button
-                                className="bg-transparent hover:bg-slate-700 border-0 text-slate-400 p-2"
-                                size="sm"
-                                onClick={(e) => e.stopPropagation()}
-                              >
-                                <MoreVertical className="w-4 h-4" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent
-                              align="end"
-                              className="bg-slate-800 border-slate-600 text-slate-200"
-                              onClick={(e) => e.stopPropagation()}
-                            >
-                              <DropdownMenuItem
-                                onClick={(e) => {
-                                  e.stopPropagation()
-                                  handleShare(track)
-                                }}
-                                className="hover:bg-slate-700 focus:bg-slate-700"
-                              >
-                                <Share2 className="w-4 h-4 mr-2" />
-                                Share
-                              </DropdownMenuItem>
-                              <DropdownMenuItem
-                                onClick={(e) => {
-                                  e.stopPropagation()
-                                  handleDownload(track)
-                                }}
-                                className="hover:bg-slate-700 focus:bg-slate-700"
-                              >
-                                <Download className="w-4 h-4 mr-2" />
-                                Download
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </div>
-
-                        {/* Desktop: Show all buttons */}
-                        <div className="hidden md:flex items-center space-x-4">
-                          <Button
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              toggleFavorite(index)
-                            }}
-                            className={`bg-transparent hover:bg-slate-700 border-0 transition-all duration-300 ${favorites.includes(index) ? "text-red-400 scale-110" : "text-slate-400"}`}
-                            size="sm"
-                          >
-                            <Heart className={`w-5 h-5 ${favorites.includes(index) ? "fill-current" : ""}`} />
-                          </Button>
-                          <Button
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              handleShare(track)
-                            }}
-                            className="bg-transparent hover:bg-slate-700 border-0 text-slate-400 transition-all duration-300 hover:scale-105"
-                            size="sm"
-                          >
-                            <Share2 className="w-5 h-5" />
-                          </Button>
-                          <Button
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              handleDownload(track)
-                            }}
-                            className="bg-transparent hover:bg-slate-700 border-0 text-slate-400 transition-all duration-300 hover:scale-105"
-                            size="sm"
-                          >
-                            <Download className="w-5 h-5" />
-                          </Button>
-                          <span className="text-slate-400 text-lg font-mono min-w-[60px]">{track.duration}</span>
-                        </div>
-
-                        {/* Playing indicator */}
+                      <div className="flex items-center space-x-4">
+                        <Button
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            toggleFavorite(index)
+                          }}
+                          className={`bg-transparent hover:bg-slate-700 border-0 transition-all duration-300 ${favorites.includes(index) ? "text-red-400 scale-110" : "text-slate-400"}`}
+                          size="sm"
+                        >
+                          <Heart className={`w-5 h-5 ${favorites.includes(index) ? "fill-current" : ""}`} />
+                        </Button>
+                        <Button
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            handleShare(track)
+                          }}
+                          className="bg-transparent hover:bg-slate-700 border-0 text-slate-400 transition-all duration-300 hover:scale-105"
+                          size="sm"
+                        >
+                          <Share2 className="w-5 h-5" />
+                        </Button>
+                        <Button
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            handleDownload(track)
+                          }}
+                          className="bg-transparent hover:bg-slate-700 border-0 text-slate-400 transition-all duration-300 hover:scale-105"
+                          size="sm"
+                        >
+                          <Download className="w-5 h-5" />
+                        </Button>
+                        <span className="text-slate-400 text-lg font-mono min-w-[60px]">{track.duration}</span>
                         {index === currentTrack && isPlaying && (
-                          <div className="flex space-x-1 ml-auto md:ml-0">
-                            <div className="w-1 h-4 md:h-6 bg-red-400 rounded animate-pulse"></div>
-                            <div className="w-1 h-6 md:h-8 bg-red-400 rounded animate-pulse delay-100"></div>
-                            <div className="w-1 h-3 md:h-4 bg-red-400 rounded animate-pulse delay-200"></div>
+                          <div className="flex space-x-1">
+                            <div className="w-1 h-6 bg-red-400 rounded animate-pulse"></div>
+                            <div className="w-1 h-8 bg-red-400 rounded animate-pulse delay-100"></div>
+                            <div className="w-1 h-4 bg-red-400 rounded animate-pulse delay-200"></div>
                           </div>
                         )}
                       </div>
@@ -1299,4 +1159,3 @@ export default function AudioPage() {
     </PageLoader>
   )
 }
-  

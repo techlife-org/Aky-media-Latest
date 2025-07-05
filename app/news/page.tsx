@@ -113,7 +113,7 @@ export default function NewsPage() {
           id: "2",
           title: "Infrastructure Development Progress",
           content:
-            "Major road construction projects across Kano State are showing significant progress as part of the administration's commitment to improving transportation infrastructure.",
+            "In line with the infrastructure renewal drive of the present administration, the Kano State Government, through the Kano Road Maintenance Agency (KARMA), has commenced asphalt overlay works on the access road leading to the Kano State Polytechnic School of Technology (SOT), Matan Fada, in the heart of Kano Metropolis. This project is part of Governor Alhaji Abba Kabir Yusuf's broader strategy to improve critical infrastructure in educational institutions and enhance accessibility, safety, and mobility for students, staff, and residents in the surrounding community. The road leading to the School of Technology had deteriorated over time due to years of wear, inadequate drainage, and high pedestrian and vehicular usage. The asphalt overlay intervention is a timely response to the concerns of road users, aimed at transforming the route into a smooth, safe, and durable roadway.",
           attachment: "/placeholder.svg?height=300&width=400",
           created_at: new Date(Date.now() - 86400000).toISOString(),
           doc_type: "Infrastructure",
@@ -194,9 +194,21 @@ export default function NewsPage() {
     })
   }
 
+  const stripHtmlTags = (html: string) => {
+    // Create a temporary div element to parse HTML
+    if (typeof document === "undefined") {
+      return ""
+    }
+    const tempDiv = document.createElement("div")
+    tempDiv.innerHTML = html
+    return tempDiv.textContent || tempDiv.innerText || ""
+  }
+
   const truncateContent = (content: string, wordLimit = 25) => {
-    const words = content.split(" ")
-    return words.length > wordLimit ? words.slice(0, wordLimit).join(" ") + "..." : content
+    // First strip HTML tags, then truncate
+    const plainText = stripHtmlTags(content)
+    const words = plainText.split(" ")
+    return words.length > wordLimit ? words.slice(0, wordLimit).join(" ") + "..." : plainText
   }
 
   return (
@@ -206,11 +218,11 @@ export default function NewsPage() {
 
         {/* Hero Section */}
         <section
-          className="py-20 relative bg-cover bg-center bg-no-repeat"
-          style={{
-            backgroundImage:
-              "linear-gradient(rgba(220, 38, 38, 0.8), rgba(185, 28, 28, 0.8)), url(/placeholder.svg?height=400&width=1200)",
-          }}
+          className="py-20 relative bg-gradient-to-r from-red-600 via-red-700 to-red-800"
+        // style={{
+        //   background:
+        //     "linear-gradient(rgba(220, 38, 38, 0.8), rgba(185, 28, 28, 0.8)),",
+        // }}
         >
           <div className="container mx-auto px-4">
             <div className="grid lg:grid-cols-2 gap-12 items-center">
@@ -262,11 +274,10 @@ export default function NewsPage() {
                   <Button
                     onClick={() => handleFilter("all")}
                     variant={activeFilter === "all" ? "default" : "outline"}
-                    className={`${
-                      activeFilter === "all"
-                        ? "bg-red-600 hover:bg-red-700 text-white"
-                        : "bg-white text-red-600 border-red-600 hover:bg-red-50"
-                    }`}
+                    className={`${activeFilter === "all"
+                      ? "bg-red-600 hover:bg-red-700 text-white"
+                      : "bg-white text-red-600 border-red-600 hover:bg-red-50"
+                      }`}
                   >
                     <Filter size={16} className="mr-2" />
                     All ({blogs.length})
@@ -278,11 +289,10 @@ export default function NewsPage() {
                         key={docType}
                         onClick={() => handleFilter(docType)}
                         variant={activeFilter === docType ? "default" : "outline"}
-                        className={`${
-                          activeFilter === docType
-                            ? "bg-red-600 hover:bg-red-700 text-white"
-                            : "bg-white text-red-600 border-red-600 hover:bg-red-50"
-                        }`}
+                        className={`${activeFilter === docType
+                          ? "bg-red-600 hover:bg-red-700 text-white"
+                          : "bg-white text-red-600 border-red-600 hover:bg-red-50"
+                          }`}
                       >
                         {docType} ({count})
                       </Button>
@@ -356,13 +366,13 @@ export default function NewsPage() {
                         {truncateContent(blog.content || "No Content")}
                       </p>
 
-                      <Link
+                      {/* <Link
                         href={`/news/${blog.id}`}
                         className="inline-flex items-center gap-2 text-red-600 font-semibold hover:text-red-700 transition-colors group"
                       >
                         Read More
                         <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />
-                      </Link>
+                      </Link> */}
                     </CardContent>
                   </Card>
                 ))}

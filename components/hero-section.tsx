@@ -83,8 +83,8 @@ export default function HeroSection() {
 
               <div className="space-y-4">
                 <p className="text-2xl text-gray-700 font-medium">Personal Website of</p>
-                <p className="text-xl text-red-600 font-semibold">Alh. Abba Kabir Yusuf</p>
-                <p className="text-lg text-gray-600">The Executive Governor, Kano State</p>
+                {/* <p className="text-xl text-red-600 font-semibold">Alh. Abba Kabir Yusuf</p> */}
+                <p className="text-xl text-red-600 font-semibold">The Executive Governor, Kano State</p>
               </div>
             </div>
 
@@ -175,10 +175,10 @@ export default function HeroSection() {
                   priority
                 />
 
-                {/* Floating Badge */}
+                {/* Floating Badge
                 <div className="absolute -top-2 -right-2 bg-red-600 text-white px-4 py-2 rounded-full text-sm font-semibold shadow-lg">
                   Governor
-                </div>
+                </div> */}
               </div>
 
               {/* Floating Cards */}

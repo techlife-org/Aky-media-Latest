@@ -10,7 +10,7 @@ const socialMediaPlatforms = [
     image: "/pictures/facebook.png",
     icon: Users,
     color: "from-blue-600 to-blue-700",
-    followers: "2.5M",
+    followers: "381K",
     description: "Official Facebook page for government updates and community engagement",
   },
   {
@@ -20,7 +20,7 @@ const socialMediaPlatforms = [
     image: "/pictures/x.png",
     icon: MessageCircle,
     color: "from-slate-800 to-black",
-    followers: "1.8M",
+    followers: "139.1K",
     description: "Real-time updates and direct communication with citizens",
   },
   {
@@ -30,7 +30,7 @@ const socialMediaPlatforms = [
     image: "/pictures/instagram.jpg",
     icon: Camera,
     color: "from-pink-500 to-purple-600",
-    followers: "950K",
+    followers: "268K",
     description: "Visual stories of development projects and state activities",
   },
   {
@@ -69,8 +69,7 @@ export default function SocialMediaSection() {
             </span>
           </h2>
           <p className="text-xl text-gray-600 max-w-3xl mx-auto leading-relaxed">
-            Stay connected with His Excellency Alh. Abba Kabir Yusuf through our official social media platforms. Get
-            the latest updates on government initiatives, development projects, and community engagement.
+            Stay connected with His Excellency Alh. Abba Kabir Yusuf through our official social media platforms.
           </p>
         </div>
 
@@ -120,7 +119,7 @@ export default function SocialMediaSection() {
                   <div className="text-center mb-6">
                     <h3 className="text-2xl font-bold text-gray-900 mb-2">{platform.name}</h3>
                     <p className="text-lg text-gray-600 font-medium mb-3">{platform.handle}</p>
-                    <p className="text-sm text-gray-500 leading-relaxed">{platform.description}</p>
+                    {/* <p className="text-sm text-gray-500 leading-relaxed">{platform.description}</p> */}
                   </div>
 
                   <Link href={platform.url} target="_blank" rel="noopener noreferrer" className="group/link w-full">

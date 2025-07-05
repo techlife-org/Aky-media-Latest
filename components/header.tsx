@@ -136,7 +136,7 @@ const Header = () => {
                 </div>
 
                 {/* Mobile Social Links */}
-                <div className="mt-4">
+                {/* <div className="mt-4">
                   <div className="flex space-x-4">
                     <a href="#" className="text-gray-400 hover:text-red-600">
                       <span className="sr-only">Facebook</span>📘
@@ -151,7 +151,7 @@ const Header = () => {
                       <span className="sr-only">YouTube</span>📺
                     </a>
                   </div>
-                </div>
+                </div> */}
               </div>
             </div>
           )}
