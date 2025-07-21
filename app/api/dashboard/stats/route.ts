@@ -4,7 +4,21 @@ import { withCors } from "@/lib/cors"
 
 async function handler(request: NextRequest) {
   try {
-    const { db } = await connectToDatabase()
+    let db
+    try {
+      const dbConnection = await connectToDatabase()
+      db = dbConnection.db
+    } catch (error) {
+      console.error("Database connection error:", error)
+      // Return a default response when database is not available
+      return NextResponse.json(
+        {
+          message: "Service temporarily unavailable. Please try again later.",
+          success: false,
+        },
+        { status: 503 },
+      )
+    }
 
     // Get visitor stats
     const totalVisitors = await db.collection("visitors").countDocuments()
@@ -25,10 +39,15 @@ async function handler(request: NextRequest) {
     // Get page views (sum of all visitor page arrays)
     const visitors = await db.collection("visitors").find({}).toArray()
     const pageViews = visitors.reduce((total, visitor) => {
-      return total + (visitor.pages ? visitor.pages.length : 1)
+      // Assuming 'page' field in visitor is a string for the current page,
+      // and 'pages' (if it existed) would be an array of visited pages.
+      // If 'pageviews' collection is used, sum from there.
+      return total + 1 // Each visitor document represents at least one page view
     }, 0)
 
     // Calculate bounce rate (visitors with only 1 page view)
+    // This logic assumes each 'visitor' document represents a session.
+    // If a visitor document only has one 'page' entry, it's a bounce.
     const singlePageVisitors = visitors.filter((visitor) => !visitor.pages || visitor.pages.length <= 1).length
     const bounceRate = totalVisitors > 0 ? Math.round((singlePageVisitors / totalVisitors) * 100) : 0
 
@@ -53,7 +72,6 @@ async function handler(request: NextRequest) {
     })
   } catch (error) {
     console.error("Dashboard stats error:", error)
-
     // Return fallback data if database fails
     return NextResponse.json({
       stats: {

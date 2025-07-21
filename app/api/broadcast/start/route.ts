@@ -4,7 +4,20 @@ import { connectToDatabase } from "@/lib/mongodb"
 export async function POST(request: NextRequest) {
   try {
     const { title, hostName } = await request.json()
-    const { db } = await connectToDatabase()
+    let db
+    try {
+      const dbConnection = await connectToDatabase()
+      db = dbConnection.db
+    } catch (error) {
+      console.error("Database connection error:", error)
+      return NextResponse.json(
+        {
+          message: "Service temporarily unavailable. Please try again later.",
+          success: false,
+        },
+        { status: 503 },
+      )
+    }
 
     // Check if there's already an active broadcast
     const existingBroadcast = await db.collection("broadcasts").findOne({ isActive: true })
@@ -17,7 +30,6 @@ export async function POST(request: NextRequest) {
         process.env.NEXT_PUBLIC_BASE_URL || process.env.VERCEL_URL
           ? `https://${process.env.VERCEL_URL}`
           : `${protocol}://${host}`
-
       const meetingLink = `${baseUrl}/live?meeting=${existingBroadcast.id}`
 
       return NextResponse.json({

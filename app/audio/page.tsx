@@ -17,7 +17,6 @@ import {
   Repeat,
   Heart,
   Share2,
-  Download,
   Music,
   X,
   Maximize2,
@@ -33,6 +32,12 @@ import Header from "@/components/header"
 import Footer from "@/components/footer"
 import NewsletterSection from "@/components/newsletter-section"
 import ScrollToTop from "@/components/scroll-to-top"
+import { formatTime } from "@/lib/audio-utils" // Import formatTime
+
+type AudioVisualizerProps = {
+  audioRef: React.RefObject<HTMLAudioElement | null>;
+  isPlaying: boolean;
+};
 
 interface Track {
   track: number
@@ -278,11 +283,16 @@ const ads = [
   },
 ]
 
+
+
 // Audio Visualizer Component
 const AudioVisualizer = ({
   audioRef,
   isPlaying,
-}: { audioRef: React.RefObject<HTMLAudioElement>; isPlaying: boolean }) => {
+}: {
+  audioRef: React.RefObject<HTMLAudioElement>
+  isPlaying: boolean
+}) => {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const animationRef = useRef<number>()
   const analyserRef = useRef<AnalyserNode>()
@@ -327,10 +337,8 @@ const AudioVisualizer = ({
         const r = Math.floor((barHeight + 25) * (i / dataArrayRef.current.length) * 255)
         const g = Math.floor(250 * (i / dataArrayRef.current.length))
         const b = Math.floor(50)
-
         ctx.fillStyle = `rgb(${r},${g},${b})`
         ctx.fillRect(x, height - barHeight, barWidth, barHeight)
-
         x += barWidth + 1
       }
 
@@ -342,18 +350,24 @@ const AudioVisualizer = ({
     if (isPlaying) {
       setupAudioContext()
       if (audioContextRef.current?.state === "suspended") {
-        audioContextRef.current.resume()
+        audioContextRef.current.resume().catch(console.error)
       }
       draw()
     } else {
       if (animationRef.current) {
         cancelAnimationFrame(animationRef.current)
       }
+      if (audioContextRef.current?.state === "running") {
+        audioContextRef.current.suspend().catch(console.error)
+      }
     }
 
     return () => {
       if (animationRef.current) {
         cancelAnimationFrame(animationRef.current)
+      }
+      if (audioContextRef.current?.state === "running") {
+        audioContextRef.current.suspend().catch(console.error)
       }
     }
   }, [isPlaying, audioRef])
@@ -381,8 +395,10 @@ export default function AudioPage() {
   const [showVisualizer, setShowVisualizer] = useState(true)
   const [audioError, setAudioError] = useState<string | null>(null)
   const [isLoaded, setIsLoaded] = useState(false)
+  const [isFullScreen, setIsFullScreen] = useState(false)
 
   const audioRef = useRef<HTMLAudioElement>(null)
+  const playerRef = useRef<HTMLDivElement>(null) // Ref for the player card for fullscreen
   const mediaPath = "https://archive.org/download/aky_20250624/"
 
   // Load favorites from localStorage
@@ -398,14 +414,43 @@ export default function AudioPage() {
     localStorage.setItem("audioFavorites", JSON.stringify(favorites))
   }, [favorites])
 
+  // Simulate page loading completion
   useEffect(() => {
-    const timer = setTimeout(() => {
+    if (!isLoading) {
       stopLoading()
-    }, 1200)
-    return () => clearTimeout(timer)
-  }, [stopLoading])
+    }
+  }, [isLoading, stopLoading])
 
-  // Enhanced Media Session API for better mobile control
+  // Move these functions before the useEffect that uses them
+  const previousTrack = useCallback(() => {
+    if (isShuffled) {
+      const newTrack = Math.floor(Math.random() * tracks.length)
+      setCurrentTrack(newTrack)
+    } else {
+      setCurrentTrack((prev) => (prev > 0 ? prev - 1 : tracks.length - 1))
+    }
+    setCurrentTime(0)
+    if (audioRef.current) {
+      audioRef.current.currentTime = 0
+    }
+    setIsPlaying(true)
+  }, [isShuffled])
+
+  const nextTrack = useCallback(() => {
+    if (isShuffled) {
+      const newTrack = Math.floor(Math.random() * tracks.length)
+      setCurrentTrack(newTrack)
+    } else {
+      setCurrentTrack((prev) => (prev < tracks.length - 1 ? prev + 1 : 0))
+    }
+    setCurrentTime(0)
+    if (audioRef.current) {
+      audioRef.current.currentTime = 0
+    }
+    setIsPlaying(true)
+  }, [isShuffled])
+
+  // Media Session API setup
   useEffect(() => {
     if ("mediaSession" in navigator) {
       const currentTrackData = tracks[currentTrack]
@@ -430,43 +475,30 @@ export default function AudioPage() {
           setIsPlaying(true)
         }
       })
-
       navigator.mediaSession.setActionHandler("pause", () => {
         if (audioRef.current) {
           audioRef.current.pause()
           setIsPlaying(false)
         }
       })
-
       navigator.mediaSession.setActionHandler("previoustrack", () => {
-        if (currentTrack > 0) {
-          setCurrentTrack(currentTrack - 1)
-          setIsPlaying(true)
-        }
+        previousTrack()
       })
-
       navigator.mediaSession.setActionHandler("nexttrack", () => {
-        if (currentTrack < tracks.length - 1) {
-          setCurrentTrack(currentTrack + 1)
-          setIsPlaying(true)
-        }
+        nextTrack()
       })
-
       navigator.mediaSession.setActionHandler("seekto", (details) => {
         if (audioRef.current && details.seekTime !== undefined) {
           audioRef.current.currentTime = details.seekTime
           setCurrentTime(details.seekTime)
         }
       })
-
-      // Additional handlers for better mobile support
       navigator.mediaSession.setActionHandler("seekbackward", (details) => {
         if (audioRef.current) {
           const seekOffset = details.seekOffset || 10
           audioRef.current.currentTime = Math.max(0, audioRef.current.currentTime - seekOffset)
         }
       })
-
       navigator.mediaSession.setActionHandler("seekforward", (details) => {
         if (audioRef.current) {
           const seekOffset = details.seekOffset || 10
@@ -474,21 +506,20 @@ export default function AudioPage() {
         }
       })
     }
-  }, [currentTrack, isPlaying, duration])
+  }, [currentTrack, isPlaying, duration, previousTrack, nextTrack])
 
+  // Audio event listeners and initial setup
   useEffect(() => {
     const audio = audioRef.current
     if (!audio) return
 
     // iOS-specific audio setup
     const setupiOSAudio = () => {
-      // Enable playsinline for iOS
       audio.setAttribute("playsinline", "true")
       audio.setAttribute("webkit-playsinline", "true")
       audio.preload = "metadata"
       audio.crossOrigin = "anonymous"
     }
-
     setupiOSAudio()
 
     const updateTime = () => {
@@ -502,7 +533,7 @@ export default function AudioPage() {
             position: audio.currentTime,
           })
         } catch (error) {
-          console.log("Position state not supported")
+          // console.log("Position state not supported or error:", error)
         }
       }
     }
@@ -523,8 +554,13 @@ export default function AudioPage() {
       }
     }
 
-    const handlePlay = () => setIsPlaying(true)
-    const handlePause = () => setIsPlaying(false)
+    const handlePlay = () => {
+      setIsPlaying(true)
+    }
+
+    const handlePause = () => {
+      setIsPlaying(false)
+    }
 
     const handleError = (e: Event) => {
       console.error("Audio error:", e)
@@ -535,6 +571,10 @@ export default function AudioPage() {
     const handleCanPlay = () => {
       setAudioError(null)
       setIsLoaded(true)
+      // If the component state says it should be playing, and the audio is paused, play it.
+      if (isPlaying && audioRef.current && audioRef.current.paused) {
+        audioRef.current.play().catch(console.error)
+      }
     }
 
     const handleLoadStart = () => {
@@ -543,11 +583,11 @@ export default function AudioPage() {
     }
 
     const handleWaiting = () => {
-      console.log("Audio buffering...")
+      // console.log("Audio buffering...")
     }
 
     const handleCanPlayThrough = () => {
-      console.log("Audio ready to play through")
+      // console.log("Audio ready to play through")
     }
 
     audio.addEventListener("timeupdate", updateTime)
@@ -573,26 +613,22 @@ export default function AudioPage() {
       audio.removeEventListener("waiting", handleWaiting)
       audio.removeEventListener("canplaythrough", handleCanPlayThrough)
     }
-  }, [currentTrack, isRepeating])
+  }, [currentTrack, isRepeating, isPlaying])
 
+  // Effect to change track source and trigger playback
   useEffect(() => {
-    if (audioRef.current) {
-      const audioUrl = `${mediaPath}${encodeURIComponent(tracks[currentTrack].file)}.mp3`
-      audioRef.current.src = audioUrl
-      audioRef.current.load() // Ensure proper loading
+    const audio = audioRef.current
+    if (!audio) return
 
-      if (isPlaying) {
-        // Add a small delay to ensure the audio is ready
-        setTimeout(() => {
-          audioRef.current?.play().catch((error) => {
-            console.error("Play failed:", error)
-            setAudioError("Failed to play audio. Please try again.")
-            setIsPlaying(false)
-          })
-        }, 100)
-      }
+    const audioUrl = `${mediaPath}${encodeURIComponent(tracks[currentTrack].file)}.mp3`
+    if (audio.src !== audioUrl) {
+      audio.src = audioUrl
+      audio.load() // Load the new track
+      setIsLoaded(false) // Indicate loading
+      setAudioError(null) // Clear previous errors
+      // Playback will be handled by the `handleCanPlay` event listener if `isPlaying` is true
     }
-  }, [currentTrack])
+  }, [currentTrack, mediaPath]) // Removed isPlaying from dependencies here
 
   // Ad timer effect
   useEffect(() => {
@@ -637,20 +673,6 @@ export default function AudioPage() {
     setIsPlaying(true)
     setAudioError(null)
   }
-
-  const previousTrack = useCallback(() => {
-    if (currentTrack > 0) {
-      setCurrentTrack(currentTrack - 1)
-      setIsPlaying(true)
-    }
-  }, [currentTrack])
-
-  const nextTrack = useCallback(() => {
-    if (currentTrack < tracks.length - 1) {
-      setCurrentTrack(currentTrack + 1)
-      setIsPlaying(true)
-    }
-  }, [currentTrack])
 
   const toggleFavorite = (trackIndex: number) => {
     setFavorites((prev) =>
@@ -703,12 +725,6 @@ export default function AudioPage() {
     }
   }
 
-  const formatTime = (time: number) => {
-    const minutes = Math.floor(time / 60)
-    const seconds = Math.floor(time % 60)
-    return `${minutes}:${seconds.toString().padStart(2, "0")}`
-  }
-
   const handleProgressClick = (e: React.MouseEvent<HTMLDivElement>) => {
     if (audioRef.current && duration) {
       const rect = e.currentTarget.getBoundingClientRect()
@@ -719,13 +735,44 @@ export default function AudioPage() {
     }
   }
 
+  const toggleFullScreen = useCallback(() => {
+    if (playerRef.current) {
+      if (!document.fullscreenElement) {
+        playerRef.current.requestFullscreen().catch((err) => {
+          console.error(`Error attempting to enable full-screen mode: ${err.message} (${err.name})`)
+        })
+        setIsFullScreen(true)
+      } else {
+        document.exitFullscreen()
+        setIsFullScreen(false)
+      }
+    }
+  }, [])
+
+  // Add event listener for fullscreen change
+  useEffect(() => {
+    const handleFullScreenChange = () => {
+      setIsFullScreen(!!document.fullscreenElement)
+    }
+    document.addEventListener("fullscreenchange", handleFullScreenChange)
+    document.addEventListener("webkitfullscreenchange", handleFullScreenChange) // For Safari
+    document.addEventListener("mozfullscreenchange", handleFullScreenChange) // For Firefox
+    document.addEventListener("MSFullscreenChange", handleFullScreenChange) // For IE/Edge
+
+    return () => {
+      document.removeEventListener("fullscreenchange", handleFullScreenChange)
+      document.removeEventListener("webkitfullscreenchange", handleFullScreenChange)
+      document.removeEventListener("mozfullscreenchange", handleFullScreenChange)
+      document.removeEventListener("MSFullscreenChange", handleFullScreenChange)
+    }
+  }, [])
+
   // Enhanced Ad Modal Component
   const AdModal = () => {
     if (!showAds || adDisplayMode !== "modal") return null
     const currentAd = ads[currentAdIndex % ads.length]
-
     return (
-      <Dialog open={showAds} onOpenChange={() => {}}>
+      <Dialog open={showAds} onOpenChange={() => { }}>
         <DialogContent className="max-w-3xl bg-gradient-to-br from-slate-900 to-red-900 border-red-500/20">
           <DialogHeader>
             <DialogTitle className="flex justify-between items-center text-white">
@@ -799,7 +846,6 @@ export default function AudioPage() {
   const AdPage = () => {
     if (!showAds || adDisplayMode !== "page") return null
     const currentAd = ads[currentAdIndex % ads.length]
-
     return (
       <div className="fixed inset-0 bg-gradient-to-br from-slate-900 via-red-900 to-slate-900 z-50 flex items-center justify-center p-4">
         <div className="bg-white/10 backdrop-blur-xl rounded-2xl max-w-4xl w-full border border-white/20 overflow-hidden">
@@ -866,50 +912,40 @@ export default function AudioPage() {
 
   return (
     <PageLoader isLoading={isLoading}>
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-red-900 to-slate-900">
+      <div className="min-h-screen bg-[url('/bgred.png')]">
         <Header />
-
         {/* Enhanced Hero Section */}
         <section className="py-20 relative overflow-hidden">
-          <div className="absolute inset-0 bg-gradient-to-r from-red-600/20 via-pink-600/20 to-orange-600/20"></div>
-          <div className="absolute inset-0">
-            <div className="absolute top-20 left-20 w-72 h-72 bg-red-500/30 rounded-full blur-3xl animate-pulse"></div>
-            <div className="absolute bottom-20 right-20 w-96 h-96 bg-pink-500/30 rounded-full blur-3xl animate-pulse delay-1000"></div>
-            <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-80 h-80 bg-orange-500/20 rounded-full blur-3xl animate-pulse delay-500"></div>
-          </div>
           <div className="container mx-auto px-4 relative z-10">
             <div className="grid lg:grid-cols-2 gap-12 items-center">
-              <div className="text-white">
+              <div>
                 <div className="flex items-center mb-6">
-                  <div className="w-16 h-16 bg-gradient-to-r from-red-500 to-pink-500 rounded-full flex items-center justify-center mr-4 shadow-2xl">
+                  <div className="w-16 h-16 rounded-full bg-[#f87e7e] flex items-center justify-center mr-4 shadow-2xl">
                     <Music className="w-8 h-8 text-white" />
                   </div>
-                  <h1 className="text-6xl lg:text-7xl font-bold bg-gradient-to-r from-red-400 via-pink-400 to-orange-400 bg-clip-text text-transparent">
-                    Audio
-                  </h1>
+                  <h1 className="text-6xl lg:text-7xl font-bold text-white">Audio</h1>
                 </div>
-                <p className="text-xl text-gray-300 mb-8 leading-relaxed">
+                <p className="text-xl text-white mb-8 leading-relaxed">
                   Experience the rich political sounds and leadership messages from Kano State with our premium audio
                   collection
                 </p>
                 <div className="flex items-center space-x-2 text-lg">
-                  <Link href="/" className="hover:text-red-400 transition-colors">
+                  <Link href="/" className="hover:text-white transition-colors">
                     Home
                   </Link>
-                  <ArrowRight size={16} className="text-red-400" />
-                  <span className="text-red-400">Audio Collection</span>
+                  <ArrowRight size={16} className="text-white" />
+                  <span className="text-white">Audio Collection</span>
                 </div>
               </div>
               <div className="relative">
-                <div className="relative bg-gradient-to-br from-red-500/20 to-pink-500/20 backdrop-blur-sm rounded-3xl p-8 border border-white/10 shadow-2xl">
-                  <div className="absolute inset-0 bg-gradient-to-br from-red-500/10 to-orange-500/10 rounded-3xl"></div>
+                <div>
                   <div className="relative z-10">
                     <Image
                       src="/pictures/logo.png"
                       alt="AKY Audio Collection"
                       width={500}
                       height={400}
-                      className="w-full h-auto rounded-2xl shadow-xl"
+                      className="w-full h-auto"
                     />
                     <div className="absolute -top-4 -right-4 bg-gradient-to-r from-red-500 to-pink-500 text-white px-6 py-3 rounded-full text-lg font-bold shadow-lg">
                       {tracks.length} Tracks
@@ -920,14 +956,18 @@ export default function AudioPage() {
             </div>
           </div>
         </section>
-
         <main className="py-20 relative">
-          <div className="container mx-auto px-4 max-w-6xl">
+          <div className="container mx-auto px-4 max-w-full">
             {/* Enhanced Audio Player with Visualizer */}
-            <Card className="mb-12 overflow-hidden border-0 shadow-2xl bg-gradient-to-br from-slate-800/90 to-slate-900/90 backdrop-blur-xl">
+            <Card
+              ref={playerRef}
+              className={`mb-12 overflow-hidden border-0 shadow-2xl bg-gradient-to-br from-slate-800/90 to-slate-900/90 backdrop-blur-xl ${isFullScreen ? "fixed inset-0 z-50 rounded-none" : ""
+                }`}
+            >
               <CardContent className="p-0">
                 <div
-                  className={`bg-gradient-to-r ${tracks[currentTrack].color || "from-red-500 to-pink-500"} p-4 md:p-8 relative overflow-hidden`}
+                  className={`bg-gradient-to-r ${tracks[currentTrack].color || "from-red-500 to-pink-500"
+                    } p-4 md:p-8 relative overflow-hidden`}
                 >
                   <div className="absolute inset-0 bg-black/20"></div>
                   <div className="relative z-10">
@@ -953,11 +993,13 @@ export default function AudioPage() {
                       <div className="flex items-center space-x-2 md:space-x-3">
                         <Button
                           onClick={() => toggleFavorite(currentTrack)}
-                          className={`bg-white/20 hover:bg-white/30 border-0 transition-all duration-300 p-2 md:p-3 ${favorites.includes(currentTrack) ? "text-red-400 scale-110" : "text-white"}`}
+                          className={`bg-white/20 hover:bg-white/30 border-0 transition-all duration-300 p-2 md:p-3 ${favorites.includes(currentTrack) ? "text-red-400 scale-110" : "text-white"
+                            }`}
                           size="sm"
                         >
                           <Heart
-                            className={`w-4 h-4 md:w-6 md:h-6 ${favorites.includes(currentTrack) ? "fill-current" : ""}`}
+                            className={`w-4 h-4 md:w-6 md:h-6 ${favorites.includes(currentTrack) ? "fill-current" : ""
+                              }`}
                           />
                         </Button>
                         <Button
@@ -967,19 +1009,19 @@ export default function AudioPage() {
                         >
                           <Share2 className="w-4 h-4 md:w-6 md:h-6" />
                         </Button>
-                        <Button
+                        {/* <Button
                           onClick={() => handleDownload(tracks[currentTrack])}
                           className="bg-white/20 hover:bg-white/30 border-0 text-white transition-all duration-300 hover:scale-105 p-2 md:p-3"
                           size="sm"
                         >
                           <Download className="w-4 h-4 md:w-6 md:h-6" />
-                        </Button>
+                        </Button> */}
                         <Button
-                          onClick={() => setShowVisualizer(!showVisualizer)}
+                          onClick={toggleFullScreen}
                           className="bg-white/20 hover:bg-white/30 border-0 text-white transition-all duration-300 p-2 md:p-3"
                           size="sm"
                         >
-                          {showVisualizer ? (
+                          {isFullScreen ? (
                             <Minimize2 className="w-4 h-4 md:w-6 md:h-6" />
                           ) : (
                             <Maximize2 className="w-4 h-4 md:w-6 md:h-6" />
@@ -987,34 +1029,35 @@ export default function AudioPage() {
                         </Button>
                       </div>
                     </div>
-
                     {/* Audio Visualizer */}
                     {showVisualizer && (
                       <div className="mb-8">
-                        <AudioVisualizer audioRef={audioRef} isPlaying={isPlaying} />
+                        <AudioVisualizer
+                          audioRef={audioRef as React.RefObject<HTMLAudioElement>}
+                          isPlaying={isPlaying}
+                        />
                       </div>
                     )}
-
                     {/* Enhanced Track Info */}
                     <div className="mb-8">
                       <h3 className="text-2xl md:text-4xl font-bold text-white mb-3">{tracks[currentTrack].name}</h3>
                       <div className="flex flex-col md:flex-row md:items-center space-y-2 md:space-y-0 md:space-x-4">
                         <p className="text-white/90 text-lg md:text-xl">{tracks[currentTrack].artist}</p>
                         <Badge
-                          className={`${genreColors[tracks[currentTrack].genre as keyof typeof genreColors] || "bg-white/20 text-white"} text-sm px-3 py-1 self-start`}
+                          className={`${genreColors[tracks[currentTrack].genre as keyof typeof genreColors] ||
+                            "bg-white/20 text-white"
+                            } text-sm px-3 py-1 self-start`}
                         >
                           {tracks[currentTrack].genre}
                         </Badge>
                       </div>
                     </div>
-
                     {/* Error Display */}
                     {audioError && (
                       <div className="mb-4 p-3 bg-red-500/20 border border-red-500/30 rounded-lg">
                         <p className="text-red-300 text-sm">{audioError}</p>
                       </div>
                     )}
-
                     {/* Enhanced Progress Bar */}
                     <div className="mb-8">
                       <div
@@ -1033,12 +1076,12 @@ export default function AudioPage() {
                         <span>{formatTime(duration)}</span>
                       </div>
                     </div>
-
                     {/* Enhanced Controls */}
                     <div className="flex items-center justify-center space-x-4 md:space-x-8 mb-8">
                       <Button
                         onClick={() => setIsShuffled(!isShuffled)}
-                        className={`bg-white/20 hover:bg-white/30 border-0 transition-all duration-300 p-2 md:p-3 ${isShuffled ? "text-red-400 scale-110" : "text-white"}`}
+                        className={`bg-white/20 hover:bg-white/30 border-0 transition-all duration-300 p-2 md:p-3 ${isShuffled ? "text-red-400 scale-110" : "text-white"
+                          }`}
                         size="sm"
                       >
                         <Shuffle size={20} className="md:w-6 md:h-6" />
@@ -1073,13 +1116,13 @@ export default function AudioPage() {
                       </Button>
                       <Button
                         onClick={() => setIsRepeating(!isRepeating)}
-                        className={`bg-white/20 hover:bg-white/30 border-0 transition-all duration-300 p-2 md:p-3 ${isRepeating ? "text-red-400 scale-110" : "text-white"}`}
+                        className={`bg-white/20 hover:bg-white/30 border-0 transition-all duration-300 p-2 md:p-3 ${isRepeating ? "text-red-400 scale-110" : "text-white"
+                          }`}
                         size="sm"
                       >
                         <Repeat size={20} className="md:w-6 md:h-6" />
                       </Button>
                     </div>
-
                     {/* Enhanced Volume Control */}
                     <div className="flex items-center justify-center space-x-4 md:space-x-6">
                       <Volume2 className="text-white" size={20} />
@@ -1116,7 +1159,6 @@ export default function AudioPage() {
                 />
               </CardContent>
             </Card>
-
             {/* Enhanced Responsive Playlist */}
             <Card className="overflow-hidden border-0 shadow-2xl bg-slate-800/90 backdrop-blur-xl">
               <CardContent className="p-0">
@@ -1129,16 +1171,14 @@ export default function AudioPage() {
                     Leadership messages and political content from Kano State
                   </p>
                 </div>
-
-                <div className="max-h-96 md:max-h-[500px] overflow-y-auto">
+                <div className="">
                   {tracks.map((track, index) => (
                     <div
                       key={track.track}
-                      className={`flex flex-col md:flex-row items-start md:items-center justify-between p-3 md:p-6 border-b border-slate-700/50 last:border-b-0 cursor-pointer transition-all duration-300 hover:bg-slate-700/50 ${
-                        index === currentTrack
+                      className={`flex flex-col md:flex-row items-start md:items-center justify-between p-3 md:p-6 border-b border-slate-700/50 last:border-b-0 cursor-pointer transition-all duration-300 hover:bg-slate-700/50 ${index === currentTrack
                           ? "bg-gradient-to-r from-red-900/50 to-pink-900/50 border-l-4 border-l-red-400"
                           : ""
-                      }`}
+                        }`}
                     >
                       {/* Main track info - clickable area */}
                       <div
@@ -1154,7 +1194,8 @@ export default function AudioPage() {
                           )}
                         </div>
                         <div
-                          className={`w-12 h-12 md:w-16 md:h-16 rounded-lg md:rounded-xl bg-gradient-to-br ${track.color || "from-red-600 to-red-700"} flex items-center justify-center overflow-hidden border-2 border-white/20 shadow-lg flex-shrink-0`}
+                          className={`w-12 h-12 md:w-16 md:h-16 rounded-lg md:rounded-xl bg-gradient-to-br ${track.color || "from-red-600 to-red-700"
+                            } flex items-center justify-center overflow-hidden border-2 border-white/20 shadow-lg flex-shrink-0`}
                         >
                           <Image
                             src="/pictures/logo.png"
@@ -1169,34 +1210,18 @@ export default function AudioPage() {
                           <div className="flex flex-col md:flex-row md:items-center md:space-x-4 mt-1 md:mt-2">
                             <p className="text-slate-400 text-xs md:text-lg truncate">{track.artist}</p>
                             <Badge
-                              className={`${genreColors[track.genre as keyof typeof genreColors] || "bg-slate-600 text-slate-200"} text-xs md:text-sm mt-1 md:mt-0 self-start md:self-auto`}
+                              className={`${genreColors[track.genre as keyof typeof genreColors] || "bg-slate-600 text-slate-200"
+                                } text-xs md:text-sm mt-1 md:mt-0 self-start md:self-auto`}
                             >
                               {track.genre}
                             </Badge>
                           </div>
                         </div>
-                        {/* Duration - visible on mobile in main area */}
-                        <span className="text-slate-400 text-xs md:hidden font-mono flex-shrink-0">
-                          {track.duration}
-                        </span>
                       </div>
-
                       {/* Action buttons and duration */}
-                      <div className="flex items-center justify-between w-full md:w-auto mt-3 md:mt-0 md:space-x-4">
-                        {/* Mobile: Show favorite + dots menu */}
-                        <div className="flex md:hidden items-center space-x-2">
-                          <Button
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              toggleFavorite(index)
-                            }}
-                            className={`bg-transparent hover:bg-slate-700 border-0 transition-all duration-300 p-2 ${favorites.includes(index) ? "text-red-400" : "text-slate-400"}`}
-                            size="sm"
-                          >
-                            <Heart className={`w-4 h-4 ${favorites.includes(index) ? "fill-current" : ""}`} />
-                          </Button>
-
-                          {/* Three dots dropdown menu for mobile */}
+                      <div className="flex items-center justify-end w-full md:w-auto mt-3 md:mt-0">
+                        {/* Mobile: Only show three dots menu */}
+                        <div className="md:hidden">
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
                               <Button
@@ -1215,6 +1240,16 @@ export default function AudioPage() {
                               <DropdownMenuItem
                                 onClick={(e) => {
                                   e.stopPropagation()
+                                  toggleFavorite(index)
+                                }}
+                                className="hover:bg-slate-700 focus:bg-slate-700"
+                              >
+                                <Heart className={`w-4 h-4 mr-2 ${favorites.includes(index) ? "fill-current" : ""}`} />
+                                Favorite
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={(e) => {
+                                  e.stopPropagation()
                                   handleShare(track)
                                 }}
                                 className="hover:bg-slate-700 focus:bg-slate-700"
@@ -1222,7 +1257,7 @@ export default function AudioPage() {
                                 <Share2 className="w-4 h-4 mr-2" />
                                 Share
                               </DropdownMenuItem>
-                              <DropdownMenuItem
+                              {/* <DropdownMenuItem
                                 onClick={(e) => {
                                   e.stopPropagation()
                                   handleDownload(track)
@@ -1231,11 +1266,10 @@ export default function AudioPage() {
                               >
                                 <Download className="w-4 h-4 mr-2" />
                                 Download
-                              </DropdownMenuItem>
+                              </DropdownMenuItem> */}
                             </DropdownMenuContent>
                           </DropdownMenu>
                         </div>
-
                         {/* Desktop: Show all buttons */}
                         <div className="hidden md:flex items-center space-x-4">
                           <Button
@@ -1243,7 +1277,8 @@ export default function AudioPage() {
                               e.stopPropagation()
                               toggleFavorite(index)
                             }}
-                            className={`bg-transparent hover:bg-slate-700 border-0 transition-all duration-300 ${favorites.includes(index) ? "text-red-400 scale-110" : "text-slate-400"}`}
+                            className={`bg-transparent hover:bg-slate-700 border-0 transition-all duration-300 ${favorites.includes(index) ? "text-red-400 scale-110" : "text-slate-400"
+                              }`}
                             size="sm"
                           >
                             <Heart className={`w-5 h-5 ${favorites.includes(index) ? "fill-current" : ""}`} />
@@ -1258,7 +1293,7 @@ export default function AudioPage() {
                           >
                             <Share2 className="w-5 h-5" />
                           </Button>
-                          <Button
+                          {/* <Button
                             onClick={(e) => {
                               e.stopPropagation()
                               handleDownload(track)
@@ -1267,10 +1302,9 @@ export default function AudioPage() {
                             size="sm"
                           >
                             <Download className="w-5 h-5" />
-                          </Button>
+                          </Button> */}
                           <span className="text-slate-400 text-lg font-mono min-w-[60px]">{track.duration}</span>
                         </div>
-
                         {/* Playing indicator */}
                         {index === currentTrack && isPlaying && (
                           <div className="flex space-x-1 ml-auto md:ml-0">
@@ -1287,11 +1321,9 @@ export default function AudioPage() {
             </Card>
           </div>
         </main>
-
         <NewsletterSection />
         <Footer />
         <ScrollToTop />
-
         {/* Enhanced Ad Components */}
         <AdModal />
         <AdPage />
@@ -1299,4 +1331,3 @@ export default function AudioPage() {
     </PageLoader>
   )
 }
-  

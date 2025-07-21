@@ -17,16 +17,24 @@ export default function ContactPage() {
       <Header />
       <main>
         {/* Breadcrumb Section */}
-        <section className="relative py-20 bg-gradient-to-r from-red-600 to-red-800 overflow-hidden">
-          <div className="absolute inset-0 bg-black/20"></div>
+        <section
+          className="relative py-20"
+          style={{
+            backgroundImage: "url('/bg3.png')",
+            backgroundSize: "cover",
+            backgroundPosition: "center",
+            opacity: 0.9,
+          }}
+        >
+          <div className="absolute "></div>
           <div className="container mx-auto px-4 relative z-10">
             <div className="grid lg:grid-cols-2 gap-12 items-center">
               <div>
-                <h1 className="text-5xl lg:text-6xl font-bold text-white mb-6">Contact Us</h1>
-                <div className="flex items-center gap-2 text-white/90">
+                <h1 className="text-5xl lg:text-6xl font-bold  text-red-800 mb-6">Contact Us</h1>
+                <div className="flex items-center gap-2 text-red-800/90">
                   <span>Home</span>
                   <span>→</span>
-                  <span className="text-white font-medium">Contact Us</span>
+                  <span className="text-red-800 font-medium">Contact Us</span>
                 </div>
               </div>
               <div className="hidden lg:block">
@@ -34,7 +42,7 @@ export default function ContactPage() {
                   <img
                     src="/pictures/assets/img/he/5.png"
                     alt="Contact illustration"
-                    className="w-full h-auto rounded-lg shadow-2xl"
+                    className="w-full h-auto"
                   />
                 </div>
               </div>

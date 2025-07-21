@@ -4,14 +4,27 @@ import { corsHeaders } from "@/lib/cors"
 
 export async function POST(request: NextRequest) {
   try {
-    const { db } = await connectToDatabase()
+    let db
+    try {
+      const dbConnection = await connectToDatabase()
+      db = dbConnection.db
+    } catch (error) {
+      console.error("Database connection error:", error)
+      return NextResponse.json(
+        {
+          message: "Service temporarily unavailable. Please try again later.",
+          success: false,
+        },
+        { status: 503 },
+      )
+    }
 
     // Get the request body (might include specific broadcast ID)
     let broadcastId = null
     try {
       const body = await request.json()
       broadcastId = body.broadcastId
-    } catch {
+    } catch (e) {
       // No body provided, that's fine
     }
 
@@ -51,7 +64,7 @@ export async function POST(request: NextRequest) {
       message: "Broadcast stopped successfully",
       stoppedCount: updateResult.modifiedCount,
     })
-  } catch (error) {
+  } catch (error: any) {
     console.error("Stop broadcast error:", error)
     return NextResponse.json({ message: "Internal server error", error: error.message }, { status: 500 })
   }
@@ -60,6 +73,6 @@ export async function POST(request: NextRequest) {
 export async function OPTIONS(request: NextRequest) {
   return new Response(null, {
     status: 200,
-    headers: corsHeaders,
+    headers: corsHeaders(),
   })
 }

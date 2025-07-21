@@ -4,7 +4,18 @@ import { corsHeaders } from "@/lib/cors"
 
 export async function GET() {
   try {
-    const { db } = await connectToDatabase()
+    let db;
+    try {
+      const dbConnection = await connectToDatabase();
+      db = dbConnection.db;
+    } catch (error) {
+      console.error('Database connection error:', error);
+      // Return a default response when database is not available
+      return NextResponse.json({
+        message: "Service temporarily unavailable. Please try again later.",
+        success: false
+      }, { status: 503 });
+    }
 
     // Get system statistics
     const [subscribersCount, messagesCount, visitorsCount] = await Promise.all([

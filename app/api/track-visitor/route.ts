@@ -3,12 +3,24 @@ import { connectToDatabase } from "@/lib/mongodb"
 
 export async function POST(request: NextRequest) {
   try {
-    const { db } = await connectToDatabase()
+    let db
+    try {
+      const dbConnection = await connectToDatabase()
+      db = dbConnection.db
+    } catch (error) {
+      console.error("Database connection error:", error)
+      return NextResponse.json(
+        {
+          message: "Service temporarily unavailable. Please try again later.",
+          success: false,
+        },
+        { status: 503 },
+      )
+    }
 
     // Get visitor information
     const userAgent = request.headers.get("user-agent") || ""
     const ip = request.headers.get("x-forwarded-for") || request.headers.get("x-real-ip") || "unknown"
-
     const { page, referrer } = await request.json()
 
     // Create visitor record

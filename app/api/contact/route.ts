@@ -17,7 +17,21 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ message: "Please enter a valid email address" }, { status: 400 })
     }
 
-    const { db } = await connectToDatabase()
+    let db
+    try {
+      const dbConnection = await connectToDatabase()
+      db = dbConnection.db
+    } catch (error) {
+      console.error("Database connection error:", error)
+      // Return a default response when database is not available
+      return NextResponse.json(
+        {
+          message: "Service temporarily unavailable. Please try again later.",
+          success: false,
+        },
+        { status: 503 },
+      )
+    }
 
     // Save contact message to database
     const contactMessage = {
@@ -42,7 +56,7 @@ export async function POST(request: NextRequest) {
     } else {
       throw new Error("Failed to save message")
     }
-  } catch (error) {
+  } catch (error: any) {
     console.error("Contact form error:", error)
     return NextResponse.json(
       { message: "Sorry, there was an error sending your message. Please try again." },

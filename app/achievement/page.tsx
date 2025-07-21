@@ -981,17 +981,19 @@ export default function AchievementPage() {
         <Header />
 
         {/* Hero Section */}
-        <section className="relative bg-gradient-to-r from-red-600 via-red-700 to-red-800 text-white py-20 overflow-hidden">
-          <div className="absolute inset-0 bg-black/20"></div>
-          <div className="absolute inset-0">
-            <div className="absolute top-10 left-10 w-72 h-72 bg-yellow-400/20 rounded-full blur-3xl animate-pulse"></div>
-            <div className="absolute bottom-10 right-10 w-96 h-96 bg-orange-400/20 rounded-full blur-3xl animate-pulse delay-1000"></div>
-          </div>
+        <section
+          className="relative py-20"
+          style={{
+            backgroundImage: "url('/bg2.png')",
+            backgroundSize: "cover",
+            backgroundPosition: "center",
+          }}
+        > <div className="absolute "></div>
 
           <div className="container mx-auto px-4 relative z-10">
             <div className="text-center max-w-4xl mx-auto">
               <div className="flex items-center justify-center mb-6">
-                <Award className="w-16 h-16 text-yellow-300 mr-4" />
+                <Award className="w-16 h-16 text-red-500 mr-4" />
                 <h1 className="text-5xl lg:text-6xl font-bold">600+ Major Achievements</h1>
               </div>
               <p className="text-xl mb-8 opacity-90">
@@ -1002,15 +1004,15 @@ export default function AchievementPage() {
               {/* Stats Cards */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-12">
                 <div className="bg-white/10 backdrop-blur-sm rounded-xl p-6 border border-white/20">
-                  <div className="text-3xl font-bold text-yellow-300">{completedCount}</div>
+                  <div className="text-3xl font-bold text-red-500">{completedCount}</div>
                   <div className="text-sm opacity-90">Completed Projects</div>
                 </div>
                 <div className="bg-white/10 backdrop-blur-sm rounded-xl p-6 border border-white/20">
-                  <div className="text-3xl font-bold text-blue-300">{ongoingCount}</div>
+                  <div className="text-3xl font-bold text-blue-500">{ongoingCount}</div>
                   <div className="text-sm opacity-90">Ongoing Projects</div>
                 </div>
                 <div className="bg-white/10 backdrop-blur-sm rounded-xl p-6 border border-white/20">
-                  <div className="text-3xl font-bold text-green-300">{totalProgress}%</div>
+                  <div className="text-3xl font-bold text-green-500">{totalProgress}%</div>
                   <div className="text-sm opacity-90">Overall Progress</div>
                 </div>
               </div>

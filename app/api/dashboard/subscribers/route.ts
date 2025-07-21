@@ -3,7 +3,21 @@ import { connectToDatabase } from "@/lib/mongodb"
 
 export async function GET() {
   try {
-    const { db } = await connectToDatabase()
+    let db
+    try {
+      const dbConnection = await connectToDatabase()
+      db = dbConnection.db
+    } catch (error) {
+      console.error("Database connection error:", error)
+      // Return a default response when database is not available
+      return NextResponse.json(
+        {
+          message: "Service temporarily unavailable. Please try again later.",
+          success: false,
+        },
+        { status: 503 },
+      )
+    }
 
     // Get subscribers from database
     const subscribers = await db.collection("subscribers").find({}).toArray()
@@ -16,14 +30,12 @@ export async function GET() {
       const now = new Date()
       return subDate.getMonth() === now.getMonth() && subDate.getFullYear() === now.getFullYear()
     }).length
-
     const lastMonth = subscribers.filter((sub) => {
       const subDate = new Date(sub.subscribedAt)
       const now = new Date()
       const lastMonthDate = new Date(now.getFullYear(), now.getMonth() - 1, 1)
       return subDate.getMonth() === lastMonthDate.getMonth() && subDate.getFullYear() === lastMonthDate.getFullYear()
     }).length
-
     const growthRate = lastMonth > 0 ? ((thisMonth - lastMonth) / lastMonth) * 100 : 0
 
     return NextResponse.json({
@@ -33,6 +45,7 @@ export async function GET() {
         subscribedAt: sub.subscribedAt,
         status: sub.status || "active",
         source: sub.source || "Newsletter",
+        mobile: sub.mobile || null, // Include mobile number
       })),
       stats: {
         total,

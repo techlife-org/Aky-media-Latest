@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -10,6 +10,14 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Eye, EyeOff, Lock, User } from "lucide-react"
 import { toast } from "@/hooks/use-toast"
+
+// Helper function to get the base URL
+const getBaseUrl = () => {
+  if (typeof window !== 'undefined') {
+    return window.location.origin
+  }
+  return process.env.NEXT_PUBLIC_BASE_URL || 'https://abbakabiryusuf.com'
+}
 
 export default function LoginPage() {
   const [email, setEmail] = useState("")
@@ -23,9 +31,20 @@ export default function LoginPage() {
     setIsLoading(true)
 
     try {
-      const response = await fetch("https://v0-next-js-home-page-nu.vercel.app/api/auth/login", {
+      const baseUrl = getBaseUrl()
+      const loginUrl = `${baseUrl}/api/auth/login`
+      
+      console.log('Login URL:', loginUrl) // For debugging
+      
+      const response = await fetch(loginUrl, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Content-Type": "application/json",
+          "Accept": "application/json",
+          "X-Requested-With": "XMLHttpRequest"
+        },
+        credentials: "include",
+        mode: "cors",
         body: JSON.stringify({ email, password }),
       })
 

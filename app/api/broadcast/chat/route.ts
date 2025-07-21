@@ -5,7 +5,20 @@ import { corsHeaders } from "@/lib/cors"
 export async function POST(request: NextRequest) {
   try {
     const { meetingId, userName, message, type = "message" } = await request.json()
-    const { db } = await connectToDatabase()
+    let db
+    try {
+      const dbConnection = await connectToDatabase()
+      db = dbConnection.db
+    } catch (error) {
+      console.error("Database connection error:", error)
+      return NextResponse.json(
+        {
+          message: "Service temporarily unavailable. Please try again later.",
+          success: false,
+        },
+        { status: 503 },
+      )
+    }
 
     // Find active broadcast
     const broadcast = await db.collection("broadcasts").findOne({
@@ -54,7 +67,20 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
     const meetingId = searchParams.get("meetingId")
-    const { db } = await connectToDatabase()
+    let db
+    try {
+      const dbConnection = await connectToDatabase()
+      db = dbConnection.db
+    } catch (error) {
+      console.error("Database connection error:", error)
+      return NextResponse.json(
+        {
+          message: "Service temporarily unavailable. Please try again later.",
+          success: false,
+        },
+        { status: 503 },
+      )
+    }
 
     // Find active broadcast
     const broadcast = await db.collection("broadcasts").findOne({
@@ -86,6 +112,6 @@ export async function GET(request: NextRequest) {
 export async function OPTIONS(request: NextRequest) {
   return new Response(null, {
     status: 200,
-    headers: corsHeaders,
+    headers: corsHeaders(),
   })
 }

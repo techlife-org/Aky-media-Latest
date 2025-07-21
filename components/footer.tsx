@@ -96,7 +96,7 @@ export default function Footer() {
               </div>
               <div>
                 <p className="text-gray-600 text-sm mb-1">Email Address:</p>
-                <a href="mailto:info@abbakabiryusuf.com" className="text-gray-900 font-bold text-lg">
+                <a href="mailto:info@abbakabiryusuf.com" className="text-gray-900 font-bold text-base">
                   info@abbakabiryusuf.com
                 </a>
               </div>

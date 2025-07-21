@@ -7,31 +7,23 @@ const ALLOWED_ORIGINS = [
   "http://localhost:3001",
   "http://127.0.0.1:3000",
 ]
-
 const ALLOWED_METHODS = ["GET", "POST", "PUT", "DELETE", "OPTIONS"]
 const ALLOWED_HEADERS = ["Content-Type", "Authorization", "X-Requested-With", "Accept", "Origin"]
 
 export function corsHeaders(origin?: string | null) {
-  const allowedOrigins = [
-    "https://abbakabiryusuf.com",
-    "https://www.abbakabiryusuf.com",
-    "http://localhost:3000",
-    "http://localhost:3001",
-    "http://127.0.0.1:3000",
-  ]
-
   const headers: Record<string, string> = {
-    "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
-    "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Requested-With",
+    "Access-Control-Allow-Methods": ALLOWED_METHODS.join(", "),
+    "Access-Control-Allow-Headers": ALLOWED_HEADERS.join(", "),
     "Access-Control-Allow-Credentials": "true",
   }
 
-  if (origin && allowedOrigins.includes(origin)) {
+  if (origin && ALLOWED_ORIGINS.includes(origin)) {
     headers["Access-Control-Allow-Origin"] = origin
   } else if (!origin) {
+    // If no origin is provided (e.g., direct request), allow all.
+    // In a real production app, you might want to be more restrictive.
     headers["Access-Control-Allow-Origin"] = "*"
   }
-
   return headers
 }
 

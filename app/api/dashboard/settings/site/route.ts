@@ -5,7 +5,18 @@ import { corsHeaders } from "@/lib/cors"
 export async function POST(request: NextRequest) {
   try {
     const settings = await request.json()
-    const { db } = await connectToDatabase()
+    let db;
+    try {
+      const dbConnection = await connectToDatabase();
+      db = dbConnection.db;
+    } catch (error) {
+      console.error('Database connection error:', error);
+      // Return a default response when database is not available
+      return NextResponse.json({
+        message: "Service temporarily unavailable. Please try again later.",
+        success: false
+      }, { status: 503 });
+    }
 
     // Update or insert site settings
     await db.collection("site_settings").updateOne(

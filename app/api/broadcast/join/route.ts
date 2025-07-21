@@ -4,7 +4,20 @@ import { connectToDatabase } from "@/lib/mongodb"
 export async function POST(request: NextRequest) {
   try {
     const { meetingId, userName, userType } = await request.json()
-    const { db } = await connectToDatabase()
+    let db
+    try {
+      const dbConnection = await connectToDatabase()
+      db = dbConnection.db
+    } catch (error) {
+      console.error("Database connection error:", error)
+      return NextResponse.json(
+        {
+          message: "Service temporarily unavailable. Please try again later.",
+          success: false,
+        },
+        { status: 503 },
+      )
+    }
 
     // Find active broadcast - check by meetingId if provided, otherwise get any active broadcast
     let broadcast

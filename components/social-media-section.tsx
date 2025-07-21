@@ -1,6 +1,6 @@
 import Link from "next/link"
 import { Card, CardContent } from "@/components/ui/card"
-import { ExternalLink, Users, Globe, Camera, MessageCircle } from "lucide-react"
+import { ExternalLink, Users, Globe, Camera, MessageCircle, Facebook, Twitter, InstagramIcon, X } from "lucide-react"
 
 const socialMediaPlatforms = [
   {
@@ -8,7 +8,7 @@ const socialMediaPlatforms = [
     handle: "@Abba Kabir Yusuf",
     url: "https://www.facebook.com/share/18p6gDcA1B/?mibextid=LQQJ4d",
     image: "/pictures/facebook.png",
-    icon: Users,
+    icon: Facebook,
     color: "from-blue-600 to-blue-700",
     followers: "381K",
     description: "Official Facebook page for government updates and community engagement",
@@ -18,7 +18,7 @@ const socialMediaPlatforms = [
     handle: "@Kyusufabba",
     url: "https://x.com/kyusufabba?s=21&t=QVAaej86af3fs31NIYvGSA",
     image: "/pictures/x.png",
-    icon: MessageCircle,
+    icon: X,
     color: "from-slate-800 to-black",
     followers: "139.1K",
     description: "Real-time updates and direct communication with citizens",
@@ -28,7 +28,7 @@ const socialMediaPlatforms = [
     handle: "@abba_kabir_yusuf",
     url: "https://www.instagram.com/abba_kabir_yusuf?igsh=MzR0NWNodG56amZw",
     image: "/pictures/instagram.jpg",
-    icon: Camera,
+    icon: InstagramIcon,
     color: "from-pink-500 to-purple-600",
     followers: "268K",
     description: "Visual stories of development projects and state activities",
