@@ -13,7 +13,6 @@ import Header from "@/components/header"
 import Footer from "@/components/footer"
 import NewsletterSection from "@/components/newsletter-section"
 import ScrollToTop from "@/components/scroll-to-top"
-import { blogApiRequest, blogApiRequestAlt, getBlogApiUrl } from "@/lib/api-config"
 
 interface BlogPost {
   id: string
@@ -390,7 +389,7 @@ export default function NewsPage() {
                       </h3>
 
                       <p className="text-gray-600 mb-6 line-clamp-3 leading-relaxed">
-                        {truncateContent(blog.content || "No Content")}
+                        {blog.content || "No Content"}
                       </p>
 
                       {/* <Link
