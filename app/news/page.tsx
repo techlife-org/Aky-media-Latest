@@ -237,23 +237,6 @@ export default function NewsPage() {
     })
   }
 
-  const stripHtmlTags = (html: string) => {
-    // Create a temporary div element to parse HTML
-    if (typeof document === "undefined") {
-      return ""
-    }
-    const tempDiv = document.createElement("div")
-    tempDiv.innerHTML = html
-    return tempDiv.textContent || tempDiv.innerText || ""
-  }
-
-  const truncateContent = (content: string, wordLimit = 25) => {
-    // First strip HTML tags, then truncate
-    const plainText = stripHtmlTags(content)
-    const words = plainText.split(" ")
-    return words.length > wordLimit ? words.slice(0, wordLimit).join(" ") + "..." : plainText
-  }
-
   return (
     <PageLoader isLoading={isLoading}>
       <div className="min-h-screen bg-white">
