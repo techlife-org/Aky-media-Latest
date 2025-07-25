@@ -392,13 +392,13 @@ export default function NewsPage() {
                         {blog.content || "No Content"}
                       </p>
 
-                      {/* <Link
+                      <Link
                         href={`/news/${blog.id}`}
                         className="inline-flex items-center gap-2 text-red-600 font-semibold hover:text-red-700 transition-colors group"
                       >
                         Read More
                         <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />
-                      </Link> */}
+                      </Link>
                     </CardContent>
                   </Card>
                 ))}

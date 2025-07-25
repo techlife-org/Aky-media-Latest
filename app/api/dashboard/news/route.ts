@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server"
-import { connectToDatabase } from "@/lib/mongodb"
 import { ObjectId } from "mongodb"
+import clientPromise from "@/lib/mongodb"
 
 interface Attachment {
   url: string
@@ -19,170 +19,90 @@ interface NewsArticle {
   views: number
 }
 
+// GET /api/dashboard/news - Get all news articles
+export async function GET() {
+  try {
+    const client = await clientPromise
+    const db = client.db()
+
+    const news = await db
+      .collection<NewsArticle>("news")
+      .find({})
+      .sort({ created_at: -1 }) // Sort by creation date, newest first
+      .toArray()
+
+    // Convert _id to string for each document
+    const formattedNews = news.map(({ _id, ...doc }) => ({
+      id: _id.toString(),
+      ...doc,
+      created_at: doc.created_at.toISOString(),
+      updated_at: doc.updated_at.toISOString(),
+    }))
+
+    return NextResponse.json(formattedNews)
+  } catch (error) {
+    console.error("Error fetching news:", error)
+    return NextResponse.json(
+      { error: "Failed to fetch news" },
+      { status: 500 }
+    )
+  }
+}
+
+// POST /api/dashboard/news - Create a new news article
 export async function POST(request: Request) {
   try {
-    const { title, content, doc_type, attachment } = (await request.json()) as Omit<
+    const data = await request.json()
+    const { title, content, doc_type, attachment } = data as Omit<
       NewsArticle,
       "_id" | "created_at" | "updated_at" | "views"
     >
-    let db
-    try {
-      const dbConnection = await connectToDatabase()
-      db = dbConnection.db
-    } catch (error) {
-      console.error("Database connection error:", error)
-      // Return a default response when database is not available
+
+    // Basic validation
+    if (!title || !content || !doc_type) {
       return NextResponse.json(
-        {
-          message: "Service temporarily unavailable. Please try again later.",
-          success: false,
-        },
-        { status: 503 },
+        { error: "Title, content, and category are required" },
+        { status: 400 }
       )
     }
 
-    const newsArticle: Omit<NewsArticle, "_id"> = {
+    const client = await clientPromise
+    const db = client.db()
+
+    const now = new Date()
+    const newArticle: Omit<NewsArticle, "_id"> = {
       title,
       content,
       doc_type,
-      ...(attachment && { attachment }),
-      created_at: new Date(),
-      updated_at: new Date(),
+      created_at: now,
+      updated_at: now,
       views: 0,
+      ...(attachment && { attachment }),
     }
 
-    const result = await db.collection<NewsArticle>("news").insertOne(newsArticle as any) // Type assertion for _id
+    const result = await db.collection<NewsArticle>("news").insertOne(newArticle)
+    const insertedId = result.insertedId
 
-    const insertedArticle = await db.collection<NewsArticle>("news").findOne({ _id: result.insertedId })
-    if (!insertedArticle) {
-      throw new Error("Failed to create news article")
-    }
+    // Fetch the complete inserted document
+    const createdArticle = await db.collection<NewsArticle>("news").findOne({
+      _id: insertedId,
+    })
 
-    return new NextResponse(
-      JSON.stringify({
-        success: true,
-        id: result.insertedId.toString(),
-        ...insertedArticle,
-        _id: result.insertedId.toString(), // Ensure _id is stringified in response
-      }),
-      {
-        status: 201,
-        headers: {
-          "Content-Type": "application/json",
-          "Access-Control-Allow-Origin": "*",
-          "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-          "Access-Control-Allow-Headers": "Content-Type, Authorization",
-        },
-      },
-    )
-  } catch (error: any) {
-    console.error("Error creating news article:", error)
+    // Convert _id to string for the response
+    const { _id, ...articleData } = createdArticle
     return NextResponse.json(
-      {
-        success: false,
-        message: "Failed to create news article",
-        error: error instanceof Error ? error.message : "Unknown error",
-      },
-      { status: 500 },
+      { id: _id.toString(), ...articleData },
+      { status: 201 }
+    )
+  } catch (error) {
+    console.error("Error creating article:", error)
+    return NextResponse.json(
+      { error: "Failed to create article" },
+      { status: 500 }
     )
   }
 }
 
-export async function GET(request: Request) {
-  try {
-    const { searchParams } = new URL(request.url)
-    const id = searchParams.get("id")
-    let db
-    try {
-      const dbConnection = await connectToDatabase()
-      db = dbConnection.db
-    } catch (error) {
-      console.error("Database connection error:", error)
-      return new NextResponse(
-        JSON.stringify({
-          message: "Service temporarily unavailable. Please try again later.",
-          success: false,
-        }),
-        { status: 503 },
-      )
-    }
-
-    if (id) {
-      // Get single article
-      if (!ObjectId.isValid(id)) {
-        return new NextResponse(JSON.stringify({ success: false, message: "Invalid article ID" }), { status: 400 })
-      }
-      const article = await db.collection<NewsArticle>("news").findOne({ _id: new ObjectId(id) })
-
-      if (!article) {
-        return new NextResponse(JSON.stringify({ success: false, message: "Article not found" }), {
-          status: 404,
-          headers: {
-            "Content-Type": "application/json",
-            "Access-Control-Allow-Origin": "*",
-          },
-        })
-      }
-
-      // Convert ObjectId to string for the response
-      const responseData = {
-        ...article,
-        _id: article._id?.toString(),
-        created_at: article.created_at.toISOString(),
-        updated_at: article.updated_at.toISOString(),
-      }
-      return new NextResponse(JSON.stringify({ success: true, data: responseData }), {
-        headers: {
-          "Content-Type": "application/json",
-          "Access-Control-Allow-Origin": "*",
-        },
-      })
-    } else {
-      // Get all articles
-      const articles = await db.collection<NewsArticle>("news").find().sort({ created_at: -1 }).toArray()
-
-      // Convert ObjectIds to strings for the response
-      const responseData = articles.map((article) => ({
-        ...article,
-        _id: article._id?.toString(),
-        created_at: article.created_at.toISOString(),
-        updated_at: article.updated_at.toISOString(),
-      }))
-      return new NextResponse(JSON.stringify({ success: true, data: responseData }), {
-        headers: {
-          "Content-Type": "application/json",
-          "Access-Control-Allow-Origin": "*",
-        },
-      })
-    }
-  } catch (error: any) {
-    console.error("Error in news API:", error)
-    return new NextResponse(
-      JSON.stringify({
-        success: false,
-        message: "An error occurred",
-        error: error instanceof Error ? error.message : "Unknown error",
-      }),
-      {
-        status: 500,
-        headers: {
-          "Content-Type": "application/json",
-          "Access-Control-Allow-Origin": "*",
-          "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-          "Access-Control-Allow-Headers": "Content-Type, Authorization",
-        },
-      },
-    )
-  }
-}
-
-export async function OPTIONS() {
-  return new Response(null, {
-    status: 200,
-    headers: {
-      "Access-Control-Allow-Origin": "*",
-      "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-      "Access-Control-Allow-Headers": "Content-Type, Authorization",
-    },
-  })
-}
+// Add support for other HTTP methods if needed
+export { default as PUT } from "./[id]/route"
+export { default as DELETE } from "./[id]/route"

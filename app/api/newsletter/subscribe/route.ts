@@ -1,6 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { connectToDatabase } from "@/lib/mongodb"
 import { withCors } from "@/lib/cors"
+import nodemailer from 'nodemailer';
 
 async function handler(request: NextRequest) {
   try {
@@ -46,13 +47,53 @@ async function handler(request: NextRequest) {
       source: "Newsletter",
     })
 
+    // Send welcome email
+    try {
+      const transporter = nodemailer.createTransport({
+        host: process.env.SMTP_HOST,
+        port: parseInt(process.env.SMTP_PORT || '465'),
+        secure: process.env.SMTP_SECURE === 'true',
+        auth: {
+          user: process.env.SMTP_USER,
+          pass: process.env.SMTP_PASSWORD,
+        },
+      });
+
+      await transporter.sendMail({
+        from: `"${process.env.EMAIL_FROM_NAME || 'AKY Newsletter'}" <${process.env.EMAIL_FROM || 'notify@abbakabiryusuf.info'}>`,
+        to: email,
+        subject: 'Welcome to AKY Newsletter!',
+        html: `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+            <h2>Welcome to AKY Newsletter!</h2>
+            <p>Dear Subscriber,</p>
+            <p>Thank you for subscribing to our newsletter. You'll now receive regular updates from us.</p>
+            <p>If you didn't subscribe, please ignore this email or contact our support team.</p>
+            <hr>
+            <p style="font-size: 12px; color: #666;">
+              ${new Date().getFullYear()} AKY. All rights reserved.
+            </p>
+          </div>
+        `,
+      });
+    } catch (emailError) {
+      console.error('Failed to send welcome email:', emailError);
+      // Continue even if email sending fails, but log it
+    }
+
     return NextResponse.json({
       message: "Thank you for subscribing! You'll receive our latest updates.",
       success: true,
     })
   } catch (error) {
     console.error("Newsletter subscription error:", error)
-    return NextResponse.json({ message: "Something went wrong. Please try again later." }, { status: 500 })
+    return NextResponse.json(
+      { 
+        message: "Something went wrong. Please try again later.",
+        success: false
+      }, 
+      { status: 500 }
+    )
   }
 }
 

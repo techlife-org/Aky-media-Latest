@@ -31,6 +31,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   const navigation = [
     { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
     { name: "Broadcast Control", href: "/dashboard/broadcast", icon: Radio },
+    { name: "Achievements", href: "/dashboard/achievements", icon: BarChart3 },
     { name: "News Management", href: "/dashboard/news", icon: Newspaper },
     { name: "Video Management", href: "/dashboard/video", icon: Video }, // Corrected path to match API
     { name: "Website Traffic", href: "/dashboard/traffic", icon: BarChart3 },

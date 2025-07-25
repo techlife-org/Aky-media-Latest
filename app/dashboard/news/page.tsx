@@ -13,6 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Newspaper, Plus, Send, Calendar, Eye, Mail, TrendingUp } from "lucide-react"
 import DashboardLayout from "@/components/dashboard-layout"
 import { toast } from "@/hooks/use-toast"
+import Link from "next/link"
 
 interface NewsArticle {
   id: string
@@ -20,6 +21,7 @@ interface NewsArticle {
   content: string
   doc_type: string
   created_at: string
+  updated_at?: string
   attachment?: {
     url: string
     type: 'image' | 'document' | 'video' | 'link'
@@ -41,10 +43,14 @@ export default function NewsPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [showCustomCategory, setShowCustomCategory] = useState(false)
   const [newArticle, setNewArticle] = useState({
+    id: '',
     title: "",
     content: "",
     doc_type: "",
+    custom_category: "",
     attachment: {
       type: 'link',
       url: '',
@@ -53,6 +59,8 @@ export default function NewsPage() {
     file: null as File | null
   })
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [isDeleting, setIsDeleting] = useState<string | null>(null)
+  const [isSending, setIsSending] = useState<string | null>(null)
 
   useEffect(() => {
     fetchNews()
@@ -84,6 +92,7 @@ export default function NewsPage() {
           content: article.content,
           doc_type: article.doc_type,
           created_at: article.created_at,
+          updated_at: article.updated_at,
           views: article.views || 0,
           ...(article.attachment && { attachment: article.attachment })
         }));
@@ -186,9 +195,95 @@ export default function NewsPage() {
     }
   }
 
+  const resetForm = () => {
+    setNewArticle({
+      id: '',
+      title: "",
+      content: "",
+      doc_type: "",
+      custom_category: "",
+      attachment: {
+        type: 'link',
+        url: '',
+        name: ''
+      },
+      file: null
+    })
+    setEditingId(null)
+    setShowCustomCategory(false)
+  }
+
+  const handleEdit = async (articleId: string) => {
+    try {
+      const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || ''
+      const response = await fetch(`${baseUrl}/api/dashboard/news/${articleId}`)
+      if (!response.ok) {
+        throw new Error('Failed to fetch article details')
+      }
+      const article = await response.json()
+      
+      setEditingId(article.id)
+      setNewArticle({
+        id: article.id,
+        title: article.title,
+        content: article.content,
+        doc_type: article.doc_type,
+        custom_category: article.doc_type,
+        attachment: article.attachment || {
+          type: 'link',
+          url: '',
+          name: ''
+        },
+        file: null
+      })
+      setIsDialogOpen(true)
+    } catch (error) {
+      console.error('Error fetching article:', error)
+      toast({
+        title: "Error",
+        description: "Failed to load article for editing. Please try again.",
+        variant: "destructive",
+      })
+    }
+  }
+
+  const handleDelete = async (id: string) => {
+    if (!window.confirm('Are you sure you want to delete this article? This action cannot be undone.')) {
+      return
+    }
+
+    try {
+      setIsDeleting(id)
+      const response = await fetch(`/api/dashboard/news/${id}`, {
+        method: 'DELETE'
+      })
+
+      if (response.ok) {
+        setNews(prev => prev.filter(article => article.id !== id))
+        toast({
+          title: "Success",
+          description: "Article deleted successfully.",
+        })
+      } else {
+        throw new Error('Failed to delete article')
+      }
+    } catch (error) {
+      console.error('Error deleting article:', error)
+      toast({
+        title: "Error",
+        description: "Failed to delete article. Please try again.",
+        variant: "destructive",
+      })
+    } finally {
+      setIsDeleting(null)
+    }
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!newArticle.title || !newArticle.content || !newArticle.doc_type) {
+    const docType = newArticle.doc_type === 'Other' ? newArticle.custom_category : newArticle.doc_type
+    
+    if (!newArticle.title || !newArticle.content || !docType) {
       toast({
         title: "Missing Information",
         description: "Please fill in all required fields.",
@@ -200,7 +295,7 @@ export default function NewsPage() {
     setIsSubmitting(true)
 
     try {
-      let attachmentUrl = newArticle.attachment.url
+      let attachmentUrl = newArticle.attachment?.url
 
       // Handle file upload if a file is selected
       if (newArticle.file) {
@@ -208,71 +303,61 @@ export default function NewsPage() {
         attachmentUrl = uploadResponse.secure_url
       }
 
-      // Add news article with attachment
-      const response = await fetch("/api/dashboard/news", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          title: newArticle.title,
-          content: newArticle.content,
-          doc_type: newArticle.doc_type,
-          ...(attachmentUrl && {
-            attachment: {
-              url: attachmentUrl,
-              type: newArticle.attachment.type,
-              name: newArticle.attachment.name || 'Attachment'
-            }
-          })
-        }),
-      })
+      const articleData = {
+        title: newArticle.title,
+        content: newArticle.content,
+        doc_type: docType,
+        ...(attachmentUrl && {
+          attachment: {
+            url: attachmentUrl,
+            type: newArticle.attachment?.type || 'link',
+            name: newArticle.attachment?.name || 'Attachment'
+          }
+        })
+      }
+
+      let response: Response
+      let successMessage = ""
+
+      if (editingId) {
+        // Update existing article
+        response = await fetch(`/api/dashboard/news/${editingId}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(articleData)
+        })
+        successMessage = "Article updated successfully"
+      } else {
+        // Create new article
+        response = await fetch("/api/dashboard/news", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(articleData)
+        })
+        successMessage = "Article published successfully"
+      }
 
       if (response.ok) {
         const article = await response.json()
-
-        // Send email notification to subscribers
-        await fetch("/api/dashboard/news/notify", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            id: article.id,
-            title: newArticle.title,
-            content: newArticle.content,
-            doc_type: newArticle.doc_type,
-            attachment: attachmentUrl ? {
-              url: attachmentUrl,
-              type: newArticle.attachment.type,
-              name: newArticle.attachment.name
-            } : undefined
-          }),
-        })
-
+        
+        // Refresh the news list
+        await fetchNews()
+        
         toast({
           title: "Success!",
-          description: "News article published and subscribers notified.",
+          description: successMessage,
         })
 
-        setNewArticle({
-          title: "",
-          content: "",
-          doc_type: "",
-          attachment: {
-            type: 'link',
-            url: '',
-            name: ''
-          },
-          file: null
-        })
+        resetForm()
         setIsDialogOpen(false)
-        fetchNews()
-        fetchStats()
       } else {
-        throw new Error("Failed to publish article")
+        throw new Error(editingId ? "Failed to update article" : "Failed to publish article")
       }
     } catch (error) {
-      console.error("Error publishing article:", error)
+      console.error("Error saving article:", error)
       toast({
         title: "Error",
-        description: "Failed to publish article. Please try again.",
+        description: error.message || "Failed to save article. Please try again.",
         variant: "destructive",
       })
     } finally {
@@ -282,39 +367,35 @@ export default function NewsPage() {
 
   const sendNewsletterUpdate = async (articleId: string) => {
     try {
-      // First get the full article details
-      const articleResponse = await fetch(`/api/dashboard/news/${articleId}`)
-      if (!articleResponse.ok) {
-        throw new Error('Failed to fetch article details')
-      }
-      const article = await articleResponse.json()
-
-      // Then send the notification with full article data
-      const response = await fetch("/api/dashboard/news/notify", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          id: article.id,
-          title: article.title,
-          content: article.content,
-          doc_type: article.doc_type,
-          attachment: article.attachment || null
-        }),
+      setIsSending(articleId)
+      const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || ''
+      const response = await fetch(`${baseUrl}/api/dashboard/news/notify`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ newsId: articleId }),
       })
 
-      if (response.ok) {
-        toast({
-          title: "Newsletter Sent!",
-          description: "Update sent to all subscribers.",
-        })
+      if (!response.ok) {
+        throw new Error('Failed to send newsletter')
       }
+
+      const result = await response.json()
+      
+      toast({
+        title: "Success",
+        description: result.message || "Newsletter sent successfully",
+      })
     } catch (error) {
-      console.error("Error sending newsletter:", error)
+      console.error('Error sending newsletter:', error)
       toast({
         title: "Error",
-        description: "Failed to send newsletter update.",
+        description: "Failed to send newsletter. Please try again.",
         variant: "destructive",
       })
+    } finally {
+      setIsSending(null)
     }
   }
 
@@ -348,7 +429,14 @@ export default function NewsPage() {
             <h1 className="text-3xl font-bold text-gray-900">News Management</h1>
             <p className="text-gray-600 mt-2">Manage news articles and notify subscribers.</p>
           </div>
-          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+          <Dialog open={isDialogOpen} onOpenChange={(open) => {
+            if (!open) {
+              resetForm()
+              setIsDialogOpen(false)
+            } else {
+              setIsDialogOpen(true)
+            }
+          }}>
             <DialogTrigger asChild>
               <Button className="bg-red-600 hover:bg-red-700">
                 <Plus className="w-4 h-4 mr-2" />
@@ -357,7 +445,7 @@ export default function NewsPage() {
             </DialogTrigger>
             <DialogContent className="max-w-2xl">
               <DialogHeader>
-                <DialogTitle>Add New Article</DialogTitle>
+                <DialogTitle>{editingId ? 'Edit Article' : 'Add New Article'}</DialogTitle>
               </DialogHeader>
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div>
@@ -369,11 +457,20 @@ export default function NewsPage() {
                     required
                   />
                 </div>
+                
                 <div>
                   <label className="block text-sm font-medium mb-2">Category</label>
                   <Select
                     value={newArticle.doc_type}
-                    onValueChange={(value) => setNewArticle({ ...newArticle, doc_type: value })}
+                    onValueChange={(value) => {
+                      const showCustom = value === 'Other'
+                      setShowCustomCategory(showCustom)
+                      setNewArticle(prev => ({
+                        ...prev,
+                        doc_type: value,
+                        custom_category: showCustom ? prev.custom_category : ''
+                      }))
+                    }}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Select category" />
@@ -385,9 +482,25 @@ export default function NewsPage() {
                       <SelectItem value="Agriculture">Agriculture</SelectItem>
                       <SelectItem value="Economy">Economy</SelectItem>
                       <SelectItem value="Security">Security</SelectItem>
+                      <SelectItem value="Other">Other (Specify)</SelectItem>
                     </SelectContent>
                   </Select>
+                  
+                  {showCustomCategory && (
+                    <div className="mt-2">
+                      <Input
+                        value={newArticle.custom_category}
+                        onChange={(e) => setNewArticle(prev => ({
+                          ...prev,
+                          custom_category: e.target.value
+                        }))}
+                        placeholder="Enter custom category"
+                        required={newArticle.doc_type === 'Other'}
+                      />
+                    </div>
+                  )}
                 </div>
+                
                 <div>
                   <div className="space-y-4">
                     <div>
@@ -441,13 +554,41 @@ export default function NewsPage() {
                     </div>
                   </div>
                 </div>
-                <div className="flex justify-end gap-4">
-                  <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
-                    Cancel
-                  </Button>
-                  <Button type="submit" disabled={isSubmitting} className="bg-red-600 hover:bg-red-700">
-                    {isSubmitting ? "Publishing..." : "Publish & Notify"}
-                  </Button>
+                <div className="flex justify-between gap-4">
+                  <div>
+                    {editingId && (
+                      <Button 
+                        type="button" 
+                        variant="destructive" 
+                        onClick={() => handleDelete(editingId)}
+                        disabled={isSubmitting}
+                      >
+                        {isDeleting === editingId ? 'Deleting...' : 'Delete'}
+                      </Button>
+                    )}
+                  </div>
+                  <div className="flex gap-4">
+                    <Button 
+                      type="button" 
+                      variant="outline" 
+                      onClick={() => {
+                        resetForm()
+                        setIsDialogOpen(false)
+                      }}
+                      disabled={isSubmitting}
+                    >
+                      Cancel
+                    </Button>
+                    <Button 
+                      type="submit" 
+                      disabled={isSubmitting} 
+                      className="bg-red-600 hover:bg-red-700"
+                    >
+                      {isSubmitting 
+                        ? (editingId ? 'Updating...' : 'Publishing...') 
+                        : (editingId ? 'Update' : 'Publish')}
+                    </Button>
+                  </div>
                 </div>
               </form>
             </DialogContent>
@@ -537,40 +678,120 @@ export default function NewsPage() {
         {/* News Articles */}
         <Card>
           <CardHeader>
-            <CardTitle>Recent Articles</CardTitle>
+            <div className="flex justify-between items-center">
+              <CardTitle>Recent Articles</CardTitle>
+              <div className="text-sm text-gray-500">
+                Showing {news.length} of {news.length} articles
+              </div>
+            </div>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
-              {news.slice(0, 10).map((article) => (
-                <div key={article.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                  <div className="flex-1">
-                    <h3 className="font-medium text-gray-900 mb-2">{article?.title}</h3>
-                    <div className="flex items-center gap-4 text-sm text-gray-500">
-                      <span className="flex items-center gap-1">
-                        <Calendar className="w-4 h-4" />
-                        {new Date(article?.created_at).toLocaleDateString()}
-                      </span>
-                      <Badge variant="secondary">{article?.doc_type}</Badge>
-                      {article?.views && (
-                        <span className="flex items-center gap-1">
-                          <Eye className="w-4 h-4" />
-                          {article?.views} views
-                        </span>
-                      )}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-4">
+              {news.map((article) => (
+                <div 
+                  key={article.id} 
+                  className="group flex flex-col h-full bg-white rounded-lg border border-gray-200 hover:shadow-md transition-shadow duration-200 overflow-hidden"
+                >
+                  {/* Image Section */}
+                  {article.attachment?.url && (
+                    <div className="w-full h-48 overflow-hidden">
+                      <img 
+                        src={article.attachment.url} 
+                        alt={article.title}
+                        className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                      />
+                    </div>
+                  )}
+                  
+                  {/* Content Section */}
+                  <div className="p-4 flex flex-col flex-1">
+                    <div className="flex-1">
+                      <h3 className="font-medium text-lg text-gray-900 mb-2 line-clamp-2">
+                        <Link href={`/news/${article.id}`} className="hover:text-red-600">
+                          {article.title}
+                        </Link>
+                      </h3>
+                      <p className="text-gray-600 text-sm mb-3 line-clamp-3">
+                        {article.content.substring(0, 150)}...
+                      </p>
+                    </div>
+                    
+                    <div className="mt-4 pt-3 border-t border-gray-100">
+                      <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-gray-500">
+                        <div className="flex items-center gap-2">
+                          <Calendar className="w-3.5 h-3.5" />
+                          <span>{new Date(article.created_at).toLocaleDateString()}</span>
+                          <Badge variant="outline" className="text-xs">
+                            {article.doc_type}
+                          </Badge>
+                        </div>
+                        {article.views !== undefined && (
+                          <div className="flex items-center gap-1">
+                            <Eye className="w-3.5 h-3.5" />
+                            <span>{article.views} {article.views === 1 ? 'view' : 'views'}</span>
+                          </div>
+                        )}
+                      </div>
+                      
+                      {/* Action Buttons */}
+                      <div className="mt-3 flex items-center justify-between gap-2 pt-2 border-t border-gray-100">
+                        <div className="flex gap-1">
+                          <Button 
+                            variant="ghost" 
+                            size="xs"
+                            onClick={(e) => {
+                              e.preventDefault()
+                              e.stopPropagation()
+                              handleEdit(article.id)
+                            }}
+                            className="text-xs h-7 px-2"
+                          >
+                            Edit
+                          </Button>
+                          <Button 
+                            variant="ghost" 
+                            size="xs"
+                            onClick={(e) => {
+                              e.preventDefault()
+                              e.stopPropagation()
+                              handleDelete(article.id)
+                            }}
+                            className="text-xs h-7 px-2 text-red-600 hover:text-red-700 hover:bg-red-50"
+                          >
+                            Delete
+                          </Button>
+                        </div>
+                        <Button 
+                          variant="ghost" 
+                          size="xs"
+                          onClick={(e) => {
+                            e.preventDefault()
+                            e.stopPropagation()
+                            sendNewsletterUpdate(article.id)
+                          }}
+                          disabled={isSending === article.id}
+                          className="text-xs h-7 px-2 text-green-600 hover:text-green-700 hover:bg-green-50"
+                        >
+                          {isSending === article.id ? 'Sending...' : 'Send Update'}
+                        </Button>
+                      </div>
                     </div>
                   </div>
-                  <Button onClick={() => sendNewsletterUpdate(article.id)} variant="outline" size="sm" className="ml-4">
-                    <Send className="w-4 h-4 mr-2" />
-                    Send Update
-                  </Button>
                 </div>
               ))}
             </div>
 
             {news.length === 0 && (
-              <div className="text-center py-8">
-                <Newspaper className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                <p className="text-gray-600">No news articles found.</p>
+              <div className="text-center py-12">
+                <Newspaper className="w-12 h-12 text-gray-300 mx-auto mb-4" />
+                <p className="text-gray-500 mb-4">No news articles found.</p>
+                <Button 
+                  onClick={() => setIsDialogOpen(true)}
+                  className="bg-red-600 hover:bg-red-700"
+                >
+                  <Plus className="w-4 h-4 mr-2" />
+                  Create Your First Article
+                </Button>
               </div>
             )}
           </CardContent>

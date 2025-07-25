@@ -1,12 +1,13 @@
-import { type NextRequest, NextResponse } from "next/server"
-import { connectToDatabase } from "@/lib/mongodb"
-import { ObjectId } from "mongodb"
-import { corsHeaders } from "@/lib/cors"
+import { NextResponse } from 'next/server';
+import { MongoClient, ObjectId } from 'mongodb';
+import nodemailer from 'nodemailer';
+import { corsHeaders } from '@/lib/cors';
 
-interface Attachment {
-  url: string
-  type: "image" | "document" | "video" | "link"
-  name?: string
+interface Subscriber {
+  _id: ObjectId;
+  email: string;
+  name?: string;
+  status: 'active' | 'pending' | 'inactive';
 }
 
 interface RequestBody {
@@ -14,17 +15,11 @@ interface RequestBody {
   title: string
   content: string
   doc_type: string
-  attachment?: Attachment
-}
-
-interface Subscriber {
-  _id: ObjectId
-  email: string
-  name?: string
-  status: string
-  mobile?: string // Added mobile field
-  lastEmailSent?: Date
-  emailsReceived?: number
+  attachment?: {
+    url: string
+    type: "image" | "document" | "video" | "link"
+    name?: string
+  }
 }
 
 interface Notification {
@@ -35,149 +30,91 @@ interface Notification {
   sentTo: number
   sentAt: Date
   type: "news_notification"
-  status: "sent"
+  status: "sent" | "partial"
   emailSubject: string
   articleId?: ObjectId | null;
-  subscribers: { email: string; name: string; mobile?: string }[] // Added mobile to notification subscribers
-  attachment?: Attachment
+  subscribers: { email: string; name: string; mobile?: string }[] 
+  attachment?: {
+    url: string
+    type: "image" | "document" | "video" | "link"
+    name?: string
+  }
+  failedRecipients?: { email: string; error: string }[]
 }
 
 export async function POST(request: NextRequest) {
   try {
     const { id, title, content, doc_type, attachment } = (await request.json()) as RequestBody
-    let db
-    try {
-      const dbConnection = await connectToDatabase()
-      db = dbConnection.db
-    } catch (error) {
-      console.error("Database connection error:", error)
-      // Return a default response when database is not available
-      return NextResponse.json(
-        {
-          message: "Service temporarily unavailable. Please try again later.",
-          success: false,
-        },
-        { status: 503 },
-      )
+    if (!id) {
+      return new NextResponse(
+        JSON.stringify({ success: false, message: 'News ID is required' }),
+        { status: 400, headers: corsHeaders() }
+      );
     }
 
-    // Get all active subscribers with proper type assertion, including mobile numbers
+    // Connect to MongoDB
+    const client = await new MongoClient(process.env.MONGODB_URI!).connect();
+    const db = client.db(process.env.MONGODB_DB);
+
+    // Get news article
+    const news = await db.collection('news').findOne({ _id: new ObjectId(id) });
+    if (!news) {
+      return new NextResponse(
+        JSON.stringify({ success: false, message: 'News article not found' }),
+        { status: 404, headers: corsHeaders() }
+      );
+    }
+
+    // Get active subscribers
     const subscribers = await db
-      .collection<Subscriber>("subscribers")
-      .find(
-        {
-          status: { $in: ["active", "pending"] },
-          email: { $exists: true, $ne: "" },
-        } as any,
-        { projection: { email: 1, name: 1, mobile: 1 } }, // Project only necessary fields
-      )
+      .collection<Subscriber>('subscribers')
+      .find({
+        status: { $in: ['active', 'pending'] },
+        email: { $exists: true, $ne: '' }
+      })
       .toArray()
+      .catch(() => []);
 
     if (subscribers.length === 0) {
-      return NextResponse.json(
-        {
-          message: "No active subscribers found",
-          sentTo: 0,
-        },
-        { headers: corsHeaders() }, // Use corsHeaders() as a function call
-      )
+      return new NextResponse(
+        JSON.stringify({ success: false, message: 'No active subscribers found' }),
+        { status: 200, headers: corsHeaders() }
+      );
     }
 
-    // Create email content
-    const emailContent = {
-      subject: `New Update: ${title}`,
-      html: `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-          <div style="background: linear-gradient(135deg, #dc2626, #b91c1c); padding: 30px; text-align: center;">
-            <h1 style="color: white; margin: 0; font-size: 28px;">AKY Media Center</h1>
-            <p style="color: rgba(255,255,255,0.9); margin: 10px 0 0 0;">News Update from Governor Abba Kabir Yusuf</p>
-          </div>
-          <div style="padding: 30px; background: white;">
-            <div style="background: #f8fafc; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
-              <span style="background: #dc2626; color: white; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: bold;">${doc_type}</span>
-            </div>
-            <h2 style="color: #1f2937; margin: 0 0 15px 0; font-size: 24px;">${title}</h2>
-            <div style="color: #4b5563; line-height: 1.6; margin-bottom: 30px;">${
-              content.length > 300 ? content.substring(0, 300) + "..." : content
-            }</div>
-            ${
-              attachment
-                ? `
-            <div style="margin: 30px 0; padding: 15px; background: #f8fafc; border-left: 4px solid #dc2626; border-radius: 4px;">
-              <h3 style="margin: 0 0 10px 0; font-size: 16px; color: #1f2937;">Attachment:</h3>
-              ${
-                attachment.type === "image"
-                  ? `<img src="${attachment.url}" alt="${
-                      attachment.name || "News attachment"
-                    }" style="max-width: 100%; border-radius: 4px; margin-bottom: 10px;" />`
-                  : ""
-              }
-              <a href="${attachment.url}"
-                  target="_blank"
-                  style="color: #dc2626; text-decoration: none; font-weight: 500; display: inline-flex; align-items: center; gap: 8px;">
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                  <polyline points="7 10 12 15 17 10"></polyline>
-                  <line x1="12" y1="15" x2="12" y2="3"></line>
-                </svg>
-                ${attachment.name || "Download Attachment"}
-              </a>
-            </div>`
-                : ""
-            }
-            <div style="text-align: center; margin: 30px 0;">
-              <a href="${process.env.NEXT_PUBLIC_BASE_URL || "https://abbakabiryusuf.com"}/news"
-                  style="background: #dc2626; color: white; padding: 12px 30px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">
-                Read Full Article
-              </a>
-            </div>
-          </div>
-          <div style="background: #f9fafb; padding: 20px; text-align: center; border-top: 1px solid #e5e7eb;">
-            <p style="color: #6b7280; font-size: 14px; margin: 0 0 10px 0;">
-              You're receiving this because you subscribed to AKY Media Center updates.
-            </p>
-            <a href="${process.env.NEXT_PUBLIC_BASE_URL || "https://abbakabiryusuf.com"}/unsubscribe"
-                style="color: #dc2626; text-decoration: none; font-size: 12px;">
-              Unsubscribe
-            </a>
-          </div>
-        </div>
-      `,
-      text: `
-        AKY Media Center - News Update
-        ${title}
-        Category: ${doc_type}
-        ${content}
-        ${attachment ? `Attachment: ${attachment.name || "Download"} - ${attachment.url}` : ""}
-        Read more at: ${process.env.NEXT_PUBLIC_BASE_URL || "https://abbakabiryusuf.com"}/news
-        ---
-        You're receiving this because you subscribed to AKY Media Center updates.
-        Unsubscribe: ${process.env.NEXT_PUBLIC_BASE_URL || "https://abbakabiryusuf.com"}/unsubscribe
-      `,
-    }
-
-    // In a real application, integrate with email service (SendGrid, Mailgun, etc.)
-    // For now, we'll simulate and log the email sending
-    console.log("📧 Sending news update to subscribers:", {
-      title,
-      doc_type,
-      subscriberCount: subscribers.length,
-      emailContent: emailContent.subject,
-    })
-
-    // Simulate sending emails
-    for (const subscriber of subscribers) {
-      console.log(`Simulating email to: ${subscriber.email} with subject: ${emailContent.subject}`)
-      // Here you would call your email service API (e.g., SendGrid, Nodemailer)
-      // Example: await sendEmail(subscriber.email, emailContent.subject, emailContent.html, emailContent.text);
-
-      // Simulate SMS sending if mobile number is available
-      if (subscriber.mobile) {
-        console.log(`Simulating SMS to: ${subscriber.mobile} with message: New update: ${title.substring(0, 50)}...`)
-        // Here you would call your SMS service API (e.g., Twilio, Vonage)
-        // Example: await sendSms(subscriber.mobile, `New update: ${title.substring(0, 100)}...`);
+    // Setup email transporter
+    const transporter = nodemailer.createTransport({
+      host: process.env.SMTP_HOST,
+      port: parseInt(process.env.SMTP_PORT || '587'),
+      secure: process.env.SMTP_SECURE === 'true',
+      auth: {
+        user: process.env.SMTP_USER,
+        pass: process.env.SMTP_PASSWORD
       }
-    }
+    });
+
+    // Send emails
+    const results = await Promise.all(
+      subscribers.map(async (sub) => {
+        try {
+          await transporter.sendMail({
+            from: `"AKY Media Center" <${process.env.SMTP_FROM_EMAIL || process.env.SMTP_USER}>`,
+            to: sub.email,
+            subject: `New Update: ${title}`,
+            html: generateEmailHtml({ title, content, attachment, _id: id }, sub.name || 'Subscriber')
+          });
+          return { success: true, email: sub.email };
+        } catch (error) {
+          return { success: false, email: sub.email, error: error instanceof Error ? error.message : 'Unknown error' };
+        }
+      })
+    );
+
+    const successful = results.filter(r => r.success);
+    const failed = results.filter(r => !r.success);
+
+    // Log results
+    console.log(`Sent ${successful.length} emails, ${failed.length} failed`);
 
     // Store notification record
     const notification: Notification = {
@@ -185,84 +122,111 @@ export async function POST(request: NextRequest) {
       title,
       content: content.substring(0, 200) + (content.length > 200 ? "..." : ""),
       doc_type,
-      sentTo: subscribers.length,
+      sentTo: successful.length,
       sentAt: new Date(),
       type: "news_notification",
-      status: "sent",
-      emailSubject: emailContent.subject,
+      status: failed.length === 0 ? "sent" : "partial",
+      emailSubject: `New Update: ${title}`,
       articleId: id ? new ObjectId(id) : null,
-      subscribers: subscribers.map((sub) => ({
-        email: sub.email,
-        name: sub.name || "Subscriber",
-        ...(sub.mobile && { mobile: sub.mobile }), // Include mobile if present
+      subscribers: successful.map((_, index) => ({
+        email: subscribers[index].email,
+        name: subscribers[index].name || "Subscriber",
+        ...(subscribers[index].mobile && { mobile: subscribers[index].mobile }),
       })),
       ...(attachment ? { attachment } : {}),
-    }
+      ...(failed.length > 0 && { failedRecipients: failed.map(result => ({ email: result.email, error: result.error })) }),
+    };
 
+    // Save notification to database
     await db.collection("email_notifications").insertOne({
       ...notification,
       _id: notification._id,
       articleId: notification.articleId,
-    })
+    });
 
-    // Update subscriber engagement with proper type assertion
-    if (subscribers.length > 0) {
+    // Update subscriber engagement
+    if (successful.length > 0) {
       await db.collection<Subscriber>("subscribers").updateMany(
         {
-          _id: { $in: subscribers.map((sub) => sub._id) },
+          _id: { $in: successful.map((_, index) => subscribers[index]._id) },
         } as any,
         { $inc: { emailsReceived: 1 }, $set: { lastEmailSent: new Date() } } as any,
       )
     }
 
-    // Insert notification into database
-    await db.collection("notifications").insertOne(notification)
+    // Insert notification into notifications collection
+    await db.collection("notifications").insertOne(notification);
 
     return new NextResponse(
       JSON.stringify({
         success: true,
-        message: "News update sent successfully to all subscribers",
-        sentTo: subscribers.length,
-        notificationId: notification._id.toString(),
+        message: `Notification sent to ${successful.length} subscribers`,
+        sent: successful.length,
+        failed: failed.length
       }),
-      {
-        status: 200,
-        headers: {
-          "Content-Type": "application/json",
-          "Access-Control-Allow-Origin": "*",
-          "Access-Control-Allow-Methods": "POST, OPTIONS",
-          "Access-Control-Allow-Headers": "Content-Type, Authorization",
-        },
-      },
-    )
-  } catch (error: any) {
-    console.error("News notification error:", error)
+      { status: 200, headers: corsHeaders() }
+    );
+
+  } catch (error) {
+    console.error('Notification error:', error);
     return new NextResponse(
       JSON.stringify({
         success: false,
-        message: "Failed to send news update",
-        error: error instanceof Error ? error.message : "Unknown error",
+        message: 'Failed to process notification',
+        error: error instanceof Error ? error.message : 'Unknown error'
       }),
-      {
-        status: 500,
-        headers: {
-          "Content-Type": "application/json",
-          "Access-Control-Allow-Origin": "*",
-          "Access-Control-Allow-Methods": "POST, OPTIONS",
-          "Access-Control-Allow-Headers": "Content-Type, Authorization",
-        },
-      },
-    )
+      { status: 500, headers: corsHeaders() }
+    );
   }
+}
+
+function generateEmailHtml(news: any, name: string) {
+  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
+  const newsUrl = `${baseUrl}/news/${news._id}`;
+  
+  return `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+      <div style="background: #dc2626; padding: 20px; text-align: center; color: white;">
+        <h1>AKY Media Center</h1>
+        <p>Latest Update from Governor Abba Kabir Yusuf</p>
+      </div>
+      <div style="padding: 20px; background: white;">
+        <h2 style="color: #1f2937; margin-top: 0;">${news.title}</h2>
+        ${news.attachment?.url && news.attachment.type === 'image' ? 
+          `<div style="margin: 15px 0;">
+            <img src="${news.attachment.url}" alt="${news.title}" style="max-width: 100%; border-radius: 4px;">
+          </div>` : ''
+        }
+        <p style="color: #4b5563; line-height: 1.6;">
+          ${news.content.substring(0, 200)}...
+        </p>
+        <div style="margin: 25px 0; text-align: center;">
+          <a href="${newsUrl}" style="
+            display: inline-block; 
+            padding: 12px 24px; 
+            background: #dc2626; 
+            color: white; 
+            text-decoration: none; 
+            border-radius: 4px;
+            font-weight: bold;
+          ">
+            Read Full Story
+          </a>
+        </div>
+      </div>
+      <div style="padding: 15px; background: #f8fafc; text-align: center; font-size: 12px; color: #666;">
+        <p>  ${new Date().getFullYear()} AKY Media Center. All rights reserved.</p>
+        <p>
+          <a href="${baseUrl}/unsubscribe" style="color: #666; text-decoration: underline;">Unsubscribe</a>
+        </p>
+      </div>
+    </div>
+  `;
 }
 
 export async function OPTIONS() {
   return new Response(null, {
     status: 200,
-    headers: {
-      "Access-Control-Allow-Origin": "*",
-      "Access-Control-Allow-Methods": "POST, OPTIONS",
-      "Access-Control-Allow-Headers": "Content-Type, Authorization",
-    },
+    headers: corsHeaders(),
   })
 }
