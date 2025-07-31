@@ -135,11 +135,11 @@ export async function POST(request: NextRequest) {
                 to: sub.email,
                 subject: `New Update: ${title}`,
                 html: generateEmailHtml({
-                  title,
-                  content,
-                  attachment,
+                  title: news?.title || title,
+                  content: news?.content || content,
+                  attachment: news?.attachment || attachment,
                   _id: newsId,
-                  doc_type
+                  doc_type: news?.doc_type || doc_type
                 }, sub.name || 'Subscriber'),
                 headers: {
                   'List-Unsubscribe': `<${process.env.NEXT_PUBLIC_BASE_URL}/unsubscribe?email=${encodeURIComponent(sub.email)}>`,

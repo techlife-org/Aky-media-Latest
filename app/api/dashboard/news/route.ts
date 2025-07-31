@@ -21,31 +21,65 @@ interface NewsArticle {
 
 // GET /api/dashboard/news - Get all news articles
 export async function GET() {
+  let client;
   try {
-    const client = await clientPromise
-    const db = client.db()
+    // Get a new client instance
+    client = await clientPromise;
+    if (!client) {
+      throw new Error('MongoDB client is not connected');
+    }
 
-    const news = await db
-      .collection<NewsArticle>("news")
+    const db = client.db();
+    if (!db) {
+      throw new Error('Failed to connect to database');
+    }
+
+    const newsCollection = db.collection<NewsArticle>('news');
+    if (!newsCollection) {
+      throw new Error('Failed to access news collection');
+    }
+
+    const news = await newsCollection
       .find({})
-      .sort({ created_at: -1 }) // Sort by creation date, newest first
-      .toArray()
+      .sort({ created_at: -1 })
+      .toArray();
 
     // Convert _id to string for each document
     const formattedNews = news.map(({ _id, ...doc }) => ({
       id: _id.toString(),
       ...doc,
-      created_at: doc.created_at.toISOString(),
-      updated_at: doc.updated_at.toISOString(),
-    }))
+      created_at: doc.created_at ? new Date(doc.created_at).toISOString() : new Date().toISOString(),
+      updated_at: doc.updated_at ? new Date(doc.updated_at).toISOString() : new Date().toISOString(),
+    }));
 
-    return NextResponse.json(formattedNews)
+    return NextResponse.json(formattedNews);
   } catch (error) {
-    console.error("Error fetching news:", error)
+    console.error('Error in GET /api/dashboard/news:', error);
+    
+    // More specific error messages based on error type
+    let errorMessage = 'Failed to fetch news';
+    let statusCode = 500;
+
+    if (error instanceof Error) {
+      if (error.message.includes('ECONNREFUSED')) {
+        errorMessage = 'Database connection refused. Please check if MongoDB is running.';
+        statusCode = 503; // Service Unavailable
+      } else if (error.message.includes('timed out')) {
+        errorMessage = 'Database connection timed out. Please try again later.';
+        statusCode = 504; // Gateway Timeout
+      } else if (error.message.includes('not authorized')) {
+        errorMessage = 'Not authorized to access the database. Check your credentials.';
+        statusCode = 401; // Unauthorized
+      }
+    }
+
     return NextResponse.json(
-      { error: "Failed to fetch news" },
-      { status: 500 }
-    )
+      { 
+        error: errorMessage,
+        details: process.env.NODE_ENV === 'development' ? error.message : undefined
+      },
+      { status: statusCode }
+    );
   }
 }
 
@@ -89,6 +123,13 @@ export async function POST(request: Request) {
     })
 
     // Convert _id to string for the response
+    if (!createdArticle) {
+      return NextResponse.json(
+        { error: "Failed to retrieve created article" },
+        { status: 500 }
+      )
+    }
+    
     const { _id, ...articleData } = createdArticle
     return NextResponse.json(
       { id: _id.toString(), ...articleData },
@@ -105,4 +146,4 @@ export async function POST(request: Request) {
 
 // Add support for other HTTP methods if needed
 export { default as PUT } from "./[id]/route"
-export { default as DELETE } from "./[id]/route"
+// export { default as DELETE } from "./[id]/route"

@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Calendar, MapPin, GraduationCap, Briefcase, Award } from "lucide-react"
 import Image from "next/image"
+import NewsletterSection from "@/components/newsletter-section"
 
 const timelineEvents = [
   {
@@ -194,24 +195,7 @@ export default function AboutPage() {
           </div>
         </section>
         {/* Call to Action */}
-        <section className="py-16 bg-gradient-to-r from-red-600 to-red-800 text-white">
-          <div className="container mx-auto px-4 text-center">
-            <h2 className="text-4xl font-bold mb-4">Stay Updated</h2>
-            <p className="text-xl mb-8 opacity-90">Don't miss our latest updates and achievements</p>
-            <div className="max-w-md mx-auto">
-              <div className="flex gap-4">
-                <input
-                  type="email"
-                  placeholder="Enter your email"
-                  className="flex-1 px-4 py-3 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-yellow-300"
-                />
-                <Button className="bg-yellow-500 hover:bg-yellow-600 text-gray-900 font-semibold px-8">
-                  Subscribe
-                </Button>
-              </div>
-            </div>
-          </div>
-        </section>
+        <NewsletterSection />
         <Footer />
       </div>
     </PageLoader>

@@ -117,9 +117,12 @@ export async function POST(req: Request) {
   }
 }
 
-export async function DELETE(req: Request) {
+export async function DELETE(
+  req: Request,
+  { params }: { params: { id: string } }
+) {
   try {
-    const id = req.url.split("/").pop() // Extract ID from URL
+    const { id } = params;
 
     if (!id || !ObjectId.isValid(id)) {
       return NextResponse.json({ error: "Valid Video ID is required" }, { status: 400 })
