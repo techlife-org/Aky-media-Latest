@@ -64,7 +64,7 @@ export default function NewsPage() {
 
   useEffect(() => {
     fetchNews()
-    fetchStats()
+    fetchStats() 
   }, [])
 
   const fetchNews = async () => {
@@ -482,6 +482,11 @@ export default function NewsPage() {
                       <SelectItem value="Agriculture">Agriculture</SelectItem>
                       <SelectItem value="Economy">Economy</SelectItem>
                       <SelectItem value="Security">Security</SelectItem>
+                      <SelectItem value="Enviroment">Enviroment</SelectItem>
+                      <SelectItem value="EconomicDevelopment">Economic Development</SelectItem>
+                      <SelectItem value="CommunityDevelopment">Community Development</SelectItem>
+                      <SelectItem value="Sport">Sport</SelectItem>
+                      
                       <SelectItem value="Other">Other (Specify)</SelectItem>
                     </SelectContent>
                   </Select>
