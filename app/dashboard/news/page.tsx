@@ -482,7 +482,7 @@ export default function NewsPage() {
                       <SelectItem value="Agriculture">Agriculture</SelectItem>
                       <SelectItem value="Economy">Economy</SelectItem>
                       <SelectItem value="Security">Security</SelectItem>
-                      <SelectItem value="Enviroment">Enviroment</SelectItem>
+                      <SelectItem value="Environment">Environment</SelectItem>
                       <SelectItem value="EconomicDevelopment">Economic Development</SelectItem>
                       <SelectItem value="CommunityDevelopment">Community Development</SelectItem>
                       <SelectItem value="Sport">Sport</SelectItem>
@@ -539,7 +539,7 @@ export default function NewsPage() {
                           <Input
                             type="file"
                             id="file-upload"
-                            className="sr-only"
+                            className="sr-only" 
                             onChange={handleFileChange}
                             accept="image/*,.pdf,.doc,.docx"
                           />
