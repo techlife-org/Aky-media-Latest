@@ -143,7 +143,7 @@ export default function NewsDetailPage() {
     <div className="min-h-screen bg-white">
       <Header />
 
-      {/* Breadcrumb Section */}
+      {/* Breadcrumb Section
       <section className="py-20 relative bg-gradient-to-r from-red-600 via-red-700 to-red-800">
         <div className="container mx-auto px-4">
           <div className="grid lg:grid-cols-2 gap-12 items-center">
@@ -172,7 +172,7 @@ export default function NewsDetailPage() {
             </div>
           </div>
         </div>
-      </section>
+      </section> */}
 
       <main className="py-20">
         <div className="container mx-auto px-4">
