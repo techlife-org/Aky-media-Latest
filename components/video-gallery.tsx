@@ -1,7 +1,5 @@
 "use client"
 
-import type React from "react"
-
 import { useState, useRef, useEffect, useCallback } from "react"
 import Image from "next/image"
 import { Button } from "@/components/ui/button"
@@ -50,12 +48,12 @@ const MobileVideoPlayer = ({
     }
   }, [isPlaying, isMuted, isYouTube])
 
-  const handlePlayPauseClick = (e: React.MouseEvent) => {
+  const handlePlayPauseClick = (e: MouseEvent<HTMLDivElement>) => {
     e.stopPropagation()
     togglePlay()
   }
 
-  const handleMuteToggleClick = (e: React.MouseEvent) => {
+  const handleMuteToggleClick = (e: MouseEvent<HTMLDivElement>) => {
     e.stopPropagation()
     toggleMute()
   }
@@ -161,7 +159,7 @@ export default function VideoGallery() {
     if (videos.length === 0) return
 
     const observer = new IntersectionObserver(
-      (entries) => {
+      (entries: IntersectionObserverEntry[], observer: IntersectionObserver) => {
         entries.forEach((entry) => {
           if (entry.isIntersecting) {
             const index = Number(entry.target.getAttribute("data-index") || "0")
@@ -218,7 +216,7 @@ export default function VideoGallery() {
     setIsModalOpen(true)
   }
 
-  const handleCloseModal = () => {
+  const handleCloseModal = (e: MouseEvent<HTMLDivElement>) => {
     setSelectedVideo(null)
     setIsModalOpen(false)
   }
@@ -252,20 +250,62 @@ export default function VideoGallery() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-red-600"></div>
+      <div className="py-16 bg-white">
+        <div className="container mx-auto px-4">
+          <div className="animate-pulse space-y-8">
+            <div className="h-8 bg-gray-200 rounded w-1/3 mx-auto"></div>
+            <div className="h-1 bg-gray-200 rounded w-20 mx-auto"></div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-12">
+              {[...Array(3)].map((_, i) => (
+                <div key={i} className="bg-gray-100 rounded-lg aspect-video"></div>
+              ))}
+            </div>
+          </div>
+        </div>
       </div>
     )
   }
 
+  if (videos.length === 0) {
+    return (
+      <section className="py-24 md:py-32 bg-gradient-to-b from-gray-50 to-white">
+        <div className="container mx-auto px-4 text-center">
+          <div className="max-w-3xl mx-auto">
+            <div className="inline-flex items-center justify-center w-24 h-24 rounded-full bg-red-50 mb-6">
+              <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-red-600">
+                <polygon points="23 7 16 12 23 17 23 7"></polygon>
+                <rect x="1" y="5" width="15" height="14" rx="2" ry="2"></rect>
+              </svg>
+            </div>
+            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
+              Coming Soon
+            </h2>
+            <p className="text-lg text-gray-600 mb-8 max-w-2xl mx-auto">
+              We're working hard to bring you amazing video content. Check back soon for updates!
+            </p>
+            <div className="w-20 h-1 bg-red-600 mx-auto mb-8"></div>
+            <div className="mt-8">
+              <Button 
+                className="bg-red-600 hover:bg-red-700 text-white px-8 py-6 text-lg"
+                onClick={() => window.location.href = '/'}
+              >
+                Back to Home
+              </Button>
+            </div>
+          </div>
+        </div>
+      </section>
+    )
+  }
+
   return (
-    <section className="py-16 bg-gray-50">
+    <section className="py-16 md:py-20 bg-white">
       <div className="container mx-auto px-4">
         <div className="text-center mb-12">
-          <h2 className="text-4xl font-bold text-gray-900 mb-4">Our Video Gallery</h2>
-          <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-            Explore a collection of impactful videos showcasing the Governor's initiatives and key events.
-          </p>
+          <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
+            Our Video Gallery
+          </h2>
+          <div className="w-20 h-1 bg-red-600 mx-auto"></div>
         </div>
         {/* Mobile View: YouTube Shorts Style */}
         <div

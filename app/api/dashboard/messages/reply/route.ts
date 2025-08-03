@@ -680,9 +680,9 @@ function generateEmailHtml(content: string, recipientName: string, subject: stri
             
             <p style="margin-top: 20px;">
               <strong>Contact Information:</strong><br>
-              📧 Email: info@abbakabiryusuf.com<br>
-              🌐 Website: www.abbakabiryusuf.com<br>
-              📱 Phone: +234 123 456 7890
+                📧 Email: info@abbakabiryusuf.com<br>
+                🌐 Website: www.abbakabiryusuf.com<br>
+                📱 Phone: +2347074222252
             </p>
           </div>
         </div>
@@ -692,9 +692,7 @@ function generateEmailHtml(content: string, recipientName: string, subject: stri
           <!-- Address Section -->
           <div class="footer-address">
             <p><strong>📍 Official Address</strong><br>
-            Kano State Government House<br>
-            AKY Media Center<br>
-            Kano, Nigeria</p>
+            Kano State Kano, Nigeria</p>
           </div>
           
           <!-- Copyright -->

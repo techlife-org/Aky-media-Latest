@@ -306,7 +306,8 @@ function generateEmailHtml(content: string, recipientName: string, subject: stri
             <p style="margin-top: 15px;">
               <strong>Contact Information:</strong><br>
               📧 Email: info@abbakabiryusuf.com<br>
-              🌐 Website: www.abbakabiryusuf.com
+              🌐 Website: www.abbakabiryusuf.com<br>
+              📱 Phone: +2347074222252
             </p>
           </div>
         </div>
