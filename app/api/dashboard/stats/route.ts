@@ -1,6 +1,26 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { connectToDatabase } from "@/lib/mongodb"
 import { withCors } from "@/lib/cors"
+import { ObjectId } from 'mongodb'
+
+// Cache for 5 minutes
+const CACHE_DURATION = 300
+
+// Define types for our aggregation results
+interface VisitorStats {
+  totalVisitors: number
+  pageViews: number
+}
+
+interface SubscriberStats {
+  subscribers: number
+  newSubscribers: number
+}
+
+interface BounceStats {
+  singlePageVisitors: number
+  totalSessions: number
+}
 
 async function handler(request: NextRequest) {
   try {
@@ -10,7 +30,6 @@ async function handler(request: NextRequest) {
       db = dbConnection.db
     } catch (error) {
       console.error("Database connection error:", error)
-      // Return a default response when database is not available
       return NextResponse.json(
         {
           message: "Service temporarily unavailable. Please try again later.",
@@ -20,47 +39,126 @@ async function handler(request: NextRequest) {
       )
     }
 
-    // Get visitor stats
-    const totalVisitors = await db.collection("visitors").countDocuments()
+    // Get visitor statistics using aggregation for better performance
+    const [
+      visitorStats,
+      subscriberStats,
+      contactMessages,
+      recentVisitors,
+      bounceStats
+    ] = await Promise.all([
+      // Get visitor stats
+      db.collection("visitors").aggregate<VisitorStats>([
+        {
+          $group: {
+            _id: null,
+            totalVisitors: { $sum: 1 },
+            pageViews: { $sum: { $add: [1] } } // Each visitor is at least one page view
+          }
+        },
+        {
+          $project: {
+            _id: 0,
+            totalVisitors: 1,
+            pageViews: 1
+          }
+        }
+      ]).next().then(res => res || { totalVisitors: 0, pageViews: 0 }),
+      
+      // Get subscriber stats
+      db.collection("subscribers").aggregate<SubscriberStats>([
+        {
+          $match: { status: "active" }
+        },
+        {
+          $group: {
+            _id: null,
+            subscribers: { $sum: 1 },
+            newSubscribers: {
+              $sum: {
+                $cond: [
+                  { $gte: ["$createdAt", new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)] },
+                  1,
+                  0
+                ]
+              }
+            }
+          }
+        },
+        {
+          $project: {
+            _id: 0,
+            subscribers: 1,
+            newSubscribers: 1
+          }
+        }
+      ]).next().then(res => res || { subscribers: 0, newSubscribers: 0 }),
+      
+      // Get contact messages count
+      db.collection("contacts").countDocuments(),
+      
+      // Get recent visitors (last 10)
+      db.collection("visitors")
+        .find({})
+        .sort({ visitedAt: -1 })
+        .limit(10)
+        .toArray(),
+      
+      // Calculate bounce rate
+      db.collection("visitors").aggregate<BounceStats>([
+        {
+          $group: {
+            _id: null,
+            singlePageVisitors: {
+              $sum: {
+                $cond: [
+                  { $lte: [{ $size: { $ifNull: ["$pages", [1]] } }, 1] },
+                  1,
+                  0
+                ]
+              }
+            },
+            totalSessions: { $sum: 1 }
+          }
+        },
+        {
+          $project: {
+            _id: 0,
+            singlePageVisitors: 1,
+            totalSessions: 1
+          }
+        }
+      ]).next().then(res => res || { singlePageVisitors: 0, totalSessions: 0 })
+    ])
+
+    // Destructure results with default values
+    const { totalVisitors = 0, pageViews = 0 } = visitorStats || {}
+    const { subscribers = 0, newSubscribers = 0 } = subscriberStats || {}
+    const { singlePageVisitors = 0, totalSessions = 0 } = bounceStats || {}
+
+    // Calculate bounce rate
+    const bounceRate = totalSessions > 0 
+      ? Math.round((singlePageVisitors / totalSessions) * 100) 
+      : 0
+
+    // Get today's date at midnight for today's visitors
     const today = new Date()
     today.setHours(0, 0, 0, 0)
-    const todayVisitors = await db.collection("visitors").countDocuments({
-      visitedAt: { $gte: today },
+    
+    // Get today's unique visitors
+    const todayUniqueVisitors = await db.collection("visitors").countDocuments({
+      visitedAt: { $gte: today }
     })
-
-    // Get subscriber count
-    const subscribers = await db.collection("subscribers").countDocuments({
-      status: "active",
-    })
-
-    // Get contact messages count
-    const contactMessages = await db.collection("contacts").countDocuments()
-
-    // Get page views (sum of all visitor page arrays)
-    const visitors = await db.collection("visitors").find({}).toArray()
-    const pageViews = visitors.reduce((total, visitor) => {
-      // Assuming 'page' field in visitor is a string for the current page,
-      // and 'pages' (if it existed) would be an array of visited pages.
-      // If 'pageviews' collection is used, sum from there.
-      return total + 1 // Each visitor document represents at least one page view
-    }, 0)
-
-    // Calculate bounce rate (visitors with only 1 page view)
-    // This logic assumes each 'visitor' document represents a session.
-    // If a visitor document only has one 'page' entry, it's a bounce.
-    const singlePageVisitors = visitors.filter((visitor) => !visitor.pages || visitor.pages.length <= 1).length
-    const bounceRate = totalVisitors > 0 ? Math.round((singlePageVisitors / totalVisitors) * 100) : 0
-
-    // Get recent visitors
-    const recentVisitors = await db.collection("visitors").find({}).sort({ visitedAt: -1 }).limit(10).toArray()
 
     const stats = {
       totalVisitors,
-      todayVisitors,
+      todayVisitors: todayUniqueVisitors,
       subscribers,
-      contactMessages,
+      newSubscribers,
+      contactMessages: contactMessages || 0,
       pageViews,
       bounceRate,
+      lastUpdated: new Date().toISOString()
     }
 
     return NextResponse.json({

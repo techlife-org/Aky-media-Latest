@@ -1,10 +1,46 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { BarChart3, Users, Globe, MapPin, Monitor, Smartphone, Tablet, TrendingUp, TrendingDown } from "lucide-react"
+import { Progress } from "@/components/ui/progress"
+import { 
+  BarChart3, 
+  Users, 
+  Globe, 
+  MapPin, 
+  Monitor, 
+  Smartphone, 
+  Tablet, 
+  Clock,
+  ExternalLink,
+  User as UserIcon,
+  Globe2,
+  Laptop,
+  Calendar,
+  Eye,
+  ArrowUpRight,
+  ArrowDownRight,
+  Clock as ClockIcon,
+  TrendingUp,
+  TrendingDown
+} from "lucide-react"
 import DashboardLayout from "@/components/dashboard-layout"
+import { formatDistanceToNow } from "date-fns"
+
+interface Visitor {
+  _id: string
+  ip: string
+  country: string
+  city: string
+  device: string
+  browser: string
+  os: string
+  visitedAt: string
+  page?: string
+  referrer?: string
+  userAgent?: string
+}
 
 interface TrafficData {
   totalVisitors: number
@@ -16,101 +52,94 @@ interface TrafficData {
   deviceStats: Array<{ device: string; count: number; percentage: number }>
   locationStats: Array<{ country: string; city: string; count: number }>
   hourlyTraffic: Array<{ hour: string; visitors: number }>
+  recentVisitors?: Visitor[]
+}
+
+interface DeviceIconProps {
+  device: string;
+  className?: string;
+}
+
+const DeviceIcon = ({ device, className = '' }: DeviceIconProps) => {
+  const deviceLower = device.toLowerCase()
+  const iconProps = { className: `h-4 w-4 text-muted-foreground ${className}` }
+  
+  if (deviceLower.includes('mobile') || deviceLower.includes('phone')) {
+    return <Smartphone {...iconProps} />
+  } else if (deviceLower.includes('tablet') || deviceLower.includes('ipad')) {
+    return <Tablet {...iconProps} />
+  } else if (deviceLower.includes('desktop') || deviceLower.includes('pc') || deviceLower.includes('mac')) {
+    return <Laptop {...iconProps} />
+  } else {
+    return <Monitor {...iconProps} />
+  }
 }
 
 export default function TrafficPage() {
-  const [trafficData, setTrafficData] = useState<TrafficData>({
-    totalVisitors: 0,
-    todayVisitors: 0,
-    pageViews: 0,
-    bounceRate: 0,
-    avgSessionDuration: "0:00",
-    topPages: [],
-    deviceStats: [],
-    locationStats: [],
-    hourlyTraffic: [],
-  })
+  const [trafficData, setTrafficData] = useState<TrafficData | null>(null)
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    fetchTrafficData()
+    const fetchData = async () => {
+      try {
+        setLoading(true)
+        const [trafficRes, statsRes] = await Promise.all([
+          fetch('/api/dashboard/traffic'),
+          fetch('/api/dashboard/stats')
+        ])
+
+        if (!trafficRes.ok || !statsRes.ok) {
+          throw new Error('Failed to fetch data')
+        }
+
+        const [trafficData, statsData] = await Promise.all([
+          trafficRes.json(),
+          statsRes.json()
+        ])
+
+        // Merge recent visitors from stats into traffic data
+        setTrafficData({
+          ...trafficData,
+          recentVisitors: statsData.recentVisitors || []
+        })
+      } catch (err) {
+        console.error('Error fetching data:', err)
+        setError(err instanceof Error ? err.message : 'Failed to load data')
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchData()
   }, [])
-
-  const fetchTrafficData = async () => {
-    try {
-      const response = await fetch("/api/dashboard/traffic")
-      const data = await response.json()
-      setTrafficData(data)
-    } catch (error) {
-      console.error("Error fetching traffic data:", error)
-      // Fallback demo data
-      setTrafficData({
-        totalVisitors: 15420,
-        todayVisitors: 342,
-        pageViews: 45680,
-        bounceRate: 32.5,
-        avgSessionDuration: "3:45",
-        topPages: [
-          { page: "/", views: 12500, percentage: 35.2 },
-          { page: "/news", views: 8900, percentage: 25.1 },
-          { page: "/about", views: 5600, percentage: 15.8 },
-          { page: "/contact", views: 3200, percentage: 9.0 },
-          { page: "/live", views: 2800, percentage: 7.9 },
-        ],
-        deviceStats: [
-          { device: "Desktop", count: 8500, percentage: 55.1 },
-          { device: "Mobile", count: 5200, percentage: 33.7 },
-          { device: "Tablet", count: 1720, percentage: 11.2 },
-        ],
-        locationStats: [
-          { country: "Nigeria", city: "Kano", count: 8900 },
-          { country: "Nigeria", city: "Lagos", count: 3200 },
-          { country: "Nigeria", city: "Abuja", count: 2100 },
-          { country: "USA", city: "New York", count: 800 },
-          { country: "UK", city: "London", count: 420 },
-        ],
-        hourlyTraffic: [
-          { hour: "00:00", visitors: 45 },
-          { hour: "06:00", visitors: 120 },
-          { hour: "12:00", visitors: 280 },
-          { hour: "18:00", visitors: 350 },
-        ],
-      })
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const getDeviceIcon = (device: string) => {
-    switch (device.toLowerCase()) {
-      case "desktop":
-        return Monitor
-      case "mobile":
-        return Smartphone
-      case "tablet":
-        return Tablet
-      default:
-        return Monitor
-    }
-  }
 
   if (loading) {
     return (
       <DashboardLayout>
-        <div className="p-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {[1, 2, 3, 4].map((i) => (
-              <Card key={i}>
-                <CardContent className="p-6">
-                  <div className="animate-pulse">
-                    <div className="h-4 bg-gray-200 rounded mb-4"></div>
-                    <div className="h-8 bg-gray-200 rounded mb-2"></div>
-                    <div className="h-3 bg-gray-200 rounded"></div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+        </div>
+      </DashboardLayout>
+    )
+  }
+
+  if (error) {
+    return (
+      <DashboardLayout>
+        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded relative" role="alert">
+          <strong className="font-bold">Error: </strong>
+          <span className="block sm:inline">{error}</span>
+        </div>
+      </DashboardLayout>
+    )
+  }
+
+  if (!trafficData) {
+    return (
+      <DashboardLayout>
+        <div className="text-center py-12">
+          <p className="text-muted-foreground">No traffic data available yet. Check back later.</p>
         </div>
       </DashboardLayout>
     )
@@ -131,11 +160,9 @@ export default function TrafficPage() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-gray-600">Total Visitors</p>
-                  <p className="text-3xl font-bold text-gray-900">{trafficData.totalVisitors.toLocaleString()}</p>
-                  <div className="flex items-center mt-2">
-                    <TrendingUp className="w-4 h-4 text-green-500 mr-1" />
-                    <span className="text-sm text-green-600">+12.5%</span>
-                  </div>
+                  <p className="text-3xl font-bold text-gray-900">
+                    {trafficData.totalVisitors.toLocaleString()}
+                  </p>
                 </div>
                 <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
                   <Users className="w-6 h-6 text-blue-600" />
@@ -199,6 +226,59 @@ export default function TrafficPage() {
           </Card>
         </div>
 
+        {/* Recent Visitors Table */}
+        <Card className="mb-8">
+          <CardHeader>
+            <CardTitle>Recent Visitors</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      IP Address
+                    </th>
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Location
+                    </th>
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Device
+                    </th>
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Browser
+                    </th>
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Visited At
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {trafficData.recentVisitors?.map((visitor: any) => (
+                    <tr key={visitor.id}>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                        {visitor.ip}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {visitor.city}, {visitor.country}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {visitor.device}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {visitor.browser}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {new Date(visitor.visitedAt).toLocaleString()}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </CardContent>
+        </Card>
+
         <div className="grid lg:grid-cols-2 gap-6 mb-8">
           {/* Top Pages */}
           <Card>
@@ -207,17 +287,20 @@ export default function TrafficPage() {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {trafficData.topPages.map((page, index) => (
+                {trafficData.topPages?.map((page, index) => (
                   <div key={index} className="flex items-center justify-between">
                     <div className="flex-1">
                       <p className="font-medium text-gray-900">{page.page}</p>
                       <div className="w-full bg-gray-200 rounded-full h-2 mt-2">
-                        <div className="bg-blue-600 h-2 rounded-full" style={{ width: `${page.percentage}%` }}></div>
+                        <div 
+                          className="bg-blue-600 h-2 rounded-full" 
+                          style={{ width: `${page.percentage}%` }}
+                        ></div>
                       </div>
                     </div>
                     <div className="ml-4 text-right">
                       <p className="font-bold text-gray-900">{page.views.toLocaleString()}</p>
-                      <p className="text-sm text-gray-500">{page.percentage}%</p>
+                      <p className="text-sm text-gray-500">{page.percentage.toFixed(1)}%</p>
                     </div>
                   </div>
                 ))}
@@ -233,12 +316,11 @@ export default function TrafficPage() {
             <CardContent>
               <div className="space-y-4">
                 {trafficData.deviceStats.map((device, index) => {
-                  const DeviceIcon = getDeviceIcon(device.device)
                   return (
                     <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                       <div className="flex items-center gap-3">
                         <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
-                          <DeviceIcon className="w-5 h-5 text-blue-600" />
+                          <DeviceIcon device={device.device} className="w-5 h-5 text-blue-600" />
                         </div>
                         <div>
                           <p className="font-medium text-gray-900">{device.device}</p>

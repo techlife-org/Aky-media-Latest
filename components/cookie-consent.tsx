@@ -10,19 +10,45 @@ export default function CookieConsent() {
   const [email, setEmail] = useState("")
   const [isLoading, setIsLoading] = useState(false)
   const [isSubscribed, setIsSubscribed] = useState(false)
+  const [isNewVisitor, setIsNewVisitor] = useState(false)
   const { toast } = useToast()
 
   useEffect(() => {
-    // Check if cookie exists
+    // Check if visitor is new
+    const visitorId = getCookie("visitor_id")
+    if (!visitorId) {
+      // Generate a unique visitor ID
+      const newVisitorId = 'visitor_' + Math.random().toString(36).substr(2, 9)
+      setCookie("visitor_id", newVisitorId, 365)
+      setIsNewVisitor(true)
+      
+      // Track the new visitor in the backend
+      trackVisitor(newVisitorId)
+    }
+    
+    // Show cookie consent if not already accepted/declined
     const consent = getCookie("newsletterConsent")
-    if (consent !== "accepted") {
-      // Small delay for better UX
+    if (consent !== "accepted" && consent !== "declined") {
       const timer = setTimeout(() => {
         setShow(true)
       }, 2000)
       return () => clearTimeout(timer)
     }
   }, [])
+  
+  const trackVisitor = async (visitorId: string) => {
+    try {
+      await fetch('/api/track-visitor', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ visitorId }),
+      })
+    } catch (error) {
+      console.error('Error tracking visitor:', error)
+    }
+  }
 
   const getCookie = (name: string) => {
     if (typeof document === 'undefined') return null
@@ -55,39 +81,53 @@ export default function CookieConsent() {
     setIsLoading(true)
 
     try {
-      const response = await fetch("/api/newsletter/subscribe", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ email }),
-      })
-
-      const data = await response.json()
-
-      if (response.ok) {
+      // First, check if the email is already subscribed
+      const checkResponse = await fetch(`/api/newsletter/check?email=${encodeURIComponent(email)}`)
+      const checkData = await checkResponse.json()
+      
+      if (checkResponse.ok && checkData.isSubscribed) {
+        // User is already subscribed, just update consent
         setCookie("newsletterConsent", "accepted")
         setIsSubscribed(true)
         toast({
-          title: "Thank you for subscribing! 🎉",
-          description: data.message,
+          title: "Welcome back! 🎉",
+          description: "You're already subscribed to our newsletter.",
           className: "bg-green-50 border-green-200 text-green-800",
         })
-        // Close modal after 2 seconds
-        setTimeout(() => {
-          setShow(false)
-        }, 2000)
       } else {
-        toast({
-          title: "Subscription Failed",
-          description: data.message || "Please try again later",
-          variant: "destructive",
+        // New subscription
+        const response = await fetch("/api/newsletter/subscribe", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ email, isNewVisitor }),
         })
+
+        const data = await response.json()
+
+        if (response.ok) {
+          setCookie("newsletterConsent", "accepted")
+          setIsSubscribed(true)
+          toast({
+            title: "Thank you for subscribing! 🎉",
+            description: data.message,
+            className: "bg-green-50 border-green-200 text-green-800",
+          })
+        } else {
+          throw new Error(data.message || "Subscription failed")
+        }
       }
+      
+      // Close modal after 2 seconds
+      setTimeout(() => {
+        setShow(false)
+      }, 2000)
+      
     } catch (error) {
       toast({
         title: "Error",
-        description: "Failed to subscribe. Please try again later.",
+        description: error instanceof Error ? error.message : "Failed to subscribe. Please try again later.",
         variant: "destructive",
       })
     } finally {

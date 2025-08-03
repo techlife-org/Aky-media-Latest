@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server"
 import { connectToDatabase } from "@/lib/mongodb"
+import { withCors } from "@/lib/cors"
 
-export async function GET() {
+async function handler() {
   try {
     let db
     try {
@@ -9,7 +10,6 @@ export async function GET() {
       db = dbConnection.db
     } catch (error) {
       console.error("Database connection error:", error)
-      // Return a default response when database is not available
       return NextResponse.json(
         {
           message: "Service temporarily unavailable. Please try again later.",
@@ -19,27 +19,31 @@ export async function GET() {
       )
     }
 
-    // Get traffic data from visitors collection
-    const visitors = await db.collection("visitors").find({}).toArray()
+    // Get all visitors
+    const visitors = await db.collection("visitors").find({}).sort({ visitedAt: -1 }).toArray()
+    
+    // Get today's date at midnight
     const today = new Date()
     today.setHours(0, 0, 0, 0)
-    const todayVisitors = visitors.filter((visitor) => new Date(visitor.visitedAt) >= today)
-
-    // Calculate stats
+    
+    // Filter today's visitors
+    const todayVisitors = visitors.filter(visitor => new Date(visitor.visitedAt) >= today)
+    
+    // Calculate total visitors and page views
     const totalVisitors = visitors.length
     const pageViews = visitors.reduce((sum, visitor) => sum + (visitor.pages?.length || 1), 0)
-    const bounceRate = (visitors.filter((visitor) => visitor.pages?.length === 1).length / totalVisitors) * 100
-
-    // Top pages
+    
+    // Calculate bounce rate (sessions with only 1 page view)
+    const singlePageVisitors = visitors.filter(visitor => !visitor.pages || visitor.pages.length <= 1).length
+    const bounceRate = totalVisitors > 0 ? (singlePageVisitors / totalVisitors) * 100 : 0
+    
+    // Calculate top pages
     const pageMap = new Map<string, number>()
-    visitors.forEach((visitor) => {
-      // Assuming 'page' is the current page visited, and 'pages' is an array of pages in a session
-      // If 'pageviews' collection is used, it would be more accurate to sum from there.
-      // For now, let's count the 'page' field from each visitor entry.
-      if (visitor.page) {
-        pageMap.set(visitor.page, (pageMap.get(visitor.page) || 0) + 1)
-      }
+    visitors.forEach(visitor => {
+      const page = visitor.page || '/'
+      pageMap.set(page, (pageMap.get(page) || 0) + 1)
     })
+    
     const topPages = Array.from(pageMap.entries())
       .map(([page, views]) => ({
         page,
@@ -48,54 +52,80 @@ export async function GET() {
       }))
       .sort((a, b) => b.views - a.views)
       .slice(0, 5)
-
-    // Device stats
+    
+    // Calculate device statistics
     const deviceMap = new Map<string, number>()
-    visitors.forEach((visitor) => {
-      const device = visitor.device || "Desktop"
+    visitors.forEach(visitor => {
+      const device = visitor.device || 'Desktop'
       deviceMap.set(device, (deviceMap.get(device) || 0) + 1)
     })
+    
     const deviceStats = Array.from(deviceMap.entries())
       .map(([device, count]) => ({
         device,
         count,
         percentage: (count / totalVisitors) * 100,
       }))
-      .sort((a, b) => b.count - a.count) // Sort by count descending
-
-    // Location stats
-    const locationMap = new Map<string, number>()
-    visitors.forEach((visitor) => {
-      const key = `${visitor.city || "Unknown City"}, ${visitor.country || "Unknown Country"}`
-      locationMap.set(key, (locationMap.get(key) || 0) + 1)
+      .sort((a, b) => b.count - a.count)
+    
+    // Calculate location statistics
+    const locationMap = new Map<string, {country: string, city: string, count: number}>()
+    
+    visitors.forEach(visitor => {
+      const country = visitor.country || 'Unknown Country'
+      const city = visitor.city || 'Unknown City'
+      const key = `${country}:${city}`
+      
+      if (locationMap.has(key)) {
+        const loc = locationMap.get(key)!
+        loc.count += 1
+      } else {
+        locationMap.set(key, { country, city, count: 1 })
+      }
     })
-    const locationStats = Array.from(locationMap.entries())
-      .map(([location, count]) => {
-        const [city, country] = location.split(", ")
-        return { country, city, count }
-      })
+    
+    const locationStats = Array.from(locationMap.values())
       .sort((a, b) => b.count - a.count)
       .slice(0, 5)
-
+    
+    // Calculate hourly traffic (last 24 hours)
+    const hourlyTraffic = Array(24).fill(0).map((_, hour) => {
+      const hourStart = new Date()
+      hourStart.setHours(hour, 0, 0, 0)
+      
+      const hourEnd = new Date(hourStart)
+      hourEnd.setHours(hourStart.getHours() + 1)
+      
+      const visitorsInHour = visitors.filter(visitor => {
+        const visitTime = new Date(visitor.visitedAt)
+        return visitTime >= hourStart && visitTime < hourEnd
+      }).length
+      
+      return {
+        hour: hourStart.toLocaleTimeString([], { hour: '2-digit', hour12: false }),
+        visitors: visitorsInHour
+      }
+    })
+    
+    // Calculate average session duration (placeholder - would need actual session data)
+    const avgSessionDuration = "3:45" // This would be calculated from session data
+    
     return NextResponse.json({
       totalVisitors,
       todayVisitors: todayVisitors.length,
       pageViews,
       bounceRate: Math.round(bounceRate * 10) / 10,
-      avgSessionDuration: "3:45", // Placeholder, requires more complex tracking
+      avgSessionDuration,
       topPages,
       deviceStats,
       locationStats,
-      hourlyTraffic: [
-        // Placeholder data, would be aggregated from timestamps
-        { hour: "00:00", visitors: 45 },
-        { hour: "06:00", visitors: 120 },
-        { hour: "12:00", visitors: 280 },
-        { hour: "18:00", visitors: 350 },
-      ],
+      hourlyTraffic,
     })
   } catch (error) {
     console.error("Traffic API error:", error)
     return NextResponse.json({ message: "Internal server error" }, { status: 500 })
   }
 }
+
+export const GET = withCors(handler)
+export const OPTIONS = withCors(async () => new NextResponse(null, { status: 200 }))
