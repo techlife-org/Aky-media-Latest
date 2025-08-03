@@ -48,6 +48,56 @@ interface TrafficData {
   recentVisitors?: Visitor[]
 }
 
+const getDeviceIcon = (device: string) => {
+  const deviceLower = device.toLowerCase()
+  if (deviceLower.includes('mobile') || deviceLower.includes('phone')) {
+    return Smartphone
+  } else if (deviceLower.includes('tablet') || deviceLower.includes('ipad')) {
+    return Tablet
+  } else if (deviceLower.includes('desktop') || deviceLower.includes('pc') || deviceLower.includes('mac')) {
+    return Laptop
+  }
+  return Monitor
+}
+
+export default function TrafficPage() {
+  const [trafficData, setTrafficData] = useState<TrafficData | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setLoading(true)
+        const [trafficRes, statsRes] = await Promise.all([
+          fetch('/api/dashboard/traffic'),
+          fetch('/api/dashboard/stats')
+        ])
+
+        if (!trafficRes.ok || !statsRes.ok) {
+          throw new Error('Failed to fetch traffic data')
+        }
+
+        const [trafficData, statsData] = await Promise.all([
+          trafficRes.json(),
+          statsRes.json()
+        ])
+
+        setTrafficData({
+          ...trafficData,
+          recentVisitors: statsData.recentVisitors || []
+        })
+      } catch (err) {
+        console.error('Error fetching traffic data:', err)
+        setError(err instanceof Error ? err.message : 'Failed to load traffic data')
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchData()
+  }, [])
+
 interface DeviceIconProps {
   device: string;
   className?: string;
