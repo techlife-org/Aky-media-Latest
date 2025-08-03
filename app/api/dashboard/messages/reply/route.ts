@@ -2,6 +2,7 @@ import { NextResponse } from "next/server"
 import nodemailer from "nodemailer"
 import { connectToDatabase } from "@/lib/mongodb"
 import { ObjectId } from "mongodb"
+import path from "path"
 
 interface EmailData {
   to: string
@@ -24,7 +25,7 @@ interface EmailData {
 //       <title>${subject}</title>
 //       <style>
 //         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
-        
+
 //         /* Base styles */
 //         body {
 //           margin: 0;
@@ -36,7 +37,7 @@ interface EmailData {
 //           -webkit-font-smoothing: antialiased;
 //           -moz-osx-font-smoothing: grayscale;
 //         }
-        
+
 //         .container {
 //           max-width: 600px;
 //           margin: 0 auto;
@@ -45,7 +46,7 @@ interface EmailData {
 //           border-radius: 8px;
 //           overflow: hidden;
 //         }
-        
+
 //         .header {
 //           position: relative;
 //           height: 200px;
@@ -56,7 +57,7 @@ interface EmailData {
 //           text-align: center;
 //           padding: 20px;
 //         }
-        
+
 //         .header::before {
 //           content: '';
 //           position: absolute;
@@ -70,41 +71,41 @@ interface EmailData {
 //           background-repeat: no-repeat;
 //           opacity: 0.3;
 //         }
-        
+
 //         .header-content {
 //           position: relative;
 //           z-index: 2;
 //           color: white;
 //         }
-        
+
 //         .header-logo {
 //           max-width: 120px;
 //           height: auto;
 //           filter: brightness(0) invert(1);
 //           margin-bottom: 10px;
 //         }
-        
+
 //         .header-title {
 //           font-size: 24px;
 //           font-weight: 600;
 //           margin: 0;
 //           text-shadow: 0 2px 4px rgba(0,0,0,0.3);
 //         }
-        
+
 //         .content {
 //           padding: 40px 30px;
 //           background: white;
 //           line-height: 1.7;
 //           color: #4b5563;
 //         }
-        
+
 //         .greeting {
 //           font-size: 18px;
 //           color: #111827;
 //           margin-bottom: 25px;
 //           font-weight: 500;
 //         }
-        
+
 //         .message-content {
 //           margin: 25px 0;
 //           font-size: 16px;
@@ -115,7 +116,7 @@ interface EmailData {
 //           border-left: 4px solid #dc2626;
 //           border-radius: 0 8px 8px 0;
 //         }
-        
+
 //         .signature {
 //           margin-top: 40px;
 //           padding-top: 20px;
@@ -123,7 +124,7 @@ interface EmailData {
 //           color: #6b7280;
 //           font-size: 15px;
 //         }
-        
+
 //         .footer {
 //           padding: 30px 20px;
 //           text-align: center;
@@ -132,7 +133,7 @@ interface EmailData {
 //           background: #f9fafb;
 //           border-top: 1px solid #e5e7eb;
 //         }
-        
+
 //         .footer-links {
 //           margin: 20px 0;
 //           display: flex;
@@ -140,7 +141,7 @@ interface EmailData {
 //           flex-wrap: wrap;
 //           gap: 15px;
 //         }
-        
+
 //         .footer-links a {
 //           color: #dc2626;
 //           text-decoration: none;
@@ -148,19 +149,19 @@ interface EmailData {
 //           padding: 5px 10px;
 //           border-radius: 4px;
 //         }
-        
+
 //         .footer-links a:hover {
 //           color: #b91c1c;
 //           background-color: #fef2f2;
 //         }
-        
+
 //         .social-links {
 //           margin: 25px 0;
 //           display: flex;
 //           justify-content: center;
 //           gap: 15px;
 //         }
-        
+
 //         .social-links a {
 //           display: inline-flex;
 //           align-items: center;
@@ -175,19 +176,19 @@ interface EmailData {
 //           font-size: 18px;
 //           font-weight: bold;
 //         }
-        
+
 //         .social-links a:hover {
 //           background: #b91c1c;
 //           transform: translateY(-2px);
 //           box-shadow: 0 4px 8px rgba(220, 38, 38, 0.3);
 //         }
-        
+
 //         .footer-address {
 //           margin: 20px 0;
 //           line-height: 1.6;
 //           color: #6b7280;
 //         }
-        
+
 //         .copyright {
 //           margin-top: 20px;
 //           padding-top: 20px;
@@ -195,7 +196,7 @@ interface EmailData {
 //           color: #9ca3af;
 //           font-size: 13px;
 //         }
-        
+
 //         .logo-fallback {
 //           width: 120px;
 //           height: 60px;
@@ -209,7 +210,7 @@ interface EmailData {
 //           font-size: 18px;
 //           margin-bottom: 10px;
 //         }
-        
+
 //         @media only screen and (max-width: 600px) {
 //           .container {
 //             width: 100% !important;
@@ -251,22 +252,22 @@ interface EmailData {
 //             <h1 class="header-title">AKY Media Center</h1>
 //           </div>
 //         </div>
-        
+
 //         <!-- Content -->
 //         <div class="content">
 //           <p class="greeting">Dear ${recipientName || "Valued Contact"},</p>
-          
+
 //           <div class="message-content">
 //             ${content.replace(/\n/g, "<br>")}
 //           </div>
-          
+
 //           <div class="signature">
 //             <p><strong>Best regards,</strong></p>
 //             <p><strong>AKY Media Center</strong><br>
 //             Office of the Governor<br>
 //             Kano State Government<br>
 //             Nigeria</p>
-            
+
 //             <p style="margin-top: 15px;">
 //               <strong>Contact Information:</strong><br>
 //               📧 Email: info@abbakabiryusuf.com<br>
@@ -275,7 +276,7 @@ interface EmailData {
 //             </p>
 //           </div>
 //         </div>
-        
+
 //         <!-- Footer -->
 //         <div class="footer">
 //           <div class="social-links">
@@ -284,20 +285,20 @@ interface EmailData {
 //             <a href="https://instagram.com/abbakabiryusuf" title="Instagram" target="_blank">📷</a>
 //             <a href="https://linkedin.com/company/abbakabiryusuf" title="LinkedIn" target="_blank">in</a>
 //           </div>
-          
+
 //           <div class="footer-address">
 //             <p><strong>📍 Address:</strong><br>
 //             Kano State Government House<br>
 //             Kano, Nigeria</p>
 //           </div>
-          
+
 //           <div class="footer-links">
 //             <a href="${baseUrl}">🏠 Home</a>
 //             <a href="${baseUrl}/about">👥 About Us</a>
 //             <a href="${baseUrl}/news">📰 News & Updates</a>
 //             <a href="${baseUrl}/contact">📞 Contact Us</a>
 //           </div>
-          
+
 //           <div class="copyright">
 //             &copy; ${new Date().getFullYear()} AKY Media Center. All rights reserved.<br>
 //             <small>This email was sent from an official government communication system.</small>
@@ -312,9 +313,22 @@ interface EmailData {
 // Enhanced email template with robust image handling and styled social media icons
 function generateEmailHtml(content: string, recipientName: string, subject: string) {
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "https://abbakabiryusuf.com"
-  
+
   // Remove trailing slash and ensure proper URL format
-  const cleanBaseUrl = baseUrl.replace(/\/$/, '')
+  // const cleanBaseUrl = baseUrl.replace(/\/$/, '')
+
+
+
+
+  // Email attachments configuration
+  const attachments = [
+    {
+      filename: 'email-header.png',
+      path: path.join(process.cwd(), 'public/pictures/email-header.png'),
+      cid: 'emailheader'
+    }
+  ];
+
 
   return `
     <!DOCTYPE html>
@@ -352,8 +366,8 @@ function generateEmailHtml(content: string, recipientName: string, subject: stri
         
         .header {
           position: relative;
-          height: 220px;
-          background: linear-gradient(135deg, #dc2626 0%, #b91c1c 50%, #991b1b 100%);
+          height: 80px;
+          background: url('cid:emailheader') center/cover no-repeat;
           display: flex;
           align-items: center;
           justify-content: center;
@@ -591,7 +605,7 @@ function generateEmailHtml(content: string, recipientName: string, subject: stri
             padding: 30px 20px !important;
           }
           .header {
-            height: 180px !important;
+            height: 50px !important;
             padding: 20px !important;
           }
           .header-logo, .logo-fallback {
@@ -737,15 +751,21 @@ export async function POST(request: Request) {
     // Verify transporter configuration
     await transporter.verify()
 
-    // Send email
+    // Send email with attachments
     const info = await transporter.sendMail({
       from: `"${process.env.EMAIL_FROM_NAME || "AKY Media Center"}" <${process.env.EMAIL_FROM || process.env.SMTP_USER}>`,
       to,
       subject,
       html: emailHtml,
       replyTo: replyTo || process.env.EMAIL_FROM || process.env.SMTP_USER,
-      // Add message ID for tracking
       messageId: `<${Date.now()}.${Math.random().toString(36).substr(2, 9)}@${process.env.EMAIL_DOMAIN || "abbakabiryusuf.com"}>`,
+      attachments: [
+        {
+          filename: 'email-header.png',
+          path: path.join(process.cwd(), 'public/pictures/email-header.png'),
+          cid: 'emailheader'
+        }
+      ]
     })
 
     console.log("Email sent successfully:", info.messageId)
