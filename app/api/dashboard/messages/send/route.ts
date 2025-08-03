@@ -20,6 +20,11 @@ const attachments = [
     cid: 'akylogo'
   },
   {
+    filename: 'email-header.png',
+    path: path.join(process.cwd(), 'public/pictures/email-header.png'),
+    cid: 'emailheader'
+  },
+  {
     filename: 'facebook.png',
     path: path.join(process.cwd(), 'public/pictures/facebook.png'),
     cid: 'facebookicon'
@@ -74,18 +79,30 @@ function generateEmailHtml(content: string, recipientName: string, subject: stri
         .header {
           position: relative;
           height: 200px;
-          background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+          background: url('cid:emailheader') center/cover no-repeat;
           display: flex;
           align-items: center;
           justify-content: center;
           text-align: center;
           padding: 20px;
+          background-color: #f0f0f0; /* Fallback color */
         }
         
         .header-content {
           position: relative;
           z-index: 2;
           color: white;
+          text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+        }
+        
+        .header-overlay {
+          position: absolute;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          background: rgba(0, 0, 0, 0.4);
+          z-index: 1;
         }
         
         .header-logo {
@@ -265,9 +282,17 @@ function generateEmailHtml(content: string, recipientName: string, subject: stri
           .footer-links {
             flex-direction: column;
             gap: 10px;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            margin: 20px 0;
           }
           .social-links {
             gap: 10px;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            margin: 20px 0;
           }
         }
       </style>
@@ -277,15 +302,8 @@ function generateEmailHtml(content: string, recipientName: string, subject: stri
         <!-- Header -->
         <div class="header">
           <div class="header-content">
-            <img 
-              src="${baseUrl}/pictures/logo.png" 
-              alt="AKY Media Logo" 
-              class="header-logo"
-              onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';"
-            />
-            <div class="logo-fallback" style="display: none;">
-              AKY Media Center
-            </div>
+            <!-- Background image is now set via CSS -->
+            <div class="header-overlay"></div>
             <h1 class="header-title">AKY Media Center</h1>
           </div>
         </div>
