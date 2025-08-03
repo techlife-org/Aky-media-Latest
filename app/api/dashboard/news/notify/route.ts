@@ -405,7 +405,9 @@ function generateEmailHtml(news: any, name: string) {
           background: #ffffff;
         }
         .header {
-          background: #dc2626;
+          background: url(${baseUrl}/pictures/email-header.png  );
+          background-size: cover;
+          background-position: center;
           padding: 30px 20px;
           text-align: center;
           color: white;

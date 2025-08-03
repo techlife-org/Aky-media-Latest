@@ -9,10 +9,7 @@ export async function PATCH(request: Request, { params }: { params: { id: string
 
     // Validate the ID format first
     if (!ObjectId.isValid(id)) {
-      return NextResponse.json(
-        { error: "Invalid message ID format" },
-        { status: 400 }
-      )
+      return NextResponse.json({ error: "Invalid message ID format" }, { status: 400 })
     }
 
     // First, check if the message exists
@@ -22,10 +19,7 @@ export async function PATCH(request: Request, { params }: { params: { id: string
 
     if (!message) {
       console.error(`Message with ID ${id} not found`)
-      return NextResponse.json(
-        { error: `Message with ID ${id} not found` },
-        { status: 404 }
-      )
+      return NextResponse.json({ error: `Message with ID ${id} not found` }, { status: 404 })
     }
 
     // If message exists, proceed with update
@@ -35,30 +29,28 @@ export async function PATCH(request: Request, { params }: { params: { id: string
         $set: {
           status: "archived",
           updatedAt: new Date(),
+          archivedAt: new Date(),
         },
       },
     )
 
     if (result.matchedCount === 0) {
       console.error(`Failed to update message with ID ${id}`)
-      return NextResponse.json(
-        { error: "Failed to archive message" },
-        { status: 500 }
-      )
+      return NextResponse.json({ error: "Failed to archive message" }, { status: 500 })
     }
 
-    return NextResponse.json({ 
+    return NextResponse.json({
       success: true,
-      message: "Message archived successfully"
+      message: "Message archived successfully",
     })
   } catch (error) {
     console.error("Error in archive route:", error)
     return NextResponse.json(
-      { 
+      {
         error: "Failed to archive message",
-        details: error instanceof Error ? error.message : String(error)
+        details: error instanceof Error ? error.message : String(error),
       },
-      { status: 500 }
+      { status: 500 },
     )
   }
 }
