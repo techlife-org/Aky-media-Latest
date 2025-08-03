@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import nodemailer from "nodemailer"
 import { connectToDatabase } from "@/lib/mongodb"
+import path from 'path'
 
 interface EmailData {
   to: string
@@ -10,6 +11,30 @@ interface EmailData {
   replyTo?: string
   recipientName?: string
 }
+
+// Email attachments configuration
+const attachments = [
+  {
+    filename: 'akylogo.png',
+    path: path.join(process.cwd(), 'public/pictures/logo.png'),
+    cid: 'akylogo'
+  },
+  {
+    filename: 'facebook.png',
+    path: path.join(process.cwd(), 'public/pictures/facebook.png'),
+    cid: 'facebookicon'
+  },
+  {
+    filename: 'twitter.png',
+    path: path.join(process.cwd(), 'public/pictures/x.png'),
+    cid: 'twittericon'
+  },
+  {
+    filename: 'instagram.png',
+    path: path.join(process.cwd(), 'public/pictures/instagram.jpeg'),
+    cid: 'instagramicon'
+  }
+];
 
 // Enhanced email template with proper social media icons
 function generateEmailHtml(content: string, recipientName: string, subject: string) {
@@ -141,31 +166,58 @@ function generateEmailHtml(content: string, recipientName: string, subject: stri
         }
         
         .social-links {
-          margin: 25px 0;
+          margin: 30px auto;
           display: flex;
           justify-content: center;
-          gap: 15px;
+          align-items: center;
+          flex-wrap: wrap;
+          gap: 12px;
+          max-width: 400px;
+          padding: 0 20px;
         }
         
         .social-links a {
-          display: inline-flex;
+          display: flex;
           align-items: center;
           justify-content: center;
-          width: 40px;
-          height: 40px;
+          width: 44px;
+          height: 44px;
           border-radius: 50%;
           background: #dc2626;
           color: white;
           text-decoration: none;
-          transition: all 0.3s ease;
-          font-size: 16px;
-          font-weight: bold;
+          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+          box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+          position: relative;
+          overflow: hidden;
+        }
+        
+        .social-links a::before {
+          content: '';
+          position: absolute;
+          top: 0;
+          left: -100%;
+          width: 100%;
+          height: 100%;
+          background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+          transition: 0.5s;
         }
         
         .social-links a:hover {
           background: #b91c1c;
-          transform: translateY(-2px);
-          box-shadow: 0 4px 8px rgba(220, 38, 38, 0.3);
+          transform: translateY(-3px) scale(1.1);
+          box-shadow: 0 6px 12px rgba(220, 38, 38, 0.25);
+        }
+        
+        .social-links a:hover::before {
+          left: 100%;
+        }
+        
+        .social-links svg {
+          width: 20px;
+          height: 20px;
+          position: relative;
+          z-index: 1;
         }
         
         .footer-address {
@@ -354,7 +406,7 @@ export async function POST(request: Request) {
     // Verify transporter configuration
     await transporter.verify()
 
-    // Send email
+    // Send email with attachments
     const info = await transporter.sendMail({
       from: `"${process.env.EMAIL_FROM_NAME || "AKY Media Center"}" <${process.env.EMAIL_FROM || process.env.SMTP_USER}>`,
       to,
@@ -362,6 +414,7 @@ export async function POST(request: Request) {
       html: emailHtml,
       replyTo: replyTo || process.env.EMAIL_FROM || process.env.SMTP_USER,
       messageId: `<${Date.now()}.${Math.random().toString(36).substr(2, 9)}@${process.env.EMAIL_DOMAIN || "abbakabiryusuf.com"}>`,
+      attachments: attachments,
     })
 
     // Store sent email in database
