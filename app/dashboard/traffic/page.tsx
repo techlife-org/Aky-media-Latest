@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
 import { 
@@ -11,22 +11,15 @@ import {
   MapPin, 
   Monitor, 
   Smartphone, 
-  Tablet, 
-  Clock,
-  ExternalLink,
-  User as UserIcon,
-  Globe2,
+  Tablet,
   Laptop,
   Calendar,
   Eye,
-  ArrowUpRight,
-  ArrowDownRight,
-  Clock as ClockIcon,
   TrendingUp,
-  TrendingDown
+  TrendingDown,
+  ExternalLink
 } from "lucide-react"
 import DashboardLayout from "@/components/dashboard-layout"
-import { formatDistanceToNow } from "date-fns"
 
 interface Visitor {
   _id: string
