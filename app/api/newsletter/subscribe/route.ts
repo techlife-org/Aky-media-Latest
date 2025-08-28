@@ -1,71 +1,19 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { MongoClient, ObjectId } from 'mongodb';
 import { withCors } from "@/lib/cors"
-import nodemailer from 'nodemailer';
+import { NotificationService } from '@/lib/notification-service';
+import { validateAndFormatPhone } from '@/lib/phone-utils';
 import { z } from 'zod';
 
 // Define validation schema
 const subscribeSchema = z.object({
   email: z.string().email('Please enter a valid email address'),
+  phone: z.string().optional(),
   name: z.string().optional(),
   source: z.string().default('website')
 });
 
-// Email template
-const getWelcomeEmail = (email: string, name?: string) => ({
-  from: `"${process.env.EMAIL_FROM_NAME || 'AKY Media'}" <${process.env.EMAIL_FROM || 'notify@abbakabiryusuf.info'}>`,
-  to: email,
-  subject: 'Welcome to AKY Newsletter!',
-  html: `
-    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-      <div style="background: #dc2626; padding: 20px; text-align: center; color: white;">
-        <h1>Welcome to AKY Media</h1>
-      </div>
-      <div style="padding: 20px; background: white;">
-        <p>Hello ${name || 'there'},</p>
-        <p>Thank you for subscribing to our newsletter. You'll now receive the latest updates, news, and announcements directly to your inbox.</p>
-        <p>We're excited to have you with us!</p>
-        
-        <div style="margin: 30px 0; text-align: center;">
-          <a href="${process.env.NEXT_PUBLIC_BASE_URL}" style="
-            display: inline-block; 
-            padding: 12px 24px; 
-            background: #dc2626; 
-            color: white; 
-            text-decoration: none; 
-            border-radius: 4px;
-            font-weight: bold;
-          ">
-            Visit Our Website
-          </a>
-        </div>
-        
-        <p>If you didn't subscribe to our newsletter, please ignore this email or contact our support team.</p>
-        
-        <div style="margin-top: 30px; padding-top: 15px; border-top: 1px solid #eee; font-size: 12px; color: #666;">
-          <p> ${new Date().getFullYear()} AKY Media. All rights reserved.</p>
-          <p>
-            <a href="${process.env.NEXT_PUBLIC_BASE_URL}/unsubscribe?email=${encodeURIComponent(email)}" style="color: #666; text-decoration: underline;">
-              Unsubscribe
-            </a>
-          </p>
-        </div>
-      </div>
-    </div>
-  `,
-  text: `Welcome to AKY Newsletter!
-  
-  Hello ${name || 'there'},
-  
-  Thank you for subscribing to our newsletter. You'll now receive the latest updates, news, and announcements directly to your inbox.
-  
-  If you didn't subscribe to our newsletter, please ignore this email or contact our support team.
-  
-   ${new Date().getFullYear()} AKY Media. All rights reserved.
-  
-  Unsubscribe: ${process.env.NEXT_PUBLIC_BASE_URL}/unsubscribe?email=${encodeURIComponent(email)}
-  `
-});
+
 
 async function handler(request: NextRequest) {
   try {
@@ -93,7 +41,23 @@ async function handler(request: NextRequest) {
       );
     }
 
-    const { email, name, source } = validation.data;
+    let { email, phone, name, source } = validation.data;
+
+    // Validate and format phone number if provided
+    let formattedPhone = null;
+    if (phone && phone.trim()) {
+      const phoneValidation = validateAndFormatPhone(phone.trim());
+      if (!phoneValidation.isValid) {
+        return NextResponse.json(
+          { 
+            success: false, 
+            message: phoneValidation.error || 'Please enter a valid phone number'
+          },
+          { status: 400 }
+        );
+      }
+      formattedPhone = phoneValidation.formattedPhone;
+    }
 
     // Connect to MongoDB
     let client;
@@ -120,57 +84,93 @@ async function handler(request: NextRequest) {
       // Add new subscriber
       const result = await db.collection("subscribers").insertOne({
         email,
+        phone: formattedPhone,
         name: name || null,
         subscribedAt: new Date(),
-        status: "pending", // Start as pending until email is verified if needed
+        status: "active", // Start as active
         source: source || 'website',
         lastActive: new Date(),
         emailVerified: false,
+        phoneVerified: false,
+        welcomeEmailSent: false,
+        welcomeSMSSent: false,
+        welcomeWhatsAppSent: false,
+        preferences: {
+          emailNotifications: true,
+          smsNotifications: !!formattedPhone,
+          whatsappNotifications: !!formattedPhone
+        },
         metadata: {
           ip: request.headers.get('x-forwarded-for') || request.ip,
           userAgent: request.headers.get('user-agent'),
-        }
+        },
+        createdAt: new Date(),
+        updatedAt: new Date()
       });
 
-      // Send welcome email in the background
+      // Send welcome notifications in the background
       try {
-        const transporter = nodemailer.createTransport({
-          host: process.env.SMTP_HOST,
-          port: parseInt(process.env.SMTP_PORT || '587'),
-          secure: process.env.SMTP_SECURE === 'true',
-          auth: {
-            user: process.env.SMTP_USER,
-            pass: process.env.SMTP_PASSWORD,
-          },
-          // Add better error handling for email sending
-          pool: true,
-          maxConnections: 1,
-          maxMessages: 5,
-        });
+        const notificationService = new NotificationService();
+        const notificationResults = await notificationService.sendWelcomeNotifications(email, formattedPhone, name);
 
-        await transporter.sendMail(getWelcomeEmail(email, name));
+        // Update subscriber with notification status
+        const updateData: any = {
+          updatedAt: new Date()
+        };
 
-        // Update subscriber status to active after sending welcome email
+        if (notificationResults.email) {
+          updateData.welcomeEmailSent = true;
+          updateData.welcomeEmailSentAt = new Date();
+        }
+
+        if (notificationResults.sms) {
+          updateData.welcomeSMSSent = true;
+          updateData.welcomeSMSSentAt = new Date();
+        }
+
+        if (notificationResults.whatsapp) {
+          updateData.welcomeWhatsAppSent = true;
+          updateData.welcomeWhatsAppSentAt = new Date();
+        }
+
         await db.collection("subscribers").updateOne(
           { _id: result.insertedId },
-          { $set: { status: 'active', welcomeEmailSent: true, welcomeEmailSentAt: new Date() } }
+          { $set: updateData }
         );
 
-      } catch (emailError) {
-        console.error('Failed to send welcome email:', emailError);
+        // Log any notification errors
+        if (notificationResults.errors.length > 0) {
+          await db.collection("notification_errors").insertOne({
+            type: 'welcome_notifications',
+            subscriberId: result.insertedId,
+            email,
+            phone: formattedPhone,
+            errors: notificationResults.errors,
+            timestamp: new Date()
+          });
+        }
+
+      } catch (notificationError) {
+        console.error('Failed to send welcome notifications:', notificationError);
         // Log the error but don't fail the request
-        await db.collection("email_errors").insertOne({
-          type: 'welcome_email',
+        await db.collection("notification_errors").insertOne({
+          type: 'welcome_notifications',
+          subscriberId: result.insertedId,
           email,
-          error: emailError instanceof Error ? emailError.message : 'Unknown error',
+          phone: formattedPhone,
+          error: notificationError instanceof Error ? notificationError.message : 'Unknown error',
           timestamp: new Date()
         });
       }
 
+      const message = formattedPhone 
+        ? "Thank you for subscribing! Please check your email, SMS, and WhatsApp for confirmation."
+        : "Thank you for subscribing! Please check your email for confirmation.";
+
       return NextResponse.json({
         success: true,
-        message: "Thank you for subscribing! Please check your email for confirmation.",
-        data: { email, name, id: result.insertedId }
+        message,
+        data: { email, phone: formattedPhone, name, id: result.insertedId }
       });
 
     } catch (dbError) {

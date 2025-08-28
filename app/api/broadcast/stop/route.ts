@@ -14,6 +14,11 @@ export async function POST(request: NextRequest) {
         {
           message: "Service temporarily unavailable. Please try again later.",
           success: false,
+          health: {
+            server: false,
+            database: false,
+            streaming: false
+          }
         },
         { status: 503 },
       )
@@ -57,16 +62,41 @@ export async function POST(request: NextRequest) {
     }
 
     if (updateResult.modifiedCount === 0) {
-      return NextResponse.json({ message: "No active broadcast found to stop" }, { status: 404 })
+      return NextResponse.json({ 
+        message: "No active broadcast found to stop",
+        success: false,
+        stoppedCount: 0,
+        health: {
+          server: true,
+          database: true,
+          streaming: true
+        }
+      }, { status: 404 })
     }
 
     return NextResponse.json({
       message: "Broadcast stopped successfully",
       stoppedCount: updateResult.modifiedCount,
+      success: true,
+      timestamp: new Date().toISOString(),
+      health: {
+        server: true,
+        database: true,
+        streaming: true
+      }
     })
   } catch (error: any) {
     console.error("Stop broadcast error:", error)
-    return NextResponse.json({ message: "Internal server error", error: error.message }, { status: 500 })
+    return NextResponse.json({ 
+      message: "Internal server error", 
+      error: error.message,
+      success: false,
+      health: {
+        server: false,
+        database: false,
+        streaming: false
+      }
+    }, { status: 500 })
   }
 }
 

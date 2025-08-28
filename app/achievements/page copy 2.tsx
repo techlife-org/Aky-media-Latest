@@ -11,23 +11,55 @@ import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Progress } from "@/components/ui/progress"
 import { Input } from "@/components/ui/input"
-import { CheckCircle, Clock, Target, Users, GraduationCap, MapPin, Heart, Award, Search, Filter, ArrowRight, Droplets, Leaf, Shield, Zap, Car, X } from "lucide-react"
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+  PaginationEllipsis,
+} from "@/components/ui/pagination"
+import {
+  CheckCircle,
+  Clock,
+  Target,
+  Users,
+  GraduationCap,
+  MapPin,
+  Heart,
+  Award,
+  Search,
+  Filter,
+  ArrowRight,
+  Droplets,
+  Leaf,
+  Shield,
+  Zap,
+  Car,
+  X,
+} from "lucide-react"
+import { AutoCarousel } from "@/components/auto-carousel"
 
 interface Achievement {
-  _id: string;
-  title: string;
-  description: string;
-  status: string;
-  progress: number;
-  category: string;
-  date: string;
-  location: string;
-  impact: string;
-  details: string[];
-  icon: string;
-  createdAt: string;
-  updatedAt: string;
+  _id: string
+  title: string
+  description: string
+  category: string
+  status: "completed" | "ongoing" | "determined"
+  progress: number
+  date: string
+  location: string
+  impact: string
+  details: string[]
+  icon: string
+  images?: string[]
+  createdAt: string
+  updatedAt: string
 }
+
+const ITEMS_PER_PAGE = 100
+const MAX_ITEMS = 1000
 
 const getStatusColor = (status: string) => {
   switch (status) {
@@ -56,10 +88,21 @@ const getStatusIcon = (status: string) => {
 
 const getIconComponent = (iconName: string) => {
   const icons: Record<string, any> = {
-    CheckCircle, Clock, Target, Users, GraduationCap, Heart, Award, Droplets, Leaf, Shield, Zap, Car
-  };
-  return icons[iconName] || Target;
-};
+    CheckCircle,
+    Clock,
+    Target,
+    Users,
+    GraduationCap,
+    Heart,
+    Award,
+    Droplets,
+    Leaf,
+    Shield,
+    Zap,
+    Car,
+  }
+  return icons[iconName] || Target
+}
 
 export default function AchievementPage() {
   const { isLoading, stopLoading } = usePageLoading()
@@ -70,97 +113,135 @@ export default function AchievementPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [modalLoading, setModalLoading] = useState(false)
+  const [currentPage, setCurrentPage] = useState(1)
   const hasFetched = useRef(false)
 
   useEffect(() => {
     const fetchAchievements = async () => {
       try {
-        setLoading(true);
-        const response = await fetch('/api/achievements');
+        setLoading(true)
+        setError(null)
+
+        const response = await fetch("/api/achievements", {
+          next: { tags: ["achievements-public"] },
+          cache: "no-store",
+        })
+
         if (!response.ok) {
-          throw new Error('Failed to fetch achievements');
+          throw new Error(`Failed to fetch achievements: ${response.statusText}`)
         }
-        const data = await response.json();
-        setAchievements(data);
-        hasFetched.current = true; // Mark as fetched
-        setLoading(false);
+
+        const data = await response.json()
+        const limitedData = data.slice(0, MAX_ITEMS)
+        setAchievements(limitedData)
+        hasFetched.current = true
       } catch (err) {
-        console.error('Error fetching achievements:', err);
-        setError('Failed to load achievements. Please try again later.');
+        console.error("Error fetching achievements:", err)
+        setError(err instanceof Error ? err.message : "Failed to load achievements. Please try again later.")
       } finally {
-        setLoading(false);
-        stopLoading();
+        setLoading(false)
+        stopLoading()
       }
-    };
+    }
 
     if (!hasFetched.current) {
-      fetchAchievements();
+      fetchAchievements()
     }
-  }, [stopLoading]);
-  // Also, update the handleAchievementClick to prevent unnecessary fetches
-  const handleAchievementClick = async (achievement: Achievement) => {
-    // Only fetch details if we don't already have them or if it's a different achievement
-    if (!selectedAchievement || selectedAchievement._id !== achievement._id) {
-      await fetchAchievementDetails(achievement._id);
-    }
-    setSelectedAchievement(achievement);
-  };
 
-  // Fetch single achievement details
-  const fetchAchievementDetails = async (id: string) => {
+    const intervalId = setInterval(() => {
+      if (document.visibilityState === "visible") {
+        fetchAchievements()
+      }
+    }, 30000)
+
+    return () => clearInterval(intervalId)
+  }, [stopLoading])
+
+  const handleAchievementClick = async (achievement: Achievement) => {
+    if (selectedAchievement?._id === achievement._id) {
+      return
+    }
+
+    setSelectedAchievement(achievement)
+    await fetchAchievementDetails(achievement._id)
+  }
+
+  const fetchAchievementDetails = async (id: string, retryCount = 0) => {
+    const MAX_RETRIES = 2
+
     try {
       setModalLoading(true)
-      const response = await fetch(`/api/achievements/${id}`)
+      setError(null)
+
+      const response = await fetch(`/api/achievements/${id}`, {
+        cache: "no-store",
+      })
+
       if (!response.ok) {
-        throw new Error('Failed to fetch achievement details')
+        if (response.status === 404) {
+          throw new Error("This achievement could not be found. It may have been removed.")
+        }
+        throw new Error(`Failed to fetch details (${response.status})`)
       }
+
       const data = await response.json()
-      setSelectedAchievement(data)
+      setSelectedAchievement((prev) => ({
+        ...data,
+        images: data.images || prev?.images || [],
+      }))
     } catch (err) {
-      console.error('Error fetching achievement details:', err)
-      setError('Failed to load achievement details. Please try again.')
+      console.error("Error fetching achievement details:", err)
+
+      if (retryCount < MAX_RETRIES) {
+        console.log(`Retrying... (${retryCount + 1}/${MAX_RETRIES})`)
+        await new Promise((resolve) => setTimeout(resolve, 1000 * (retryCount + 1)))
+        return fetchAchievementDetails(id, retryCount + 1)
+      }
+
+      setError(err instanceof Error ? err.message : "Failed to load achievement details")
+
+      if (retryCount >= MAX_RETRIES - 1) {
+        setSelectedAchievement(null)
+      }
     } finally {
       setModalLoading(false)
     }
   }
 
-  // const handleAchievementClick = (achievement: Achievement) => {
-  //   setSelectedAchievement(achievement)
-  //   fetchAchievementDetails(achievement._id)
-  // }
-
   const categories = [
     { id: "all", name: "All Achievements", count: achievements.length },
-    {
-      id: "infrastructure",
-      name: "Infrastructure",
-      count: achievements.filter((a) => a.category === "infrastructure").length,
-    },
-    {
-      id: "education",
-      name: "Education",
-      count: achievements.filter((a) => a.category === "education").length
-    },
-    {
-      id: "healthcare",
-      name: "Healthcare",
-      count: achievements.filter((a) => a.category === "healthcare").length
-    },
-    {
-      id: "finance",
-      name: "Finance",
-      count: achievements.filter((a) => a.category === "finance").length
-    },
-    {
-      id: "agriculture",
-      name: "Agriculture",
-      count: achievements.filter((a) => a.category === "agriculture").length
-    },
-    {
-      id: "environment",
-      name: "Environment",
-      count: achievements.filter((a) => a.category === "environment").length
-    },
+    ...[
+      {
+        id: "infrastructure",
+        name: "Infrastructure",
+        count: achievements.filter((a) => a.category === "infrastructure").length,
+      },
+      {
+        id: "education",
+        name: "Education",
+        count: achievements.filter((a) => a.category === "education").length,
+      },
+      {
+        id: "healthcare",
+        name: "Healthcare",
+        count: achievements.filter((a) => a.category === "healthcare").length,
+      },
+      {
+        id: "finance",
+        name: "Finance",
+        count: achievements.filter((a) => a.category === "finance").length,
+      },
+      {
+        id: "agriculture",
+        name: "Agriculture",
+        count: achievements.filter((a) => a.category === "agriculture").length,
+      },
+      {
+        id: "environment",
+        name: "Environment",
+        count: achievements.filter((a) => a.category === "environment").length,
+      },
+    ].sort((a, b) => a.name.localeCompare(b.name))
   ]
 
   const filteredAchievements = achievements.filter((achievement) => {
@@ -171,11 +252,20 @@ export default function AchievementPage() {
     return matchesCategory && matchesSearch
   })
 
+  const totalPages = Math.ceil(filteredAchievements.length / ITEMS_PER_PAGE)
+  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE
+  const endIndex = startIndex + ITEMS_PER_PAGE
+  const paginatedAchievements = filteredAchievements.slice(startIndex, endIndex)
+
+  // Reset to page 1 when filters change
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [selectedCategory, searchTerm])
+
   const completedCount = achievements.filter((a) => a.status === "completed").length
   const ongoingCount = achievements.filter((a) => a.status === "ongoing").length
-  const totalProgress = achievements.length > 0
-    ? Math.round(achievements.reduce((sum, a) => sum + a.progress, 0) / achievements.length)
-    : 0
+  const totalProgress =
+    achievements.length > 0 ? Math.round(achievements.reduce((sum, a) => sum + a.progress, 0) / achievements.length) : 0
 
   if (loading && !achievements.length) {
     return (
@@ -192,10 +282,7 @@ export default function AchievementPage() {
           <div className="text-red-500 text-4xl mb-4">⚠️</div>
           <h2 className="text-2xl font-bold mb-2">Something went wrong</h2>
           <p className="text-gray-600 mb-4">{error}</p>
-          <Button
-            onClick={() => window.location.reload()}
-            className="bg-red-600 hover:bg-red-700 text-white"
-          >
+          <Button onClick={() => window.location.reload()} className="bg-red-600 hover:bg-red-700 text-white">
             Try Again
           </Button>
         </div>
@@ -229,7 +316,6 @@ export default function AchievementPage() {
                 Executive Governor
               </p>
 
-              {/* Stats Cards */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-12">
                 <div className="bg-white/10 backdrop-blur-sm rounded-xl p-6 border border-white/20">
                   <div className="text-3xl font-bold text-red-300">{completedCount}</div>
@@ -264,7 +350,8 @@ export default function AchievementPage() {
               <div className="flex items-center space-x-2 text-gray-600">
                 <Filter className="w-5 h-5" />
                 <span className="text-sm">
-                  Showing {filteredAchievements.length} of {achievements.length} achievements
+                  Showing {startIndex + 1}-{Math.min(endIndex, filteredAchievements.length)} of{" "}
+                  {filteredAchievements.length} achievements
                 </span>
               </div>
             </div>
@@ -275,7 +362,6 @@ export default function AchievementPage() {
         <section className="py-16">
           <div className="container mx-auto px-4">
             <Tabs value={selectedCategory} onValueChange={setSelectedCategory} className="w-full">
-              {/* Category Tabs */}
               <div className="mb-8">
                 <TabsList className="grid w-full grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-2 h-auto p-2 bg-white shadow-lg rounded-xl border">
                   {categories.map((category) => (
@@ -293,24 +379,31 @@ export default function AchievementPage() {
                 </TabsList>
               </div>
 
-              {/* Achievements Grid */}
               <TabsContent value={selectedCategory} className="mt-8">
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                  {filteredAchievements.map((achievement) => {
+                  {paginatedAchievements.map((achievement) => {
                     const IconComponent = getIconComponent(achievement.icon)
                     return (
                       <Card
                         key={achievement._id}
                         className="group hover:shadow-2xl transition-all duration-300 border-0 shadow-lg overflow-hidden bg-white hover:-translate-y-2"
                       >
+                        <div className="relative h-40 overflow-hidden">
+                          <AutoCarousel
+                            images={achievement.images || []}
+                            title={achievement.title}
+                            className="h-full"
+                            showControls={false}
+                            aspectRatio="auto"
+                          />
+                        </div>
+
                         <CardHeader className="pb-3">
                           <div className="flex justify-between items-start">
                             <CardTitle className="text-lg font-bold text-gray-900 group-hover:text-red-600 transition-colors line-clamp-2">
                               {achievement.title}
                             </CardTitle>
-                            <Badge
-                              className={`${getStatusColor(achievement.status)} flex items-center gap-1 text-xs`}
-                            >
+                            <Badge className={`${getStatusColor(achievement.status)} flex items-center gap-1 text-xs`}>
                               {getStatusIcon(achievement.status)}
                               {achievement.status.toUpperCase()}
                             </Badge>
@@ -341,6 +434,101 @@ export default function AchievementPage() {
                   })}
                 </div>
 
+                {totalPages > 1 && (
+                  <div className="mt-12 flex justify-center">
+                    <Pagination>
+                      <PaginationContent>
+                        <PaginationItem>
+                          <PaginationPrevious
+                            href="#"
+                            onClick={(e) => {
+                              e.preventDefault()
+                              if (currentPage > 1) setCurrentPage(currentPage - 1)
+                            }}
+                            className={currentPage <= 1 ? "pointer-events-none opacity-50" : ""}
+                          />
+                        </PaginationItem>
+
+                        {/* Show first page */}
+                        {currentPage > 3 && (
+                          <>
+                            <PaginationItem>
+                              <PaginationLink
+                                href="#"
+                                onClick={(e) => {
+                                  e.preventDefault()
+                                  setCurrentPage(1)
+                                }}
+                              >
+                                1
+                              </PaginationLink>
+                            </PaginationItem>
+                            {currentPage > 4 && (
+                              <PaginationItem>
+                                <PaginationEllipsis />
+                              </PaginationItem>
+                            )}
+                          </>
+                        )}
+
+                        {/* Show current page and surrounding pages */}
+                        {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                          const pageNum = Math.max(1, Math.min(totalPages - 4, currentPage - 2)) + i
+                          if (pageNum > totalPages) return null
+
+                          return (
+                            <PaginationItem key={pageNum}>
+                              <PaginationLink
+                                href="#"
+                                onClick={(e) => {
+                                  e.preventDefault()
+                                  setCurrentPage(pageNum)
+                                }}
+                                isActive={currentPage === pageNum}
+                              >
+                                {pageNum}
+                              </PaginationLink>
+                            </PaginationItem>
+                          )
+                        })}
+
+                        {/* Show last page */}
+                        {currentPage < totalPages - 2 && (
+                          <>
+                            {currentPage < totalPages - 3 && (
+                              <PaginationItem>
+                                <PaginationEllipsis />
+                              </PaginationItem>
+                            )}
+                            <PaginationItem>
+                              <PaginationLink
+                                href="#"
+                                onClick={(e) => {
+                                  e.preventDefault()
+                                  setCurrentPage(totalPages)
+                                }}
+                              >
+                                {totalPages}
+                              </PaginationLink>
+                            </PaginationItem>
+                          </>
+                        )}
+
+                        <PaginationItem>
+                          <PaginationNext
+                            href="#"
+                            onClick={(e) => {
+                              e.preventDefault()
+                              if (currentPage < totalPages) setCurrentPage(currentPage + 1)
+                            }}
+                            className={currentPage >= totalPages ? "pointer-events-none opacity-50" : ""}
+                          />
+                        </PaginationItem>
+                      </PaginationContent>
+                    </Pagination>
+                  </div>
+                )}
+
                 {filteredAchievements.length === 0 && !loading && (
                   <div className="text-center py-12">
                     <div className="text-gray-400 mb-4">
@@ -367,7 +555,7 @@ export default function AchievementPage() {
       {/* Achievement Detail Modal */}
       {selectedAchievement && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50 backdrop-blur-sm">
-          <div className="bg-white rounded-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto shadow-2xl">
+          <div className="bg-white rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto shadow-2xl">
             <div className="relative h-48 bg-gradient-to-br from-red-500 to-red-600 p-6">
               <Button
                 onClick={() => setSelectedAchievement(null)}
@@ -379,7 +567,7 @@ export default function AchievementPage() {
               <div className="absolute bottom-6 left-6">
                 <div className="bg-white/90 backdrop-blur-sm rounded-full p-4 shadow-lg mb-4">
                   {React.createElement(getIconComponent(selectedAchievement.icon), {
-                    className: "w-8 h-8 text-red-600"
+                    className: "w-8 h-8 text-red-600",
                   })}
                 </div>
                 <h2 className="text-2xl font-bold text-white">{selectedAchievement.title}</h2>
@@ -404,7 +592,20 @@ export default function AchievementPage() {
                   <p className="text-gray-700">{selectedAchievement.description}</p>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                {selectedAchievement.images?.length ? (
+                  <div className="mt-6">
+                    <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-4">Gallery</h3>
+                    <AutoCarousel
+                      images={selectedAchievement.images}
+                      title={selectedAchievement.title}
+                      className="max-w-2xl mx-auto"
+                      aspectRatio="video"
+                      showControls={true}
+                    />
+                  </div>
+                ) : null}
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6 mt-6">
                   <div>
                     <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-2">Location</h3>
                     <div className="flex items-center text-gray-700">

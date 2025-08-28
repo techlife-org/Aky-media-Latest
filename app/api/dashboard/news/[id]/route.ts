@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { ObjectId, WithId, Document } from 'mongodb'
-import clientPromise from '@/lib/mongodb'
+import clientPromise, { connectToDatabase } from '@/lib/mongodb'
 import { corsHeaders } from '@/lib/cors'
 
 interface NewsArticle extends WithId<Document> {
@@ -13,6 +13,7 @@ interface NewsArticle extends WithId<Document> {
     type: string
     name?: string
   }
+  
   created_at?: string
   updated_at?: string
 }
@@ -59,77 +60,160 @@ export async function GET(
   }
 }
 
-export async function PUT(
-  request: Request,
-  { params }: { params: { id: string } }
-) {
+// export async function PUT(
+//   request: Request,
+//   { params }: { params: { id: string } }
+// ) {
+//   try {
+//     // Validate ID format
+//     if (!ObjectId.isValid(params.id)) {
+//       return new NextResponse(
+//         JSON.stringify({ error: 'Invalid article ID format' }),
+//         { status: 400, headers: corsHeaders() }
+//       )
+//     }
+
+//     const data = await request.json()
+//     const { title, content, doc_type, attachment } = data
+
+//     // Basic validation
+//     if (!title || !content || !doc_type) {
+//       return new NextResponse(
+//         JSON.stringify({ error: 'Title, content, and category are required' }),
+//         { status: 400, headers: corsHeaders() }
+//       )
+//     }
+
+//     const client = await clientPromise
+//     const db = client.db()
+
+//     const updateData = {
+//       title,
+//       content,
+//       doc_type,
+//       updated_at: new Date().toISOString(),
+//       ...(attachment && { attachment })
+//     }
+
+//     const result = await db.collection<NewsArticle>('news').updateOne(
+//       { _id: new ObjectId(params.id) },
+//       { $set: updateData }
+//     )
+
+//     if (result.matchedCount === 0) {
+//       return new NextResponse(
+//         JSON.stringify({ error: 'Article not found' }),
+//         { status: 404, headers: corsHeaders() }
+//       )
+//     }
+
+//     // Fetch the updated article to return
+//     const updatedArticle = await db.collection<NewsArticle>('news').findOne({
+//       _id: new ObjectId(params.id)
+//     })
+
+//     if (!updatedArticle) {
+//       return new NextResponse(
+//         JSON.stringify({ error: 'Failed to fetch updated article' }),
+//         { status: 500, headers: corsHeaders() }
+//       )
+//     }
+
+//     // Convert _id to string for the response
+//     const { _id, ...articleData } = updatedArticle
+//     return new NextResponse(
+//       JSON.stringify({ id: _id.toString(), ...articleData }),
+//       { headers: corsHeaders() }
+//     )
+//   } catch (error) {
+//     console.error('Error updating article:', error)
+//     return new NextResponse(
+//       JSON.stringify({ error: 'Failed to update article' }),
+//       { status: 500, headers: corsHeaders() }
+//     )
+//   }
+// }
+
+export async function PUT(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
-    // Validate ID format
-    if (!ObjectId.isValid(params.id)) {
-      return new NextResponse(
-        JSON.stringify({ error: 'Invalid article ID format' }),
-        { status: 400, headers: corsHeaders() }
-      )
+    const { id } = await params
+
+    // Validate the ID parameter
+    if (!id || !ObjectId.isValid(id)) {
+      return NextResponse.json({ error: "Invalid news ID" }, { status: 400 })
     }
 
-    const data = await request.json()
-    const { title, content, doc_type, attachment } = data
+    // Parse the request body
+    const body = await request.json()
+    const { title, content, doc_type, attachments, custom_category } = body
 
-    // Basic validation
+    // Validate required fields
     if (!title || !content || !doc_type) {
-      return new NextResponse(
-        JSON.stringify({ error: 'Title, content, and category are required' }),
-        { status: 400, headers: corsHeaders() }
-      )
+      return NextResponse.json({ error: "Missing required fields" }, { status: 400 })
     }
 
+    // Connect to the database
     const client = await clientPromise
     const db = client.db()
 
-    const updateData = {
+    // Prepare the update data with proper attachments handling
+    const updateData: {
+      title: any;
+      content: any;
+      doc_type: any;
+      attachments: any[];
+      updated_at: string;
+      custom_category?: any; // Make it optional with ?
+    } = {
       title,
       content,
       doc_type,
+      attachments: Array.isArray(attachments) ? attachments : [],
       updated_at: new Date().toISOString(),
-      ...(attachment && { attachment })
     }
 
-    const result = await db.collection<NewsArticle>('news').updateOne(
-      { _id: new ObjectId(params.id) },
-      { $set: updateData }
-    )
+    // Add custom_category if provided
+    if (custom_category) {
+      updateData.custom_category = custom_category
+    }
 
+    console.log("[v0] Updating news with data:", updateData) // Debug log
+
+    // Update the news article
+    const result = await db.collection("news").updateOne({ _id: new ObjectId(id) }, { $set: updateData })
+
+    console.log("[v0] Update result:", result) // Debug log
+
+    // Check if the article was found and updated
     if (result.matchedCount === 0) {
-      return new NextResponse(
-        JSON.stringify({ error: 'Article not found' }),
-        { status: 404, headers: corsHeaders() }
-      )
+      return NextResponse.json({ error: "News article not found" }, { status: 404 })
     }
 
     // Fetch the updated article to return
-    const updatedArticle = await db.collection<NewsArticle>('news').findOne({
-      _id: new ObjectId(params.id)
+    const updatedNews = await db.collection("news").findOne({
+      _id: new ObjectId(id),
     })
 
-    if (!updatedArticle) {
-      return new NextResponse(
-        JSON.stringify({ error: 'Failed to fetch updated article' }),
-        { status: 500, headers: corsHeaders() }
+    if (!updatedNews) {
+      return NextResponse.json(
+        { error: "Failed to fetch updated news article" },
+        { status: 500 }
       )
     }
 
-    // Convert _id to string for the response
-    const { _id, ...articleData } = updatedArticle
-    return new NextResponse(
-      JSON.stringify({ id: _id.toString(), ...articleData }),
-      { headers: corsHeaders() }
-    )
+    console.log("[v0] Updated news from DB:", updatedNews) // Debug log
+
+    // Convert ObjectId to string for JSON serialization
+    const newsWithId = {
+      ...updatedNews,
+      _id: updatedNews._id.toString(),
+      id: updatedNews._id.toString(),
+    }
+
+    return NextResponse.json(newsWithId)
   } catch (error) {
-    console.error('Error updating article:', error)
-    return new NextResponse(
-      JSON.stringify({ error: 'Failed to update article' }),
-      { status: 500, headers: corsHeaders() }
-    )
+    console.error("Error updating news article:", error)
+    return NextResponse.json({ error: "Failed to update news article" }, { status: 500 })
   }
 }
 

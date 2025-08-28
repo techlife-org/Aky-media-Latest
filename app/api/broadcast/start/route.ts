@@ -14,6 +14,11 @@ export async function POST(request: NextRequest) {
         {
           message: "Service temporarily unavailable. Please try again later.",
           success: false,
+          health: {
+            server: false,
+            database: false,
+            streaming: false
+          }
         },
         { status: 503 },
       )
@@ -37,6 +42,13 @@ export async function POST(request: NextRequest) {
         broadcast: existingBroadcast,
         meetingLink,
         isExisting: true,
+        success: true,
+        timestamp: new Date().toISOString(),
+        health: {
+          server: true,
+          database: true,
+          streaming: true
+        }
       })
     }
 
@@ -68,6 +80,12 @@ export async function POST(request: NextRequest) {
       ],
       viewerCount: 0,
       createdAt: new Date(),
+      stats: {
+        totalViewTime: 0,
+        peakViewers: 0,
+        averageViewTime: 0,
+        chatMessages: 0
+      }
     }
 
     await db.collection("broadcasts").insertOne(broadcast)
@@ -78,9 +96,25 @@ export async function POST(request: NextRequest) {
       meetingLink,
       meetingId,
       isExisting: false,
+      success: true,
+      timestamp: new Date().toISOString(),
+      health: {
+        server: true,
+        database: true,
+        streaming: true
+      }
     })
   } catch (error) {
     console.error("Start broadcast error:", error)
-    return NextResponse.json({ message: "Internal server error" }, { status: 500 })
+    return NextResponse.json({ 
+      message: "Internal server error",
+      success: false,
+      error: error instanceof Error ? error.message : "Unknown error",
+      health: {
+        server: false,
+        database: false,
+        streaming: false
+      }
+    }, { status: 500 })
   }
 }

@@ -7,20 +7,30 @@ import Image from "next/image"
 import Link from "next/link"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Calendar, ArrowRight, Filter, Search } from "lucide-react"
+import { ArrowRight, Filter, Search, Eye } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import Header from "@/components/header"
 import Footer from "@/components/footer"
 import NewsletterSection from "@/components/newsletter-section"
 import ScrollToTop from "@/components/scroll-to-top"
+import { AutoCarousel } from "@/components/auto-carousel"
+
+interface Attachment {
+  url: string
+  type: "image" | "document" | "video" | "link"
+  name?: string
+  order?: number
+}
 
 interface BlogPost {
   id: string
   title: string
   content: string
-  attachment?: string
+  attachments: Attachment[]
   created_at: string
+  updated_at?: string
   doc_type?: string
+  views?: number
 }
 
 export default function NewsPage() {
@@ -34,185 +44,85 @@ export default function NewsPage() {
   const [hasLoaded, setHasLoaded] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  // // Memoized fetch function to prevent infinite loops
-  // const fetchBlogs = useCallback(async () => {
-  //   if (hasLoaded) return // Prevent multiple fetches
-
-  //   try {
-  //     setDataLoading(true)
-  //     setError(null)
-
-  //     console.log("Fetching blogs from news page...")
-
-  //     // Try the primary method first
-  //     let result = await blogApiRequest("/kgt/blog", {
-  //       method: "POST",
-  //       body: { newForm: { query_type: "select" } },
-  //     })
-
-  //     // If primary method fails, try alternative method
-  //     if (!result.success) {
-  //       console.log("Primary method failed, trying alternative...")
-  //       result = await blogApiRequestAlt("/kgt/blog")
-  //     }
-
-  //     if (result.success && result.data) {
-  //       let blogData = []
-
-  //       // Handle different response formats
-  //       if (result.data.resp && Array.isArray(result.data.resp)) {
-  //         blogData = result.data.resp
-  //       } else if (Array.isArray(result.data)) {
-  //         blogData = result.data
-  //       } else if (result.data.data && Array.isArray(result.data.data)) {
-  //         blogData = result.data.data
-  //       }
-
-  //       if (blogData.length > 0) {
-  //         // Sort by created_at date (newest first)
-  //         const sortedBlogs = blogData.sort(
-  //           (a: BlogPost, b: BlogPost) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
-  //         )
-
-  //         // Format image URLs to be absolute
-  //         const blogsWithImages = sortedBlogs.map((blog: BlogPost) => ({
-  //           ...blog,
-  //           attachment: blog.attachment
-  //             ? `${getBlogApiUrl()}${blog.attachment}`
-  //             : "/placeholder.svg?height=300&width=400",
-  //         }))
-
-  //         setBlogs(blogsWithImages)
-  //         setFilteredBlogs(blogsWithImages)
-
-  //         // Extract unique document types
-  //         const types = [...new Set(blogsWithImages.map((blog: BlogPost) => blog.doc_type).filter(Boolean))]
-  //         setDocTypes(types)
-  //         console.log("Successfully fetched blogs:", blogsWithImages)
-  //       } else {
-  //         throw new Error("No blog data found in response")
-  //       }
-  //     } else {
-  //       throw new Error(result.error || "Failed to fetch blogs")
-  //     }
-  //   } catch (error) {
-  //     console.error("Error fetching blogs:", error)
-  //     // Fallback data for demo
-  //     const fallbackData = [
-  //       {
-  //         id: "1",
-  //         title: "Governor Launches New Education Initiative",
-  //         content:
-  //           "His Excellency Alh. Abba Kabir Yusuf announced a comprehensive education reform program aimed at improving the quality of education in Kano State. The initiative includes infrastructure development, teacher training, and student support programs.",
-  //         attachment: "/placeholder.svg?height=300&width=400",
-  //         created_at: new Date().toISOString(),
-  //         doc_type: "Education",
-  //       },
-  //       {
-  //         id: "2",
-  //         title: "Infrastructure Development Progress",
-  //         content:
-  //           "In line with the infrastructure renewal drive of the present administration, the Kano State Government, through the Kano Road Maintenance Agency (KARMA), has commenced asphalt overlay works on the access road leading to the Kano State Polytechnic School of Technology (SOT), Matan Fada, in the heart of Kano Metropolis. This project is part of Governor Alhaji Abba Kabir Yusuf's broader strategy to improve critical infrastructure in educational institutions and enhance accessibility, safety, and mobility for students, staff, and residents in the surrounding community. The road leading to the School of Technology had deteriorated over time due to years of wear, inadequate drainage, and high pedestrian and vehicular usage. The asphalt overlay intervention is a timely response to the concerns of road users, aimed at transforming the route into a smooth, safe, and durable roadway.",
-  //         attachment: "/placeholder.svg?height=300&width=400",
-  //         created_at: new Date(Date.now() - 86400000).toISOString(),
-  //         doc_type: "Infrastructure",
-  //       },
-  //       {
-  //         id: "3",
-  //         title: "Healthcare System Strengthening",
-  //         content:
-  //           "The state government continues to invest in healthcare infrastructure with the opening of new medical facilities and equipment procurement.",
-  //         attachment: "/placeholder.svg?height=300&width=400",
-  //         created_at: new Date(Date.now() - 172800000).toISOString(),
-  //         doc_type: "Healthcare",
-  //       },
-  //       {
-  //         id: "4",
-  //         title: "Youth Empowerment Programs",
-  //         content:
-  //           "New initiatives to empower young people across Kano State with skills training and entrepreneurship opportunities.",
-  //         attachment: "/placeholder.svg?height=300&width=400",
-  //         created_at: new Date(Date.now() - 259200000).toISOString(),
-  //         doc_type: "Youth Development",
-  //       },
-  //       {
-  //         id: "5",
-  //         title: "Agricultural Development Projects",
-  //         content:
-  //           "Investment in modern farming techniques and irrigation systems to boost agricultural productivity in the state.",
-  //         attachment: "/placeholder.svg?height=300&width=400",
-  //         created_at: new Date(Date.now() - 345600000).toISOString(),
-  //         doc_type: "Agriculture",
-  //       },
-  //     ]
-  //     setBlogs(fallbackData)
-  //     setFilteredBlogs(fallbackData)
-  //     setDocTypes(["Education", "Infrastructure", "Healthcare", "Youth Development", "Agriculture"])
-  //   } finally {
-  //     setDataLoading(false)
-  //     setHasLoaded(true)
-  //     stopLoading()
-  //   }
-  // }, [hasLoaded, stopLoading])
-
-  // In app/news/page.tsx
   const fetchBlogs = useCallback(async () => {
-    if (hasLoaded) return;
+    if (hasLoaded) return
 
     try {
-      setDataLoading(true);
-      setError(null);
+      setDataLoading(true)
+      setError(null)
 
-      const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || '';
+      const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || ""
       const response = await fetch(`${baseUrl}/api/news`, {
         method: "GET",
         headers: { "Content-Type": "application/json" },
-      });
+      })
 
       if (!response.ok) {
-        throw new Error('Failed to fetch news');
+        throw new Error("Failed to fetch news")
       }
 
-      const data = await response.json();
+      const data = await response.json()
       if (Array.isArray(data)) {
         const sortedBlogs = data.sort(
-          (a: BlogPost, b: BlogPost) =>
-            new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-        );
-        setBlogs(sortedBlogs);
-        setFilteredBlogs(sortedBlogs);
+          (a: BlogPost, b: BlogPost) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
+        )
+        setBlogs(sortedBlogs)
+        setFilteredBlogs(sortedBlogs)
 
-        // Extract unique document types
+        // Extract unique document types, filter out undefined, and sort alphabetically
         const types = [...new Set(sortedBlogs
           .map((blog: BlogPost) => blog.doc_type)
-          .filter(Boolean)
-        )];
-        setDocTypes(types);
+          .filter((type): type is string => Boolean(type))
+        )]
+        setDocTypes(types.sort((a, b) => a.localeCompare(b)))
       }
     } catch (error) {
-      console.error("Error fetching blogs:", error);
-      setError(error instanceof Error ? error.message : 'Failed to load news');
+      console.error("Error fetching blogs:", error)
+      setError(error instanceof Error ? error.message : "Failed to load news")
+
+      const fallbackData = [
+        {
+          id: "1",
+          title: "Governor Launches New Education Initiative",
+          content:
+            "His Excellency Alh. Abba Kabir Yusuf announced a comprehensive education reform program aimed at improving the quality of education in Kano State.",
+          attachments: [{ url: "/placeholder.svg?height=300&width=400", type: "image" as const }],
+          created_at: new Date().toISOString(),
+          doc_type: "Education",
+          views: 150,
+        },
+        {
+          id: "2",
+          title: "Infrastructure Development Progress",
+          content:
+            "The Kano State Government has commenced asphalt overlay works on critical infrastructure projects across the state.",
+          attachments: [{ url: "/placeholder.svg?height=300&width=400", type: "image" as const }],
+          created_at: new Date(Date.now() - 86400000).toISOString(),
+          doc_type: "Infrastructure",
+          views: 200,
+        },
+      ]
+      setBlogs(fallbackData)
+      setFilteredBlogs(fallbackData)
+      setDocTypes(["Education", "Infrastructure"])
     } finally {
-      setDataLoading(false);
-      setHasLoaded(true);
-      stopLoading();
+      setDataLoading(false)
+      setHasLoaded(true)
+      stopLoading()
     }
-  }, [hasLoaded, stopLoading]);
-  // Single useEffect for initial data fetch
+  }, [hasLoaded, stopLoading])
+
   useEffect(() => {
     fetchBlogs()
   }, [fetchBlogs])
 
-  // Separate useEffect for filtering (no API calls)
   useEffect(() => {
     let filtered = blogs
 
-    // Apply category filter
     if (activeFilter !== "all") {
       filtered = filtered.filter((blog) => blog.doc_type === activeFilter)
     }
 
-    // Apply search filter
     if (searchTerm) {
       filtered = filtered.filter(
         (blog) =>
@@ -249,20 +159,21 @@ export default function NewsPage() {
             backgroundSize: "cover",
             backgroundPosition: "center",
           }}
-        > <div className="absolute"></div>
-          <div className="container mx-auto px-4">
+        >
+          <div className="absolute inset-0 bg-black/20"></div>
+          <div className="container mx-auto px-4 relative z-10">
             <div className="grid lg:grid-cols-2 gap-12 items-center">
               <div>
                 <h1 className="text-5xl lg:text-6xl font-bold mb-6 text-red-500">Latest News</h1>
-                <p className="text-xl mb-8 text-black-800">
+                <p className="text-xl mb-8 text-gray-800">
                   Stay informed with the latest updates, achievements, and developments from the Governor's office
                 </p>
                 <div className="flex items-center space-x-2 text-lg">
-                  <Link href="/" className="text-500 hover:text-red-200 transition-colors">
+                  <Link href="/" className="text-gray-600 hover:text-red-500 transition-colors">
                     Home
                   </Link>
                   <ArrowRight size={16} />
-                  <span className="text-red-200 ">News</span>
+                  <span className="text-red-500">News</span>
                 </div>
               </div>
               <div className="relative">
@@ -283,7 +194,6 @@ export default function NewsPage() {
             {/* Search and Filter Section */}
             <div className="mb-12">
               <div className="flex flex-col lg:flex-row gap-6 items-center justify-between">
-                {/* Search Bar */}
                 <div className="relative flex-1 max-w-md">
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
                   <Input
@@ -295,15 +205,15 @@ export default function NewsPage() {
                   />
                 </div>
 
-                {/* Filter Buttons */}
                 <div className="flex flex-wrap justify-center gap-3">
                   <Button
                     onClick={() => handleFilter("all")}
                     variant={activeFilter === "all" ? "default" : "outline"}
-                    className={`${activeFilter === "all"
-                      ? "bg-red-600 hover:bg-red-700 text-white"
-                      : "bg-white text-red-600 border-red-600 hover:bg-red-50"
-                      }`}
+                    className={`${
+                      activeFilter === "all"
+                        ? "bg-red-600 hover:bg-red-700 text-white"
+                        : "bg-white text-red-600 border-red-600 hover:bg-red-50"
+                    }`}
                   >
                     <Filter size={16} className="mr-2" />
                     All ({blogs.length})
@@ -315,10 +225,11 @@ export default function NewsPage() {
                         key={docType}
                         onClick={() => handleFilter(docType)}
                         variant={activeFilter === docType ? "default" : "outline"}
-                        className={`${activeFilter === docType
-                          ? "bg-red-600 hover:bg-red-700 text-white"
-                          : "bg-white text-red-600 border-red-600 hover:bg-red-50"
-                          }`}
+                        className={`${
+                          activeFilter === docType
+                            ? "bg-red-600 hover:bg-red-700 text-white"
+                            : "bg-white text-red-600 border-red-600 hover:bg-red-50"
+                        }`}
                       >
                         {docType} ({count})
                       </Button>
@@ -352,53 +263,52 @@ export default function NewsPage() {
                 ))}
               </div>
             ) : (
-              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-                {filteredBlogs.map((blog, index) => (
-                  <Card
-                    key={blog.id}
-                    className="overflow-hidden hover:shadow-xl transition-all duration-300 transform hover:-translate-y-2 bg-white"
-                  >
-                    <div className="relative h-64 overflow-hidden">
-                      <Image
-                        src={blog.attachment?.url || `/placeholder.svg?height=300&width=400&text=News+${index + 1}`}
-                        alt={blog.title}
-                        fill
-                        className="object-cover transition-transform duration-300 hover:scale-110"
-                        sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-                      />
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
-                      {blog.doc_type && (
-                        <div className="absolute top-4 left-4">
-                          <span className="px-3 py-1 bg-red-600 text-white text-sm font-semibold rounded-full shadow-lg">
-                            {blog.doc_type}
-                          </span>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                {filteredBlogs.map((blog) => (
+                  <Card key={blog.id} className="group overflow-hidden transition-all duration-300 hover:shadow-lg">
+                    <Link href={`/news/${blog.id}`} className="block h-48 relative overflow-hidden">
+                      {blog.attachments && blog.attachments.length > 0 ? (
+                        <AutoCarousel
+                          images={blog.attachments.map((att) => att.url)}
+                          title={blog.title}
+                          className="h-full"
+                          aspectRatio="auto"
+                          showControls={false}
+                          autoAdvanceInterval={5000}
+                        />
+                      ) : (
+                        <div className="w-full h-full bg-gray-100 flex items-center justify-center">
+                          <span className="text-gray-400">No image</span>
                         </div>
                       )}
-                    </div>
-
+                    </Link>
                     <CardContent className="p-6">
-                      <div className="flex items-center justify-between mb-4">
-                        <div className="flex items-center gap-2 text-sm text-gray-500">
-                          <Calendar size={16} />
-                          <span>{formatDate(blog.created_at)}</span>
-                        </div>
+                      <div className="flex items-center gap-2 mb-2">
+                        {blog.doc_type && (
+                          <span className="px-2 py-1 bg-red-100 text-red-600 text-xs font-medium rounded">
+                            {blog.doc_type}
+                          </span>
+                        )}
+                        <span className="text-sm text-gray-500">{formatDate(blog.created_at)}</span>
                       </div>
-
-                      <h3 className="text-xl font-bold text-gray-900 mb-4 line-clamp-2 hover:text-red-600 transition-colors">
-                        <Link href={`/news/${blog.id}`}>{blog.title || "No Title"}</Link>
+                      <h3 className="text-xl font-semibold mb-2 line-clamp-2">
+                        <Link href={`/news/${blog.id}`} className="hover:text-red-600 transition-colors">
+                          {blog.title}
+                        </Link>
                       </h3>
-
-                      <p className="text-gray-600 mb-6 line-clamp-3 leading-relaxed">
-                        {blog.content || "No Content"}
-                      </p>
-
-                      <Link
-                        href={`/news/${blog.id}`}
-                        className="inline-flex items-center gap-2 text-red-600 font-semibold hover:text-red-700 transition-colors group"
-                      >
-                        Read More
-                        <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />
-                      </Link>
+                      <p className="text-gray-600 mb-4 line-clamp-3">{blog.content}</p>
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-gray-500 flex items-center gap-1">
+                          <Eye size={16} />
+                          {blog.views || 0} views
+                        </span>
+                        <Link
+                          href={`/news/${blog.id}`}
+                          className="text-red-600 hover:text-red-700 text-sm font-medium flex items-center gap-1"
+                        >
+                          Read More <ArrowRight size={16} />
+                        </Link>
+                      </div>
                     </CardContent>
                   </Card>
                 ))}

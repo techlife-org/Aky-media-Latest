@@ -2,163 +2,245 @@
 
 import { useState } from "react"
 import Link from "next/link"
-import Image from "next/image"
 import { Button } from "@/components/ui/button"
-import { Menu, X } from "lucide-react"
+import { Input } from "@/components/ui/input"
+import { Menu, X, Award, Search, UserPlus, Users, ChevronDown } from "lucide-react"
+import { SearchModal } from "./search-modal"
+import Image from "next/image"
 
-const Header = () => {
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
+export default function Header() {
+  const [isMenuOpen, setIsMenuOpen] = useState(false)
+  const [isSearchModalOpen, setIsSearchModalOpen] = useState(false)
+  const [searchQuery, setSearchQuery] = useState("")
 
-  const navigation = [
-    { name: "Home", href: "/" },
-    { name: "About", href: "/about" },
-    { name: "Achievement", href: "/achievement" },
-    { name: "News and Updates", href: "/news" },
-    { name: "Audio", href: "/audio" },
-    { name: "Video", href: "/video" },
-    { name: "Contact", href: "/contact" },
-  ]
+  const toggleMenu = () => {
+    setIsMenuOpen(!isMenuOpen)
+  }
+
+  const openSearchModal = () => {
+    setIsSearchModalOpen(true)
+  }
+
+  const closeSearchModal = () => {
+    setIsSearchModalOpen(false)
+    setSearchQuery("")
+  }
 
   return (
     <>
-      {/* Desktop Header */}
-      <header className="hidden lg:block bg-white border-b border-gray-200 sticky top-0 z-40">
+      <header className="bg-white/95 backdrop-blur-md shadow-lg border-b border-gray-200/50 sticky top-0 z-50">
         <div className="container mx-auto px-4">
-          <div className="flex items-center justify-between py-4">
-            {/* Logo */}
-            <div className="w-1/6">
-              <Link href="/">
+          <div className="flex items-center justify-between h-20">
+            {/* Enhanced Logo Section */}
+            <Link href="/" className="flex items-center gap-3 group">
+              <div className="relative">
+                <div className="absolute inset-0 bg-gradient-to-r from-red-500/20 to-blue-500/20 rounded-full blur-lg group-hover:blur-xl transition-all duration-300"></div>
                 <Image
                   src="/pictures/logo.png"
                   alt="AKY Media Logo"
-                  width={200}
+                  width={60}
                   height={60}
-                  className="h-12 w-auto"
+                  className="h-14 w-auto relative z-10 group-hover:scale-105 transition-transform duration-300"
                 />
-              </Link>
-            </div>
-
-            {/* Navigation Menu */}
-            <div className="w-2/3">
-              <nav className="flex justify-center">
-                <ul className="flex items-center space-x-8">
-                  {navigation.map((item) => (
-                    <li key={item.name}>
-                      <Link
-                        href={item.href}
-                        className="text-gray-700 hover:text-red-600 font-medium transition-colors duration-200"
-                      >
-                        {item.name}
-                      </Link>
-                    </li>
-                  ))}
-                </ul>
-              </nav>
-            </div>
-
-            {/* Live Broadcast Button */}
-            <div className="w-1/6 flex justify-end">
-              <Button asChild className="bg-red-600 hover:bg-red-700 text-white px-6 py-2 rounded-full">
-                <Link href="/live">
-                  <span className="font-medium">Live broadcast</span>
-                </Link>
-              </Button>
-            </div>
-          </div>
-        </div>
-      </header>
-
-      {/* Mobile Header */}
-      <header className="lg:hidden bg-white border-b border-gray-200 sticky top-0 z-40">
-        <div className="container mx-auto px-4">
-          <div className="flex items-center justify-between py-4">
-            {/* Mobile Logo */}
-            <Link href="/">
-              <Image
-                src="/pictures/logo.png"
-                alt="AKY Media Logo"
-                width={150}
-                height={40}
-                className="h-8 w-auto"
-              />
+              </div>
+              <div className="hidden sm:block">
+                <h1 className="text-xl font-bold bg-gradient-to-r from-red-600 via-blue-600 to-green-600 bg-clip-text text-transparent">
+                  AKY Media
+                </h1>
+                <p className="text-xs text-gray-500 font-medium">Kano State Government</p>
+              </div>
             </Link>
 
-            {/* Mobile Menu Button */}
-            <button onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} className="text-gray-700 hover:text-red-600">
-              {isMobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
+            {/* Enhanced Desktop Navigation */}
+            <nav className="hidden lg:flex items-center space-x-1">
+              <Link 
+                href="/" 
+                className="relative px-4 py-2 text-gray-700 hover:text-red-600 transition-all duration-300 font-medium rounded-lg hover:bg-red-50 group"
+              >
+                <span className="relative z-10">Home</span>
+                <div className="absolute inset-0 bg-gradient-to-r from-red-500/10 to-red-600/10 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+              </Link>
+              <Link 
+                href="/achievements" 
+                className="relative px-4 py-2 text-gray-700 hover:text-blue-600 transition-all duration-300 font-medium rounded-lg hover:bg-blue-50 group"
+              >
+                <span className="relative z-10">Achievements</span>
+                <div className="absolute inset-0 bg-gradient-to-r from-blue-500/10 to-blue-600/10 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+              </Link>
+              <Link 
+                href="/news" 
+                className="relative px-4 py-2 text-gray-700 hover:text-purple-600 transition-all duration-300 font-medium rounded-lg hover:bg-purple-50 group"
+              >
+                <span className="relative z-10">News</span>
+                <div className="absolute inset-0 bg-gradient-to-r from-purple-500/10 to-purple-600/10 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+              </Link>
+              <Link 
+                href="/about" 
+                className="relative px-4 py-2 text-gray-700 hover:text-indigo-600 transition-all duration-300 font-medium rounded-lg hover:bg-indigo-50 group"
+              >
+                <span className="relative z-10">About</span>
+                <div className="absolute inset-0 bg-gradient-to-r from-indigo-500/10 to-indigo-600/10 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+              </Link>
+              <Link 
+                href="/contact" 
+                className="relative px-4 py-2 text-gray-700 hover:text-green-600 transition-all duration-300 font-medium rounded-lg hover:bg-green-50 group"
+              >
+                <span className="relative z-10">Contact</span>
+                <div className="absolute inset-0 bg-gradient-to-r from-green-500/10 to-green-600/10 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+              </Link>
+            </nav>
+
+            {/* Enhanced Right Section */}
+            <div className="hidden lg:flex items-center space-x-4">
+              {/* Enhanced Search */}
+              <div className="relative group">
+                <div className="absolute inset-0 bg-gradient-to-r from-gray-200/50 to-blue-200/50 rounded-xl blur-sm group-hover:blur-md transition-all duration-300"></div>
+                <div className="relative bg-white/80 backdrop-blur-sm rounded-xl border border-gray-200/50 shadow-sm hover:shadow-md transition-all duration-300">
+                  <Input
+                    type="text"
+                    placeholder="Search news & achievements..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    onFocus={openSearchModal}
+                    className="w-72 pr-12 border-0 bg-transparent focus:ring-2 focus:ring-blue-500/20 text-sm placeholder:text-gray-400"
+                  />
+                  <Search
+                    className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400 cursor-pointer hover:text-blue-500 transition-colors duration-300"
+                    size={18}
+                    onClick={openSearchModal}
+                  />
+                </div>
+              </div>
+
+              {/* Enhanced Youth Program Buttons */}
+              <div className="flex items-center gap-3">
+                <Link href="/register">
+                  <Button className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105 flex items-center gap-2 px-6">
+                    <UserPlus className="w-4 h-4" />
+                    <span className="font-medium">Register</span>
+                  </Button>
+                </Link>
+
+                <Link href="/youth-login">
+                  <Button 
+                    variant="outline" 
+                    className="border-2 border-blue-600/20 bg-blue-50/50 text-blue-700 hover:bg-blue-100 hover:border-blue-600/40 shadow-md hover:shadow-lg transition-all duration-300 transform hover:scale-105 flex items-center gap-2 px-6 backdrop-blur-sm"
+                  >
+                    <Users className="w-4 h-4" />
+                    <span className="font-medium">Youth Dashboard</span>
+                  </Button>
+                </Link>
+              </div>
+            </div>
+
+            {/* Enhanced Mobile Menu Button */}
+            <button
+              onClick={toggleMenu}
+              className="lg:hidden p-3 rounded-xl text-gray-700 hover:text-red-600 hover:bg-red-50 transition-all duration-300 border border-gray-200/50 shadow-sm hover:shadow-md"
+            >
+              {isMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
             </button>
           </div>
 
-          {/* Mobile Menu */}
-          {isMobileMenuOpen && (
-            <div className="border-t border-gray-200 py-4">
-              <nav>
-                <ul className="space-y-4">
-                  {navigation.map((item) => (
-                    <li key={item.name}>
-                      <Link
-                        href={item.href}
-                        className="block text-gray-700 hover:text-red-600 font-medium transition-colors duration-200"
-                        onClick={() => setIsMobileMenuOpen(false)}
-                      >
-                        {item.name}
-                      </Link>
-                    </li>
-                  ))}
-                </ul>
-              </nav>
-
-              {/* Mobile Live Broadcast Button */}
-              <div className="mt-6">
-                <Button asChild className="w-full bg-red-600 hover:bg-red-700 text-white">
-                  <Link href="/live" onClick={() => setIsMobileMenuOpen(false)}>
-                    Live broadcast
-                  </Link>
-                </Button>
-              </div>
-
-              {/* Mobile Contact Info */}
-              <div className="mt-6 pt-6 border-t border-gray-200">
-                <h3 className="font-bold text-gray-900 mb-4">Contact Us</h3>
-                <div className="space-y-3">
-                  <div className="flex items-center gap-3">
-                    <span className="text-red-600">📞</span>
-                    <a href="tel:+2347074222252" className="text-gray-600 hover:text-red-600">
-                      +2347074222252
-                    </a>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <span className="text-red-600">✉️</span>
-                    <a href="mailto:info@abbakabiryusuf.com" className="text-gray-600 hover:text-red-600">
-                      info@abbakabiryusuf.com
-                    </a>
+          {/* Enhanced Mobile Navigation */}
+          {isMenuOpen && (
+            <div className="lg:hidden py-6 border-t border-gray-200/50 bg-white/95 backdrop-blur-md">
+              {/* Mobile Search */}
+              <div className="mb-6">
+                <div className="relative group">
+                  <div className="absolute inset-0 bg-gradient-to-r from-gray-200/50 to-blue-200/50 rounded-xl blur-sm"></div>
+                  <div className="relative bg-white/80 backdrop-blur-sm rounded-xl border border-gray-200/50 shadow-sm">
+                    <Input
+                      type="text"
+                      placeholder="Search news & achievements..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      onFocus={openSearchModal}
+                      className="w-full pr-12 border-0 bg-transparent focus:ring-2 focus:ring-blue-500/20"
+                    />
+                    <Search
+                      className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400 cursor-pointer"
+                      size={18}
+                      onClick={openSearchModal}
+                    />
                   </div>
                 </div>
+              </div>
 
-                {/* Mobile Social Links */}
-                {/* <div className="mt-4">
-                  <div className="flex space-x-4">
-                    <a href="#" className="text-gray-400 hover:text-red-600">
-                      <span className="sr-only">Facebook</span>📘
-                    </a>
-                    <a href="#" className="text-gray-400 hover:text-red-600">
-                      <span className="sr-only">Twitter</span>🐦
-                    </a>
-                    <a href="#" className="text-gray-400 hover:text-red-600">
-                      <span className="sr-only">Instagram</span>📷
-                    </a>
-                    <a href="#" className="text-gray-400 hover:text-red-600">
-                      <span className="sr-only">YouTube</span>📺
-                    </a>
-                  </div>
-                </div> */}
+              {/* Mobile Navigation Links */}
+              <nav className="flex flex-col space-y-2 mb-6">
+                <Link
+                  href="/"
+                  className="flex items-center px-4 py-3 text-gray-700 hover:text-red-600 hover:bg-red-50 transition-all duration-300 font-medium rounded-xl group"
+                  onClick={() => setIsMenuOpen(false)}
+                >
+                  <span className="relative z-10">Home</span>
+                  <div className="absolute inset-0 bg-gradient-to-r from-red-500/10 to-red-600/10 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                </Link>
+                <Link
+                  href="/achievements"
+                  className="flex items-center px-4 py-3 text-gray-700 hover:text-blue-600 hover:bg-blue-50 transition-all duration-300 font-medium rounded-xl group"
+                  onClick={() => setIsMenuOpen(false)}
+                >
+                  <span className="relative z-10">Achievements</span>
+                  <div className="absolute inset-0 bg-gradient-to-r from-blue-500/10 to-blue-600/10 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                </Link>
+                <Link
+                  href="/news"
+                  className="flex items-center px-4 py-3 text-gray-700 hover:text-purple-600 hover:bg-purple-50 transition-all duration-300 font-medium rounded-xl group"
+                  onClick={() => setIsMenuOpen(false)}
+                >
+                  <span className="relative z-10">News</span>
+                  <div className="absolute inset-0 bg-gradient-to-r from-purple-500/10 to-purple-600/10 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                </Link>
+                <Link
+                  href="/about"
+                  className="flex items-center px-4 py-3 text-gray-700 hover:text-indigo-600 hover:bg-indigo-50 transition-all duration-300 font-medium rounded-xl group"
+                  onClick={() => setIsMenuOpen(false)}
+                >
+                  <span className="relative z-10">About</span>
+                  <div className="absolute inset-0 bg-gradient-to-r from-indigo-500/10 to-indigo-600/10 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                </Link>
+                <Link
+                  href="/contact"
+                  className="flex items-center px-4 py-3 text-gray-700 hover:text-green-600 hover:bg-green-50 transition-all duration-300 font-medium rounded-xl group"
+                  onClick={() => setIsMenuOpen(false)}
+                >
+                  <span className="relative z-10">Contact</span>
+                  <div className="absolute inset-0 bg-gradient-to-r from-green-500/10 to-green-600/10 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                </Link>
+              </nav>
+              
+              {/* Enhanced Mobile Youth Program Buttons */}
+              <div className="space-y-3 pt-4 border-t border-gray-200/50">
+                <Link href="/register" onClick={() => setIsMenuOpen(false)}>
+                  <Button className="w-full bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-[1.02] flex items-center justify-center gap-2 py-3">
+                    <UserPlus className="w-5 h-5" />
+                    <span className="font-medium">Register for Youth Program</span>
+                  </Button>
+                </Link>
+                
+                <Link href="/youth-login" onClick={() => setIsMenuOpen(false)}>
+                  <Button 
+                    variant="outline" 
+                    className="w-full border-2 border-blue-600/20 bg-blue-50/50 text-blue-700 hover:bg-blue-100 hover:border-blue-600/40 shadow-md hover:shadow-lg transition-all duration-300 transform hover:scale-[1.02] flex items-center justify-center gap-2 py-3 backdrop-blur-sm"
+                  >
+                    <Users className="w-5 h-5" />
+                    <span className="font-medium">Youth Dashboard</span>
+                  </Button>
+                </Link>
               </div>
             </div>
           )}
         </div>
       </header>
+
+      <SearchModal
+        isOpen={isSearchModalOpen}
+        onClose={closeSearchModal}
+        searchQuery={searchQuery}
+        onSearchQueryChange={setSearchQuery}
+      />
     </>
   )
 }
-
-export default Header

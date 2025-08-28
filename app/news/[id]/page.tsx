@@ -2,25 +2,34 @@
 
 import { useState, useEffect } from "react"
 import { useParams, useRouter } from "next/navigation"
-import Image from "next/image"
 import Link from "next/link"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Calendar, ArrowRight, Clock, MapPin, User } from "lucide-react"
+import { Calendar, ArrowRight, MapPin, User } from "lucide-react"
 import Header from "@/components/header"
 import Footer from "@/components/footer"
 import NewsletterSection from "@/components/newsletter-section"
 import ScrollToTop from "@/components/scroll-to-top"
+import { AutoCarousel } from "@/components/auto-carousel"
+
+interface Attachment {
+  url: string
+  type: "image" | "document" | "video" | "link"
+  name?: string
+  order?: number
+}
 
 interface BlogPost {
   id: string
   title: string
   content: string
-  attachment?: string
+  attachments: Attachment[]
   created_at: string
+  updated_at?: string
   doc_type?: string
   author?: string
   location?: string
+  views?: number
 }
 
 export default function NewsDetailPage() {
@@ -35,31 +44,34 @@ export default function NewsDetailPage() {
     const fetchBlogDetail = async () => {
       try {
         setLoading(true)
-        
+        console.log("[v0] Fetching blog detail for ID:", params.id)
+
         // Fetch the specific blog post
-        const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || ''
+        const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || ""
         const response = await fetch(`${baseUrl}/api/news/${params.id}`)
-        
+
+        console.log("[v0] API response status:", response.status)
+
         if (!response.ok) {
-          throw new Error('Failed to fetch blog post')
+          const errorData = await response.json().catch(() => ({}))
+          console.error("[v0] API error:", errorData)
+          throw new Error(errorData.details || "Failed to fetch blog post")
         }
-        
+
         const data = await response.json()
+        console.log("[v0] Received blog data:", data)
         setBlog(data)
 
         // Fetch related blogs (last 3 posts excluding the current one)
         const relatedResponse = await fetch(`${baseUrl}/api/news`)
         if (relatedResponse.ok) {
           const allBlogs = await relatedResponse.json()
-          const filteredRelated = allBlogs
-            .filter((b: BlogPost) => b.id !== params.id)
-            .slice(0, 3) // Get the 3 most recent
+          const filteredRelated = allBlogs.filter((b: BlogPost) => b.id !== params.id).slice(0, 3) // Get the 3 most recent
           setRelatedBlogs(filteredRelated)
         }
-        
       } catch (err) {
-        console.error("Error fetching blog detail:", err)
-        setError('Failed to load the news article. Please try again later.')
+        console.error("[v0] Error fetching blog detail:", err)
+        setError(err instanceof Error ? err.message : "Failed to load the news article. Please try again later.")
       } finally {
         setLoading(false)
       }
@@ -108,10 +120,7 @@ export default function NewsDetailPage() {
             <div className="text-red-500 text-5xl mb-4">⚠️</div>
             <h1 className="text-3xl font-bold text-gray-900 mb-4">Something went wrong</h1>
             <p className="text-gray-600 mb-8">{error}</p>
-            <Button 
-              onClick={() => router.push('/news')}
-              className="bg-red-600 hover:bg-red-700 text-white"
-            >
+            <Button onClick={() => router.push("/news")} className="bg-red-600 hover:bg-red-700 text-white">
               Back to News
             </Button>
           </div>
@@ -181,9 +190,7 @@ export default function NewsDetailPage() {
             <div className="mb-8">
               <div className="flex items-center gap-4 mb-6">
                 {blog.doc_type && (
-                  <span className="px-3 py-1 bg-red-100 text-red-600 text-sm rounded-full">
-                    {blog.doc_type}
-                  </span>
+                  <span className="px-3 py-1 bg-red-100 text-red-600 text-sm rounded-full">{blog.doc_type}</span>
                 )}
                 <div className="flex items-center gap-2 text-gray-600">
                   <Calendar size={16} />
@@ -211,7 +218,7 @@ export default function NewsDetailPage() {
                   </div>
                   <div>
                     <h4 className="font-semibold text-gray-900">Author</h4>
-                    <span className="text-gray-600">{blog.author || 'AKY Media Team'}</span>
+                    <span className="text-gray-600">{blog.author || "AKY Media Team"}</span>
                   </div>
                 </div>
 
@@ -221,33 +228,32 @@ export default function NewsDetailPage() {
                   </div>
                   <div>
                     <h4 className="font-semibold text-gray-900">Location</h4>
-                    <span className="text-gray-600">{blog.location || 'Kano State, Nigeria'}</span>
+                    <span className="text-gray-600">{blog.location || "Kano State, Nigeria"}</span>
                   </div>
                 </div>
               </div>
             </div>
 
-            {/* Featured Image */}
-            {blog.attachment && (
-              <div className="relative h-96 mb-8 rounded-lg overflow-hidden">
-                <Image
-                  src={blog.attachment.url}
-                  alt={blog.title}
-                  fill
-                  className="object-cover"
-                  priority
+            {/* Featured Images */}
+            {blog.attachments && blog.attachments.length > 0 && (
+              <div className="mb-8">
+                <AutoCarousel
+                  images={blog.attachments.map((att) => att.url)}
+                  title={blog.title}
+                  className="h-96"
+                  aspectRatio="video"
+                  showControls={true}
+                  autoAdvanceInterval={5000}
                 />
               </div>
             )}
 
             {/* Article Content */}
-            <div 
-              className="prose prose-lg max-w-none mb-12" 
-              dangerouslySetInnerHTML={{ 
-                __html: blog.content 
-                  ? blog.content.replace(/\n/g, '<br/>')
-                  : 'No content available.' 
-              }} 
+            <div
+              className="prose prose-lg max-w-none mb-12"
+              dangerouslySetInnerHTML={{
+                __html: blog.content ? blog.content.replace(/\n/g, "<br/>") : "No content available.",
+              }}
             />
 
             {/* Quote Section */}
@@ -271,14 +277,24 @@ export default function NewsDetailPage() {
               <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
                 {relatedBlogs.map((relatedBlog) => (
                   <Card key={relatedBlog.id} className="overflow-hidden hover:shadow-lg transition-shadow">
+                    {/* Related Blog Images */}
                     <div className="relative h-48">
-                      <Image
-                        src={relatedBlog.attachment.url || "/placeholder.svg?height=300&width=400"}
-                        alt={relatedBlog.title}
-                        fill
-                        className="object-cover"
-                      />
+                      {relatedBlog.attachments && relatedBlog.attachments.length > 0 ? (
+                        <AutoCarousel
+                          images={relatedBlog.attachments.map((att) => att.url)}
+                          title={relatedBlog.title}
+                          className="h-full"
+                          aspectRatio="auto"
+                          showControls={false}
+                          autoAdvanceInterval={5000}
+                        />
+                      ) : (
+                        <div className="w-full h-full bg-gray-100 flex items-center justify-center">
+                          <span className="text-4xl">📰</span>
+                        </div>
+                      )}
                     </div>
+
                     <CardContent className="p-6">
                       <div className="flex items-center justify-between mb-4">
                         <div className="flex items-center gap-2 text-sm text-gray-600">
@@ -299,7 +315,7 @@ export default function NewsDetailPage() {
                       </h3>
 
                       <p className="text-gray-600 mb-4 line-clamp-3">
-                        {relatedBlog.content?.replace(/<[^>]*>/g, '').substring(0, 150)}...
+                        {relatedBlog.content?.replace(/<[^>]*>/g, "").substring(0, 150)}...
                       </p>
 
                       <Link
