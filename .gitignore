@@ -22,7 +22,8 @@ yarn-error.log*
 .env.development.local
 .env.test.local
 .env.production.local
-
+.env.communication.envcommunicationexample
+.env.example 
 # vercel
 .vercel
 

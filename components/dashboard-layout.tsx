@@ -22,6 +22,7 @@ import {
   Smartphone,
   UserCheck,
   FolderKanban,
+  Send,
 } from "lucide-react"
 
 interface DashboardLayoutProps {
@@ -53,6 +54,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   const navigation = [
     { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
     { name: "Broadcast Control", href: "/dashboard/broadcast", icon: Radio },
+    { name: "Communication Center", href: "/dashboard/communication", icon: Send },
     { name: "Youth Management", href: "/dashboard/youth-management", icon: UserCheck },
     { name: "Project Management", href: "/dashboard/project-management", icon: FolderKanban },
     { name: "Achievements", href: "/dashboard/achievements", icon: BarChart3 },
@@ -129,7 +131,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
         <div className="bg-white border-b border-gray-200 flex-shrink-0">
           <div className="px-6">
             <Tabs value={getCurrentTab()} className="w-full">
-              <TabsList className="grid w-full grid-cols-11 h-12 bg-gray-50">
+              <TabsList className="grid w-full grid-cols-12 h-12 bg-gray-50">
                 {navigation.map((item) => (
                   <TabsTrigger
                     key={item.name}

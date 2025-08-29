@@ -25,8 +25,10 @@ export async function GET() {
       console.error("Database connection error:", error)
       return NextResponse.json(
         {
+          error: "Database connection failed",
           message: "Service temporarily unavailable. Please try again later.",
           success: false,
+          timestamp: new Date().toISOString()
         },
         { status: 503 },
       )
@@ -42,19 +44,33 @@ export async function GET() {
       updatedAt: video.updatedAt.toISOString(),
     }))
 
-    return NextResponse.json(formattedVideos)
+    return NextResponse.json(formattedVideos, {
+      headers: {
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'Pragma': 'no-cache',
+        'Expires': '0'
+      }
+    })
   } catch (error) {
     console.error("Error fetching videos:", error)
-    return NextResponse.json({ error: "Failed to fetch videos" }, { status: 500 })
+    return NextResponse.json({ 
+      error: "Failed to fetch videos",
+      message: error instanceof Error ? error.message : "Unknown error occurred",
+      timestamp: new Date().toISOString()
+    }, { status: 500 })
   }
 }
 
 export async function POST(req: Request) {
   try {
-    const { title, description, videoUrl, thumbnail, category } = await req.json()
+    const { title, description, videoUrl, thumbnail, category, featured } = await req.json()
 
     if (!title || !description || !videoUrl || !category) {
-      return NextResponse.json({ error: "Missing required fields" }, { status: 400 })
+      return NextResponse.json({ 
+        error: "Missing required fields",
+        required: ["title", "description", "videoUrl", "category"],
+        timestamp: new Date().toISOString()
+      }, { status: 400 })
     }
 
     let db
@@ -65,8 +81,10 @@ export async function POST(req: Request) {
       console.error("Database connection error:", error)
       return NextResponse.json(
         {
+          error: "Database connection failed",
           message: "Service temporarily unavailable. Please try again later.",
           success: false,
+          timestamp: new Date().toISOString()
         },
         { status: 503 },
       )
@@ -81,11 +99,11 @@ export async function POST(req: Request) {
     }
 
     const newVideo: Omit<Video, "_id" | "id"> = {
-      title,
-      description,
-      videoUrl,
+      title: title.trim(),
+      description: description.trim(),
+      videoUrl: videoUrl.trim(),
       thumbnail: finalThumbnail,
-      category,
+      category: category.trim(),
       createdAt: new Date(),
       updatedAt: new Date(),
     }
@@ -113,45 +131,10 @@ export async function POST(req: Request) {
     )
   } catch (error) {
     console.error("Error adding video:", error)
-    return NextResponse.json({ error: "Failed to add video" }, { status: 500 })
-  }
-}
-
-export async function DELETE(
-  req: Request,
-  { params }: { params: { id: string } }
-) {
-  try {
-    const { id } = params;
-
-    if (!id || !ObjectId.isValid(id)) {
-      return NextResponse.json({ error: "Valid Video ID is required" }, { status: 400 })
-    }
-
-    let db
-    try {
-      const dbConnection = await connectToDatabase()
-      db = dbConnection.db
-    } catch (error) {
-      console.error("Database connection error:", error)
-      return NextResponse.json(
-        {
-          message: "Service temporarily unavailable. Please try again later.",
-          success: false,
-        },
-        { status: 503 },
-      )
-    }
-
-    const result = await db.collection<Video>("videos").deleteOne({ _id: new ObjectId(id) })
-
-    if (result.deletedCount === 0) {
-      return NextResponse.json({ error: "Video not found" }, { status: 404 })
-    }
-
-    return NextResponse.json({ message: "Video deleted successfully" }, { status: 200 })
-  } catch (error) {
-    console.error("Error deleting video:", error)
-    return NextResponse.json({ error: "Failed to delete video" }, { status: 500 })
+    return NextResponse.json({ 
+      error: "Failed to add video",
+      message: error instanceof Error ? error.message : "Unknown error occurred",
+      timestamp: new Date().toISOString()
+    }, { status: 500 })
   }
 }
