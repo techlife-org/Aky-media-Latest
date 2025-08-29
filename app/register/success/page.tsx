@@ -1,14 +1,14 @@
 "use client"
 
 import { useSearchParams, useRouter } from "next/navigation"
-import { useEffect, useState } from "react"
+import { useEffect, useState, Suspense } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { CheckCircle, Download, Share2, Home, User, Mail, MapPin, Calendar, Copy } from "lucide-react"
 import { toast } from "sonner"
 
-export default function RegistrationSuccessPage() {
+function RegistrationSuccessContent() {
   const searchParams = useSearchParams()
   const router = useRouter()
   const [copied, setCopied] = useState(false)
@@ -267,5 +267,20 @@ export default function RegistrationSuccessPage() {
         </div>
       </div>
     </div>
+  )
+}
+
+export default function RegistrationSuccessPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gradient-to-br from-green-50 to-blue-50 py-8 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading registration details...</p>
+        </div>
+      </div>
+    }>
+      <RegistrationSuccessContent />
+    </Suspense>
   )
 }

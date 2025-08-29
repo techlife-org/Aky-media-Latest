@@ -145,5 +145,5 @@ export async function POST(request: Request) {
 }
 
 // Add support for other HTTP methods if needed
-export { default as PUT } from "./[id]/route"
-// export { default as DELETE } from "./[id]/route"
+// Note: PUT and DELETE are handled in the [id]/route.ts file for specific articles
+// This route only handles GET (list all) and POST (create new)
