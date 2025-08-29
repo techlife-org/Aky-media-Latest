@@ -1,7 +1,11 @@
-import { type NextRequest, NextResponse } from "next/server"
+import { NextResponse } from "next/server"
 import { connectToDatabase } from "@/lib/mongodb"
+import { ObjectId } from "mongodb"
 
-export async function GET(request: NextRequest) {
+// Force dynamic rendering
+export const dynamic = 'force-dynamic'
+
+export async function GET(request: Request) {
   try {
     let db;
     try {

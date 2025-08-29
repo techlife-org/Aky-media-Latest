@@ -10,6 +10,11 @@ const nextConfig = {
   typescript: {
     ignoreBuildErrors: true,
   },
+  trailingSlash: false,
+  output: 'standalone',
+  experimental: {
+    serverComponentsExternalPackages: ['mongodb'],
+  },
   images: {
     unoptimized: true,
     domains: ['server.bitcoops.com', 'abbakabiryusuf.com'],
