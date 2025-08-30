@@ -109,17 +109,28 @@ export default function NewsPage() {
   const fetchNews = async () => {
     try {
       setLoading(true)
-      const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || ""
-      const response = await fetch(`${baseUrl}/api/dashboard/news`, {
+      setError(null)
+      
+      console.log("[News Management] Fetching news from /api/dashboard/news")
+      
+      // Use relative URL for client-side fetches
+      const response = await fetch("/api/dashboard/news", {
         method: "GET",
         headers: { "Content-Type": "application/json" },
+        cache: "no-store"
       })
 
+      console.log("[News Management] API response status:", response.status)
+
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`)
+        const errorText = await response.text()
+        console.error("[News Management] API error response:", errorText)
+        throw new Error(`HTTP error! status: ${response.status} - ${errorText}`)
       }
 
       const result = await response.json()
+      console.log("[News Management] API response data:", result)
+      
       const newsData = Array.isArray(result) ? result : result.data || []
 
       if (Array.isArray(newsData)) {
@@ -138,19 +149,61 @@ export default function NewsPage() {
               : [],
         }))
 
+        console.log("[News Management] Formatted news data:", formattedNews.length, "articles")
         setNews(formattedNews)
       } else {
-        console.error("Unexpected news data format:", newsData)
+        console.error("[News Management] Unexpected news data format:", newsData)
         setNews([])
       }
     } catch (error) {
-      console.error("Error fetching news:", error)
-      setNews([])
-      toast({
-        title: "Error",
-        description: "Failed to load news articles. Please try again.",
-        variant: "destructive",
-      })
+      console.error("[News Management] Error fetching news:", error)
+      setError(error instanceof Error ? error.message : "Failed to load news articles")
+      
+      // Fallback to public news API if dashboard API fails
+      try {
+        console.log("[News Management] Trying fallback to /api/news")
+        const fallbackResponse = await fetch("/api/news", {
+          method: "GET",
+          headers: { "Content-Type": "application/json" },
+        })
+        
+        if (fallbackResponse.ok) {
+          const fallbackData = await fallbackResponse.json()
+          console.log("[News Management] Fallback data loaded:", fallbackData.length, "articles")
+          
+          const formattedFallbackNews = fallbackData.map((article: any) => ({
+            id: article._id || article.id,
+            title: article.title,
+            content: article.content,
+            doc_type: article.doc_type || "General",
+            created_at: article.created_at,
+            updated_at: article.updated_at,
+            views: article.views || 0,
+            attachments: Array.isArray(article.attachments)
+              ? article.attachments
+              : article.attachment
+                ? [article.attachment]
+                : [],
+          }))
+          
+          setNews(formattedFallbackNews)
+          toast({
+            title: "Warning",
+            description: "Loaded news from public API. Some management features may be limited.",
+            className: "bg-yellow-50 border-yellow-200 text-yellow-800",
+          })
+        } else {
+          throw new Error("Both dashboard and public APIs failed")
+        }
+      } catch (fallbackError) {
+        console.error("[News Management] Fallback also failed:", fallbackError)
+        setNews([])
+        toast({
+          title: "Error",
+          description: "Failed to load news articles from both sources. Please check your connection and try again.",
+          variant: "destructive",
+        })
+      }
     } finally {
       setLoading(false)
     }
@@ -179,19 +232,36 @@ export default function NewsPage() {
 
   const fetchStats = async () => {
     try {
-      const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || ""
-      const response = await fetch(`${baseUrl}/api/dashboard/news/stats`, {
+      console.log("[News Management] Fetching stats from /api/dashboard/news/stats")
+      
+      const response = await fetch("/api/dashboard/news/stats", {
         method: "GET",
         headers: { "Content-Type": "application/json" },
+        cache: "no-store"
       })
 
       if (!response.ok) {
-        throw new Error(`Failed to fetch stats: ${response.statusText}`)
+        console.warn("[News Management] Stats API failed, using calculated stats")
+        // Calculate stats from news data if API fails
+        const calculatedStats = {
+          totalNews: news.length,
+          thisMonth: news.filter(article => {
+            const articleDate = new Date(article.created_at)
+            const now = new Date()
+            return articleDate.getMonth() === now.getMonth() && articleDate.getFullYear() === now.getFullYear()
+          }).length,
+          totalViews: news.reduce((sum, article) => sum + (article.views || 0), 0),
+          emailsSent: 0,
+        }
+        setStats(calculatedStats)
+        return
       }
 
       const result = await response.json()
+      console.log("[News Management] Stats data:", result)
+      
       const defaultStats = {
-        totalNews: 0,
+        totalNews: news.length, // Use actual news count as fallback
         thisMonth: 0,
         totalViews: 0,
         emailsSent: 0,
@@ -200,14 +270,21 @@ export default function NewsPage() {
 
       setStats(defaultStats)
     } catch (err) {
-      console.error("Error fetching stats:", err)
-      setError(err instanceof Error ? err.message : "Failed to load statistics")
-      setStats({
-        totalNews: 0,
-        thisMonth: 0,
-        totalViews: 0,
+      console.error("[News Management] Error fetching stats:", err)
+      
+      // Calculate basic stats from loaded news data
+      const calculatedStats = {
+        totalNews: news.length,
+        thisMonth: news.filter(article => {
+          const articleDate = new Date(article.created_at)
+          const now = new Date()
+          return articleDate.getMonth() === now.getMonth() && articleDate.getFullYear() === now.getFullYear()
+        }).length,
+        totalViews: news.reduce((sum, article) => sum + (article.views || 0), 0),
         emailsSent: 0,
-      })
+      }
+      
+      setStats(calculatedStats)
     }
   }
 
@@ -396,12 +473,15 @@ export default function NewsPage() {
 
   const handleEdit = async (articleId: string) => {
     try {
-      const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || ""
-      const response = await fetch(`${baseUrl}/api/dashboard/news/${articleId}`)
+      console.log("[News Management] Fetching article for edit:", articleId)
+      const response = await fetch(`/api/dashboard/news/${articleId}`, {
+        cache: "no-store"
+      })
       if (!response.ok) {
         throw new Error("Failed to fetch article details")
       }
       const article = await response.json()
+      console.log("[News Management] Article data for edit:", article)
 
       setEditingId(article.id)
       setNewArticle({
@@ -546,8 +626,8 @@ export default function NewsPage() {
   const sendNewsletterUpdate = async (articleId: string) => {
     try {
       setIsSending(articleId)
-      const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || ""
-      const response = await fetch(`${baseUrl}/api/dashboard/news/notify`, {
+      console.log("[News Management] Sending newsletter for article:", articleId)
+      const response = await fetch("/api/dashboard/news/notify", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

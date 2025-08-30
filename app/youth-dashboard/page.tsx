@@ -1,4 +1,4 @@
-import MobileYouthDashboard from "@/components/mobile-youth-dashboard"
+import ResponsiveYouthDashboard from "@/components/responsive-youth-dashboard"
 import { Metadata } from "next"
 
 export const metadata: Metadata = {
@@ -8,6 +8,5 @@ export const metadata: Metadata = {
 }
 
 export default function YouthDashboardPage() {
-  return <MobileYouthDashboard />
+  return <ResponsiveYouthDashboard />
 }
-

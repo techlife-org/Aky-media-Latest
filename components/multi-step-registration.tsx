@@ -31,21 +31,19 @@ import { KANO_LGAS, OCCUPATION_OPTIONS } from "@/models/Youth"
 import { toast } from "sonner"
 
 interface FormData {
-  // Step 1: Personal Information
+  // Step 1: Personal Information (now includes LGA and Occupation)
   fullName: string
   email: string
   phone: string
   dateOfBirth: string
+  lga: string
+  occupation: string
   
   // Step 2: Identification
   ninNumber: string
   ninDocument: File | null
   
-  // Step 3: Location & Occupation
-  lga: string
-  occupation: string
-  
-  // Step 4: Security
+  // Step 3: Security
   password: string
   confirmPassword: string
 }
@@ -60,7 +58,7 @@ const STEPS = [
     title: "Personal Information",
     description: "Tell us about yourself",
     icon: User,
-    fields: ["fullName", "email", "phone", "dateOfBirth"]
+    fields: ["fullName", "email", "phone", "dateOfBirth", "lga", "occupation"]
   },
   {
     id: 2,
@@ -71,20 +69,13 @@ const STEPS = [
   },
   {
     id: 3,
-    title: "Location & Occupation",
-    description: "Where are you from?",
-    icon: MapPin,
-    fields: ["lga", "occupation"]
-  },
-  {
-    id: 4,
     title: "Security",
     description: "Create your password",
     icon: Lock,
     fields: ["password", "confirmPassword"]
   },
   {
-    id: 5,
+    id: 4,
     title: "Review & Submit",
     description: "Confirm your details",
     icon: CheckCircle,
@@ -100,10 +91,10 @@ export default function MultiStepRegistration() {
     email: "",
     phone: "",
     dateOfBirth: "",
-    ninNumber: "",
-    ninDocument: null,
     lga: "",
     occupation: "",
+    ninNumber: "",
+    ninDocument: null,
     password: "",
     confirmPassword: ""
   })
@@ -128,6 +119,33 @@ export default function MultiStepRegistration() {
     return age
   }
 
+  // Validate NIN format according to Nigerian NIN standards
+  const validateNIN = (nin: string): boolean => {
+    // Remove any spaces or special characters
+    const cleanNIN = nin.replace(/\s+/g, '')
+    
+    // Check if it's exactly 11 digits
+    if (!/^\d{11}$/.test(cleanNIN)) {
+      return false
+    }
+    
+    // Additional NIN validation rules for Nigerian NIN
+    // NIN should not start with 0
+    if (cleanNIN.startsWith('0')) {
+      return false
+    }
+    
+    // Check for obvious invalid patterns (all same digits, sequential)
+    const allSameDigits = /^(.)\1{10}$/.test(cleanNIN)
+    const sequential = /^(0123456789|1234567890|9876543210|0987654321)/.test(cleanNIN)
+    
+    if (allSameDigits || sequential) {
+      return false
+    }
+    
+    return true
+  }
+
   // Validate current step
   const validateStep = (step: number): boolean => {
     const newErrors: StepValidation = {}
@@ -135,12 +153,14 @@ export default function MultiStepRegistration() {
     
     if (!currentStepData) return false
 
-    // Step 1: Personal Information
+    // Step 1: Personal Information (now includes LGA and Occupation)
     if (step === 1) {
       if (!formData.fullName.trim()) {
         newErrors.fullName = "Full name is required"
       } else if (formData.fullName.trim().length < 2) {
         newErrors.fullName = "Full name must be at least 2 characters"
+      } else if (!/^[a-zA-Z\s'-]+$/.test(formData.fullName.trim())) {
+        newErrors.fullName = "Full name can only contain letters, spaces, hyphens, and apostrophes"
       }
 
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
@@ -154,7 +174,7 @@ export default function MultiStepRegistration() {
       if (!formData.phone.trim()) {
         newErrors.phone = "Phone number is required"
       } else if (!phoneRegex.test(formData.phone.replace(/\s+/g, ""))) {
-        newErrors.phone = "Invalid Nigerian phone number format"
+        newErrors.phone = "Invalid Nigerian phone number format (e.g., 08012345678 or +2348012345678)"
       }
 
       if (!formData.dateOfBirth) {
@@ -162,18 +182,31 @@ export default function MultiStepRegistration() {
       } else {
         const age = calculateAge(formData.dateOfBirth)
         if (age < 15 || age > 35) {
-          newErrors.dateOfBirth = "Age must be between 15 and 35 years"
+          newErrors.dateOfBirth = "Age must be between 15 and 35 years to qualify for the youth program"
         }
+      }
+
+      if (!formData.lga) {
+        newErrors.lga = "Local Government Area is required"
+      }
+
+      if (!formData.occupation) {
+        newErrors.occupation = "Occupation/Status is required"
       }
     }
 
-    // Step 2: Identification
+    // Step 2: Identification (Enhanced NIN validation)
     if (step === 2) {
-      const ninRegex = /^\d{11}$/
       if (!formData.ninNumber.trim()) {
         newErrors.ninNumber = "NIN is required"
-      } else if (!ninRegex.test(formData.ninNumber)) {
-        newErrors.ninNumber = "NIN must be exactly 11 digits"
+      } else if (!validateNIN(formData.ninNumber)) {
+        if (!/^\d{11}$/.test(formData.ninNumber.replace(/\s+/g, ''))) {
+          newErrors.ninNumber = "NIN must be exactly 11 digits"
+        } else if (formData.ninNumber.replace(/\s+/g, '').startsWith('0')) {
+          newErrors.ninNumber = "Invalid NIN format - NIN cannot start with 0"
+        } else {
+          newErrors.ninNumber = "Invalid NIN format - Please enter a valid Nigerian NIN"
+        }
       }
 
       if (!formData.ninDocument) {
@@ -190,19 +223,8 @@ export default function MultiStepRegistration() {
       }
     }
 
-    // Step 3: Location & Occupation
+    // Step 3: Security
     if (step === 3) {
-      if (!formData.lga) {
-        newErrors.lga = "Local Government Area is required"
-      }
-
-      if (!formData.occupation) {
-        newErrors.occupation = "Occupation is required"
-      }
-    }
-
-    // Step 4: Security
-    if (step === 4) {
       if (!formData.password) {
         newErrors.password = "Password is required"
       } else if (formData.password.length < 8) {
@@ -224,7 +246,17 @@ export default function MultiStepRegistration() {
 
   // Handle input changes
   const handleInputChange = (field: keyof FormData, value: string) => {
-    setFormData(prev => ({ ...prev, [field]: value }))
+    // Special handling for NIN input - only allow digits and format
+    if (field === 'ninNumber') {
+      // Remove all non-digit characters
+      const digitsOnly = value.replace(/\D/g, '')
+      // Limit to 11 digits
+      const limitedValue = digitsOnly.slice(0, 11)
+      setFormData(prev => ({ ...prev, [field]: limitedValue }))
+    } else {
+      setFormData(prev => ({ ...prev, [field]: value }))
+    }
+    
     // Clear error when user starts typing
     if (errors[field]) {
       setErrors(prev => ({ ...prev, [field]: "" }))
@@ -275,7 +307,7 @@ export default function MultiStepRegistration() {
 
   // Submit form
   const handleSubmit = async () => {
-    if (!validateStep(4)) {
+    if (!validateStep(3)) {
       toast.error("Please fix all errors before submitting")
       return
     }
@@ -404,20 +436,23 @@ export default function MultiStepRegistration() {
           </CardHeader>
           
           <CardContent className="p-8">
-            {/* Step 1: Personal Information */}
+            {/* Step 1: Personal Information (now includes LGA and Occupation) */}
             {currentStep === 1 && (
               <div className="space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-2">
                     <Label htmlFor="fullName">Full Name (as on NIN) *</Label>
-                    <Input
-                      id="fullName"
-                      type="text"
-                      value={formData.fullName}
-                      onChange={(e) => handleInputChange("fullName", e.target.value)}
-                      placeholder="Enter your full name"
-                      className={errors.fullName ? "border-red-500" : ""}
-                    />
+                    <div className="relative">
+                      <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                      <Input
+                        id="fullName"
+                        type="text"
+                        value={formData.fullName}
+                        onChange={(e) => handleInputChange("fullName", e.target.value)}
+                        placeholder="Enter your full name as it appears on your NIN"
+                        className={`pl-10 ${errors.fullName ? "border-red-500" : ""}`}
+                      />
+                    </div>
                     {errors.fullName && (
                       <p className="text-sm text-red-500 flex items-center gap-1">
                         <AlertCircle className="w-4 h-4" />
@@ -456,7 +491,7 @@ export default function MultiStepRegistration() {
                         type="tel"
                         value={formData.phone}
                         onChange={(e) => handleInputChange("phone", e.target.value)}
-                        placeholder="08012345678"
+                        placeholder="08012345678 or +2348012345678"
                         className={`pl-10 ${errors.phone ? "border-red-500" : ""}`}
                       />
                     </div>
@@ -494,24 +529,88 @@ export default function MultiStepRegistration() {
                       </p>
                     )}
                   </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="lga">Local Government Area (LGA) *</Label>
+                    <div className="relative">
+                      <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4 z-10" />
+                      <Select value={formData.lga} onValueChange={(value) => handleInputChange("lga", value)}>
+                        <SelectTrigger className={`pl-10 ${errors.lga ? "border-red-500" : ""}`}>
+                          <SelectValue placeholder="Select your LGA" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {Object.entries(KANO_LGAS).map(([lga, code]) => (
+                            <SelectItem key={lga} value={lga}>
+                              {lga} ({code})
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    {errors.lga && (
+                      <p className="text-sm text-red-500 flex items-center gap-1">
+                        <AlertCircle className="w-4 h-4" />
+                        {errors.lga}
+                      </p>
+                    )}
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="occupation">Occupation/Status *</Label>
+                    <div className="relative">
+                      <Briefcase className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4 z-10" />
+                      <Select value={formData.occupation} onValueChange={(value) => handleInputChange("occupation", value)}>
+                        <SelectTrigger className={`pl-10 ${errors.occupation ? "border-red-500" : ""}`}>
+                          <SelectValue placeholder="Select your occupation/status" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {OCCUPATION_OPTIONS.map((occupation) => (
+                            <SelectItem key={occupation} value={occupation}>
+                              {occupation}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    {errors.occupation && (
+                      <p className="text-sm text-red-500 flex items-center gap-1">
+                        <AlertCircle className="w-4 h-4" />
+                        {errors.occupation}
+                      </p>
+                    )}
+                  </div>
                 </div>
               </div>
             )}
 
-            {/* Step 2: Identification */}
+            {/* Step 2: Identification (Enhanced NIN validation) */}
             {currentStep === 2 && (
               <div className="space-y-6">
                 <div className="space-y-2">
-                  <Label htmlFor="ninNumber">NIN Number *</Label>
-                  <Input
-                    id="ninNumber"
-                    type="text"
-                    value={formData.ninNumber}
-                    onChange={(e) => handleInputChange("ninNumber", e.target.value.replace(/\D/g, ""))}
-                    placeholder="12345678901"
-                    maxLength={11}
-                    className={errors.ninNumber ? "border-red-500" : ""}
-                  />
+                  <Label htmlFor="ninNumber">National Identification Number (NIN) *</Label>
+                  <div className="relative">
+                    <CreditCard className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                    <Input
+                      id="ninNumber"
+                      type="text"
+                      value={formData.ninNumber}
+                      onChange={(e) => handleInputChange("ninNumber", e.target.value)}
+                      placeholder="Enter your 11-digit NIN"
+                      maxLength={11}
+                      className={`pl-10 font-mono tracking-wider ${errors.ninNumber ? "border-red-500" : ""}`}
+                    />
+                  </div>
+                  <div className="text-xs text-gray-500">
+                    <p>• NIN must be exactly 11 digits</p>
+                    <p>• Cannot start with 0</p>
+                    <p>• Must be a valid Nigerian NIN format</p>
+                  </div>
+                  {formData.ninNumber && formData.ninNumber.length === 11 && validateNIN(formData.ninNumber) && (
+                    <p className="text-sm text-green-600 flex items-center gap-1">
+                      <CheckCircle className="w-4 h-4" />
+                      Valid NIN format
+                    </p>
+                  )}
                   {errors.ninNumber && (
                     <p className="text-sm text-red-500 flex items-center gap-1">
                       <AlertCircle className="w-4 h-4" />
@@ -582,59 +681,8 @@ export default function MultiStepRegistration() {
               </div>
             )}
 
-            {/* Step 3: Location & Occupation */}
+            {/* Step 3: Security */}
             {currentStep === 3 && (
-              <div className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="space-y-2">
-                    <Label htmlFor="lga">Local Government Area (LGA) *</Label>
-                    <Select value={formData.lga} onValueChange={(value) => handleInputChange("lga", value)}>
-                      <SelectTrigger className={errors.lga ? "border-red-500" : ""}>
-                        <SelectValue placeholder="Select your LGA" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {Object.entries(KANO_LGAS).map(([lga, code]) => (
-                          <SelectItem key={lga} value={lga}>
-                            {lga} ({code})
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    {errors.lga && (
-                      <p className="text-sm text-red-500 flex items-center gap-1">
-                        <AlertCircle className="w-4 h-4" />
-                        {errors.lga}
-                      </p>
-                    )}
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="occupation">Occupation/Status *</Label>
-                    <Select value={formData.occupation} onValueChange={(value) => handleInputChange("occupation", value)}>
-                      <SelectTrigger className={errors.occupation ? "border-red-500" : ""}>
-                        <SelectValue placeholder="Select your occupation" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {OCCUPATION_OPTIONS.map((occupation) => (
-                          <SelectItem key={occupation} value={occupation}>
-                            {occupation}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    {errors.occupation && (
-                      <p className="text-sm text-red-500 flex items-center gap-1">
-                        <AlertCircle className="w-4 h-4" />
-                        {errors.occupation}
-                      </p>
-                    )}
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Step 4: Security */}
-            {currentStep === 4 && (
               <div className="space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-2">
@@ -725,8 +773,8 @@ export default function MultiStepRegistration() {
               </div>
             )}
 
-            {/* Step 5: Review & Submit */}
-            {currentStep === 5 && (
+            {/* Step 4: Review & Submit */}
+            {currentStep === 4 && (
               <div className="space-y-6">
                 <div className="bg-gray-50 rounded-lg p-6">
                   <h3 className="text-lg font-semibold mb-4">Review Your Information</h3>
@@ -739,14 +787,14 @@ export default function MultiStepRegistration() {
                         <p><span className="font-medium">Email:</span> {formData.email}</p>
                         <p><span className="font-medium">Phone:</span> {formData.phone}</p>
                         <p><span className="font-medium">Age:</span> {formData.dateOfBirth ? calculateAge(formData.dateOfBirth) : 'N/A'} years</p>
+                        <p><span className="font-medium">LGA:</span> {formData.lga}</p>
+                        <p><span className="font-medium">Occupation:</span> {formData.occupation}</p>
                       </div>
                     </div>
 
                     <div>
-                      <h4 className="font-medium text-gray-700 mb-2">Location & Occupation</h4>
+                      <h4 className="font-medium text-gray-700 mb-2">Identification</h4>
                       <div className="space-y-2 text-sm">
-                        <p><span className="font-medium">LGA:</span> {formData.lga}</p>
-                        <p><span className="font-medium">Occupation:</span> {formData.occupation}</p>
                         <p><span className="font-medium">NIN:</span> {formData.ninNumber}</p>
                         <p><span className="font-medium">Document:</span> {formData.ninDocument?.name || 'Not uploaded'}</p>
                       </div>
