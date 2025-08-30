@@ -31,8 +31,8 @@ export default function Header() {
       <header className="bg-white/95 backdrop-blur-md shadow-lg border-b border-gray-200/50 sticky top-0 z-50">
         <div className="container mx-auto px-4">
           <div className="flex items-center justify-between h-20">
-            {/* Enhanced Logo Section */}
-            <Link href="/" className="flex items-center gap-3 group">
+            {/* Logo Section */}
+            <Link href="/" className="flex items-center group">
               <div className="relative">
                 <div className="absolute inset-0 bg-gradient-to-r from-red-500/20 to-blue-500/20 rounded-full blur-lg group-hover:blur-xl transition-all duration-300"></div>
                 <Image
@@ -42,12 +42,6 @@ export default function Header() {
                   height={60}
                   className="h-14 w-auto relative z-10 group-hover:scale-105 transition-transform duration-300"
                 />
-              </div>
-              <div className="hidden sm:block">
-                <h1 className="text-xl font-bold bg-gradient-to-r from-red-600 via-blue-600 to-green-600 bg-clip-text text-transparent">
-                  AKY Media
-                </h1>
-                <p className="text-xs text-gray-500 font-medium">Kano State Government</p>
               </div>
             </Link>
 

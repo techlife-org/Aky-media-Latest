@@ -260,12 +260,6 @@ export default function YouthManagement() {
                     <Download className="w-4 h-4 mr-2" />
                     Export Data
                   </Button>
-                  <Button 
-                    className="bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105"
-                  >
-                    <UserPlus className="w-4 h-4 mr-2" />
-                    Add Youth
-                  </Button>
                 </div>
               </div>
             </div>
