@@ -28,25 +28,32 @@ export default function NewsSection() {
         setLoading(true)
         setError(null)
 
-        const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || ""
-        const response = await fetch(`${baseUrl}/api/news`, {
+        // Ensure we're running in the browser
+        if (typeof window === 'undefined') {
+          console.log("[News Section] Skipping fetch - running on server")
+          return
+        }
+
+        console.log("[News Section] Fetching news from /api/news")
+        // Use relative URL for client-side fetches
+        const response = await fetch("/api/news", {
           method: "GET",
           headers: { "Content-Type": "application/json" },
         })
 
         if (!response.ok) {
-          throw new Error("Failed to fetch news")
+          throw new Error(`Failed to fetch news: ${response.status} ${response.statusText}`)
         }
 
         const data = await response.json()
-        console.log("[v0] API response data:", data)
+        console.log("[News Section] API response data:", data)
 
         if (Array.isArray(data)) {
           const sortedBlogs = data
             .sort((a: BlogPost, b: BlogPost) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
             .slice(0, 3)
             .map((blog: BlogPost) => {
-              console.log("[v0] Processing blog:", blog.title, "attachments:", blog.attachments)
+              console.log("[News Section] Processing blog:", blog.title, "attachments:", blog.attachments)
 
               const processedAttachments =
                 blog.attachments?.map((attachment) => {
@@ -71,7 +78,7 @@ export default function NewsSection() {
                   return `/uploads/${attachmentUrl}`
                 }) || []
 
-              console.log("[v0] Processed attachments:", processedAttachments)
+              console.log("[News Section] Processed attachments:", processedAttachments)
 
               return {
                 ...blog,
@@ -79,7 +86,7 @@ export default function NewsSection() {
               }
             })
           setBlogs(sortedBlogs)
-          console.log("[v0] Final processed blogs:", sortedBlogs)
+          console.log("[News Section] Final processed blogs:", sortedBlogs)
         }
       } catch (error) {
         console.error("Error fetching blogs:", error)
@@ -112,7 +119,8 @@ export default function NewsSection() {
           },
         ]
         setBlogs(fallbackData)
-        console.log("[v0] Using fallback data with proper attachments")
+        console.log("[News Section] Using fallback data due to API error:", error)
+        console.log("[News Section] Using fallback data with proper attachments")
       } finally {
         setLoading(false)
       }

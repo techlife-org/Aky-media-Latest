@@ -214,38 +214,18 @@ export default function AchievementPage() {
     }
   }
 
+  // Get unique categories from achievements and sort alphabetically
+  const uniqueCategories = [...new Set(achievements.map(a => a.category))]
+    .filter(category => category) // Remove any undefined/null categories
+    .sort((a, b) => a.localeCompare(b)) // Sort alphabetically
+
   const categories = [
     { id: "all", name: "All Achievements", count: achievements.length },
-    {
-      id: "infrastructure",
-      name: "Infrastructure",
-      count: achievements.filter((a) => a.category === "infrastructure").length,
-    },
-    {
-      id: "education",
-      name: "Education",
-      count: achievements.filter((a) => a.category === "education").length,
-    },
-    {
-      id: "healthcare",
-      name: "Healthcare",
-      count: achievements.filter((a) => a.category === "healthcare").length,
-    },
-    {
-      id: "finance",
-      name: "Finance",
-      count: achievements.filter((a) => a.category === "finance").length,
-    },
-    {
-      id: "agriculture",
-      name: "Agriculture",
-      count: achievements.filter((a) => a.category === "agriculture").length,
-    },
-    {
-      id: "environment",
-      name: "Environment",
-      count: achievements.filter((a) => a.category === "environment").length,
-    },
+    ...uniqueCategories.map(category => ({
+      id: category,
+      name: category.charAt(0).toUpperCase() + category.slice(1), // Capitalize first letter
+      count: achievements.filter((a) => a.category === category).length,
+    }))
   ]
 
   const filteredAchievements = achievements.filter((achievement) => {
@@ -364,20 +344,86 @@ export default function AchievementPage() {
           <div className="container mx-auto px-4">
             <Tabs value={selectedCategory} onValueChange={setSelectedCategory} className="w-full">
               <div className="mb-8">
-                <TabsList className="grid w-full grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-2 h-auto p-2 bg-white shadow-lg rounded-xl border">
-                  {categories.map((category) => (
-                    <TabsTrigger
-                      key={category.id}
-                      value={category.id}
-                      className="flex flex-col items-center p-4 data-[state=active]:bg-red-600 data-[state=active]:text-white rounded-lg transition-all duration-200 hover:bg-red-50"
-                    >
-                      <span className="font-semibold text-sm text-center">{category.name}</span>
-                      <Badge variant="secondary" className="mt-1 text-xs">
-                        {category.count}
-                      </Badge>
-                    </TabsTrigger>
-                  ))}
-                </TabsList>
+                {/* Mobile Dropdown for small screens */}
+                <div className="block sm:hidden mb-4">
+                  <select
+                    value={selectedCategory}
+                    onChange={(e) => setSelectedCategory(e.target.value)}
+                    className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl shadow-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 text-sm font-medium"
+                  >
+                    {categories.map((category) => (
+                      <option key={category.id} value={category.id}>
+                        {category.name} ({category.count})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Desktop/Tablet Tab Layout - Full Width */}
+                <div className="hidden sm:block">
+                  <TabsList className="grid w-full h-auto p-3 bg-gradient-to-r from-gray-50 to-white rounded-2xl border border-gray-100" style={{gridTemplateColumns: `repeat(${categories.length}, 1fr)`}}>
+                    {categories.map((category, index) => (
+                      <TabsTrigger
+                        key={category.id}
+                        value={category.id}
+                        className={`
+                          group relative flex flex-col items-center justify-center gap-1 px-2 py-3 
+                          data-[state=active]:bg-gradient-to-r data-[state=active]:from-red-600 data-[state=active]:to-red-700 
+                          data-[state=active]:text-white
+                          rounded-lg transition-all duration-300 ease-out
+                          hover:bg-gradient-to-r hover:from-red-50 hover:to-red-100 hover:scale-105
+                          text-xs font-medium border border-transparent
+                          data-[state=active]:border-red-300
+                          transform hover:-translate-y-0.5 min-h-[60px]
+                        `}
+                        style={{
+                          animationDelay: `${index * 50}ms`,
+                          animationDuration: '0.6s',
+                          animationFillMode: 'both'
+                        }}
+                      >
+                        {/* Active indicator */}
+                        <div className="absolute -top-1 left-1/2 transform -translate-x-1/2 w-1.5 h-1.5 bg-red-500 rounded-full opacity-0 group-data-[state=active]:opacity-100 transition-opacity duration-300"></div>
+                        
+                        {/* Category name */}
+                        <span className="text-center group-data-[state=active]:font-bold transition-all duration-300 text-xs leading-tight">
+                          {category.name}
+                        </span>
+                        
+                        {/* Count badge */}
+                        <Badge 
+                          variant="secondary" 
+                          className={`
+                            text-xs px-1.5 py-0.5 min-w-[20px] h-4 flex items-center justify-center
+                            transition-all duration-300 font-bold
+                            group-data-[state=active]:bg-white/20 group-data-[state=active]:text-white group-data-[state=active]:border-white/30
+                            group-hover:bg-red-100 group-hover:text-red-700 group-hover:border-red-200
+                            bg-gray-100 text-gray-600 border border-gray-200
+                          `}
+                        >
+                          {category.count}
+                        </Badge>
+                        
+                        {/* Hover effect overlay */}
+                        <div className="absolute inset-0 bg-gradient-to-r from-red-500/10 to-red-600/10 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"></div>
+                      </TabsTrigger>
+                    ))}
+                  </TabsList>
+                </div>
+
+                {/* Filter summary */}
+                <div className="mt-4 text-center">
+                  <p className="text-sm text-gray-600">
+                    {selectedCategory === 'all' ? (
+                      <span className="font-medium">Showing all <span className="text-red-600 font-bold">{filteredAchievements.length}</span> achievements</span>
+                    ) : (
+                      <span className="font-medium">
+                        Filtered by <span className="text-red-600 font-bold">{categories.find(c => c.id === selectedCategory)?.name}</span> - 
+                        <span className="text-red-600 font-bold">{filteredAchievements.length}</span> achievements found
+                      </span>
+                    )}
+                  </p>
+                </div>
               </div>
 
               <TabsContent value={selectedCategory} className="mt-8">

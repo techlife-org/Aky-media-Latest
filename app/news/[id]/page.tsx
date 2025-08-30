@@ -44,33 +44,42 @@ export default function NewsDetailPage() {
     const fetchBlogDetail = async () => {
       try {
         setLoading(true)
-        console.log("[v0] Fetching blog detail for ID:", params.id)
+        
+        // Ensure we're running in the browser
+        if (typeof window === 'undefined') {
+          console.log("[News Detail] Skipping fetch - running on server")
+          return
+        }
+        
+        console.log("[News Detail] Fetching blog detail for ID:", params.id)
 
-        // Fetch the specific blog post
-        const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || ""
-        const response = await fetch(`${baseUrl}/api/news/${params.id}`)
+        // Fetch the specific blog post using relative URL
+        const response = await fetch(`/api/news/${params.id}`)
 
-        console.log("[v0] API response status:", response.status)
+        console.log("[News Detail] API response status:", response.status)
 
         if (!response.ok) {
           const errorData = await response.json().catch(() => ({}))
-          console.error("[v0] API error:", errorData)
+          console.error("[News Detail] API error:", errorData)
           throw new Error(errorData.details || "Failed to fetch blog post")
         }
 
         const data = await response.json()
-        console.log("[v0] Received blog data:", data)
+        console.log("[News Detail] Received blog data:", data)
         setBlog(data)
 
         // Fetch related blogs (last 3 posts excluding the current one)
-        const relatedResponse = await fetch(`${baseUrl}/api/news`)
+        const relatedResponse = await fetch("/api/news")
         if (relatedResponse.ok) {
           const allBlogs = await relatedResponse.json()
           const filteredRelated = allBlogs.filter((b: BlogPost) => b.id !== params.id).slice(0, 3) // Get the 3 most recent
           setRelatedBlogs(filteredRelated)
+          console.log("[News Detail] Loaded", filteredRelated.length, "related articles")
+        } else {
+          console.warn("[News Detail] Failed to fetch related articles")
         }
       } catch (err) {
-        console.error("[v0] Error fetching blog detail:", err)
+        console.error("[News Detail] Error fetching blog detail:", err)
         setError(err instanceof Error ? err.message : "Failed to load the news article. Please try again later.")
       } finally {
         setLoading(false)
