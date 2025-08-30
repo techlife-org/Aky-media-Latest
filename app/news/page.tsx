@@ -7,6 +7,8 @@ import Image from "next/image"
 import Link from "next/link"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
+import { Badge } from "@/components/ui/badge"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { ArrowRight, Filter, Search, Eye } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import Header from "@/components/header"
@@ -51,23 +53,33 @@ export default function NewsPage() {
       setDataLoading(true)
       setError(null)
 
-      const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || ""
-      const response = await fetch(`${baseUrl}/api/news`, {
+      // Ensure we're running in the browser
+      if (typeof window === 'undefined') {
+        console.log("[News Page] Skipping fetch - running on server")
+        return
+      }
+
+      console.log("[News Page] Fetching news from /api/news")
+      // Use relative URL for client-side fetches
+      const response = await fetch("/api/news", {
         method: "GET",
         headers: { "Content-Type": "application/json" },
       })
 
       if (!response.ok) {
-        throw new Error("Failed to fetch news")
+        throw new Error(`Failed to fetch news: ${response.status} ${response.statusText}`)
       }
 
       const data = await response.json()
+      console.log("[News Page] API response data:", data)
+      
       if (Array.isArray(data)) {
         const sortedBlogs = data.sort(
           (a: BlogPost, b: BlogPost) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
         )
         setBlogs(sortedBlogs)
         setFilteredBlogs(sortedBlogs)
+        console.log("[News Page] Loaded", sortedBlogs.length, "news articles")
 
         // Extract unique document types, filter out undefined, and sort alphabetically
         const types = [...new Set(sortedBlogs
@@ -75,14 +87,20 @@ export default function NewsPage() {
           .filter((type): type is string => Boolean(type))
         )]
         setDocTypes(types.sort((a, b) => a.localeCompare(b)))
+        console.log("[News Page] Document types:", types)
+      } else {
+        console.warn("[News Page] API response is not an array:", data)
+        setError("Invalid data format received from server")
       }
     } catch (error) {
-      console.error("Error fetching blogs:", error)
+      console.error("[News Page] Error fetching blogs:", error)
       setError(error instanceof Error ? error.message : "Failed to load news")
 
+      // Use fallback data only if there's a network error
+      console.log("[News Page] Using fallback data due to API error:", error)
       const fallbackData = [
         {
-          id: "1",
+          id: "fallback-1",
           title: "Governor Launches New Education Initiative",
           content:
             "His Excellency Alh. Abba Kabir Yusuf announced a comprehensive education reform program aimed at improving the quality of education in Kano State.",
@@ -92,7 +110,7 @@ export default function NewsPage() {
           views: 150,
         },
         {
-          id: "2",
+          id: "fallback-2",
           title: "Infrastructure Development Progress",
           content:
             "The Kano State Government has commenced asphalt overlay works on critical infrastructure projects across the state.",
@@ -105,6 +123,7 @@ export default function NewsPage() {
       setBlogs(fallbackData)
       setFilteredBlogs(fallbackData)
       setDocTypes(["Education", "Infrastructure"])
+      console.log("[News Page] Fallback data loaded with", fallbackData.length, "articles")
     } finally {
       setDataLoading(false)
       setHasLoaded(true)
@@ -189,64 +208,162 @@ export default function NewsPage() {
           </div>
         </section>
 
-        <main className="py-20">
+        {/* Search Section */}
+        <section className="py-8 bg-white shadow-sm">
           <div className="container mx-auto px-4">
-            {/* Search and Filter Section */}
-            <div className="mb-12">
-              <div className="flex flex-col lg:flex-row gap-6 items-center justify-between">
-                <div className="relative flex-1 max-w-md">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
-                  <Input
-                    type="text"
-                    placeholder="Search news..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-10 pr-4 py-3 border-2 border-gray-200 focus:border-red-500 rounded-lg"
-                  />
-                </div>
-
-                <div className="flex flex-wrap justify-center gap-3">
-                  <Button
-                    onClick={() => handleFilter("all")}
-                    variant={activeFilter === "all" ? "default" : "outline"}
-                    className={`${
-                      activeFilter === "all"
-                        ? "bg-red-600 hover:bg-red-700 text-white"
-                        : "bg-white text-red-600 border-red-600 hover:bg-red-50"
-                    }`}
-                  >
-                    <Filter size={16} className="mr-2" />
-                    All ({blogs.length})
-                  </Button>
-                  {docTypes.map((docType) => {
-                    const count = blogs.filter((blog) => blog.doc_type === docType).length
-                    return (
-                      <Button
-                        key={docType}
-                        onClick={() => handleFilter(docType)}
-                        variant={activeFilter === docType ? "default" : "outline"}
-                        className={`${
-                          activeFilter === docType
-                            ? "bg-red-600 hover:bg-red-700 text-white"
-                            : "bg-white text-red-600 border-red-600 hover:bg-red-50"
-                        }`}
-                      >
-                        {docType} ({count})
-                      </Button>
-                    )
-                  })}
-                </div>
+            <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
+              <div className="relative flex-1 max-w-md">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                <Input
+                  placeholder="Search news articles..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10 border-gray-200 focus:border-red-500 focus:ring-red-500"
+                />
+              </div>
+              <div className="flex items-center space-x-2 text-gray-600">
+                <Filter className="w-5 h-5" />
+                <span className="text-sm">
+                  Showing {filteredBlogs.length} of {blogs.length} articles
+                  {searchTerm && ` for "${searchTerm}"`}
+                </span>
               </div>
             </div>
+          </div>
+        </section>
 
-            {/* Results Count */}
-            <div className="mb-8">
-              <p className="text-gray-600 text-lg">
-                Showing {filteredBlogs.length} of {blogs.length} news articles
-                {searchTerm && ` for "${searchTerm}"`}
-                {activeFilter !== "all" && ` in ${activeFilter}`}
-              </p>
-            </div>
+        <main className="py-16">
+          <div className="container mx-auto px-4">
+            {/* Tab Filter Section */}
+            <Tabs value={activeFilter} onValueChange={setActiveFilter} className="w-full">
+              <div className="mb-8">
+                {/* Mobile Dropdown for small screens */}
+                <div className="block sm:hidden mb-4">
+                  <select
+                    value={activeFilter}
+                    onChange={(e) => setActiveFilter(e.target.value)}
+                    className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl shadow-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 text-sm font-medium"
+                  >
+                    <option value="all">All Articles ({blogs.length})</option>
+                    {docTypes.map((docType) => {
+                      const count = blogs.filter((blog) => blog.doc_type === docType).length
+                      return (
+                        <option key={docType} value={docType}>
+                          {docType} ({count})
+                        </option>
+                      )
+                    })}
+                  </select>
+                </div>
+
+                {/* Desktop/Tablet Tab Layout - Full Width */}
+                <div className="hidden sm:block">
+                  <TabsList 
+                    className="grid w-full h-auto p-3 bg-gradient-to-r from-gray-50 to-white rounded-2xl border border-gray-100" 
+                    style={{gridTemplateColumns: `repeat(${docTypes.length + 1}, 1fr)`}}
+                  >
+                    <TabsTrigger
+                      value="all"
+                      className="
+                        group relative flex flex-col items-center justify-center gap-1 px-2 py-3 
+                        data-[state=active]:bg-gradient-to-r data-[state=active]:from-red-600 data-[state=active]:to-red-700 
+                        data-[state=active]:text-white
+                        rounded-lg transition-all duration-300 ease-out
+                        hover:bg-gradient-to-r hover:from-red-50 hover:to-red-100 hover:scale-105
+                        text-xs font-medium border border-transparent
+                        data-[state=active]:border-red-300
+                        transform hover:-translate-y-0.5 min-h-[60px]
+                      "
+                    >
+                      {/* Active indicator */}
+                      <div className="absolute -top-1 left-1/2 transform -translate-x-1/2 w-1.5 h-1.5 bg-red-500 rounded-full opacity-0 group-data-[state=active]:opacity-100 transition-opacity duration-300"></div>
+                      
+                      {/* Category name */}
+                      <span className="text-center group-data-[state=active]:font-bold transition-all duration-300 text-xs leading-tight">
+                        All Articles
+                      </span>
+                      
+                      {/* Count badge */}
+                      <Badge 
+                        variant="secondary" 
+                        className="
+                          text-xs px-1.5 py-0.5 min-w-[20px] h-4 flex items-center justify-center
+                          transition-all duration-300 font-bold
+                          group-data-[state=active]:bg-white/20 group-data-[state=active]:text-white group-data-[state=active]:border-white/30
+                          group-hover:bg-red-100 group-hover:text-red-700 group-hover:border-red-200
+                          bg-gray-100 text-gray-600 border border-gray-200
+                        "
+                      >
+                        {blogs.length}
+                      </Badge>
+                      
+                      {/* Hover effect overlay */}
+                      <div className="absolute inset-0 bg-gradient-to-r from-red-500/10 to-red-600/10 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"></div>
+                    </TabsTrigger>
+                    
+                    {docTypes.map((docType) => {
+                      const count = blogs.filter((blog) => blog.doc_type === docType).length
+                      return (
+                        <TabsTrigger
+                          key={docType}
+                          value={docType}
+                          className="
+                            group relative flex flex-col items-center justify-center gap-1 px-2 py-3 
+                            data-[state=active]:bg-gradient-to-r data-[state=active]:from-red-600 data-[state=active]:to-red-700 
+                            data-[state=active]:text-white
+                            rounded-lg transition-all duration-300 ease-out
+                            hover:bg-gradient-to-r hover:from-red-50 hover:to-red-100 hover:scale-105
+                            text-xs font-medium border border-transparent
+                            data-[state=active]:border-red-300
+                            transform hover:-translate-y-0.5 min-h-[60px]
+                          "
+                        >
+                          {/* Active indicator */}
+                          <div className="absolute -top-1 left-1/2 transform -translate-x-1/2 w-1.5 h-1.5 bg-red-500 rounded-full opacity-0 group-data-[state=active]:opacity-100 transition-opacity duration-300"></div>
+                          
+                          {/* Category name */}
+                          <span className="text-center group-data-[state=active]:font-bold transition-all duration-300 text-xs leading-tight">
+                            {docType}
+                          </span>
+                          
+                          {/* Count badge */}
+                          <Badge 
+                            variant="secondary" 
+                            className="
+                              text-xs px-1.5 py-0.5 min-w-[20px] h-4 flex items-center justify-center
+                              transition-all duration-300 font-bold
+                              group-data-[state=active]:bg-white/20 group-data-[state=active]:text-white group-data-[state=active]:border-white/30
+                              group-hover:bg-red-100 group-hover:text-red-700 group-hover:border-red-200
+                              bg-gray-100 text-gray-600 border border-gray-200
+                            "
+                          >
+                            {count}
+                          </Badge>
+                          
+                          {/* Hover effect overlay */}
+                          <div className="absolute inset-0 bg-gradient-to-r from-red-500/10 to-red-600/10 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"></div>
+                        </TabsTrigger>
+                      )
+                    })}
+                  </TabsList>
+                </div>
+
+                {/* Filter summary */}
+                <div className="mt-4 text-center">
+                  <p className="text-sm text-gray-600">
+                    {activeFilter === 'all' ? (
+                      <span className="font-medium">Showing all <span className="text-red-600 font-bold">{filteredBlogs.length}</span> articles</span>
+                    ) : (
+                      <span className="font-medium">
+                        Filtered by <span className="text-red-600 font-bold">{activeFilter}</span> - 
+                        <span className="text-red-600 font-bold">{filteredBlogs.length}</span> articles found
+                      </span>
+                    )}
+                  </p>
+                </div>
+              </div>
+
+              <TabsContent value={activeFilter} className="mt-8">
 
             {/* Blog Posts */}
             {dataLoading ? (
@@ -339,6 +456,8 @@ export default function NewsPage() {
                 </div>
               </div>
             )}
+              </TabsContent>
+            </Tabs>
           </div>
         </main>
 

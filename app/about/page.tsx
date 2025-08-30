@@ -364,59 +364,79 @@ export default function AboutPage() {
 
         <Header />
 
-        {/* Hero Section with CSS Animations */}
+        {/* Hero Section with Modern Design */}
         <section 
-          className="relative h-screen flex items-center justify-center overflow-hidden"
+          className="relative min-h-screen flex items-center justify-center overflow-hidden"
           style={{
             backgroundImage: "url('/bg.png')",
             backgroundSize: "cover",
             backgroundPosition: "center",
-            opacity: 0.9,
           }}
         >
-          {/* Animated Background */}
-          <div className="absolute inset-0 z-0">
-            <div className="absolute inset-0 bg-white/10" />
-            <div className="absolute inset-0 bg-gradient-to-br from-red-500/20 via-blue-500/10 to-purple-500/20" />
-            
-            {/* Floating Elements with CSS animations */}
-            <div className="absolute top-20 left-20 w-20 h-20 bg-gradient-to-br from-blue-400/20 to-purple-400/20 rounded-full blur-xl animate-float" />
-            <div className="absolute bottom-32 right-32 w-32 h-32 bg-gradient-to-br from-red-400/20 to-pink-400/20 rounded-full blur-xl animate-float-delayed" />
-            <div className="absolute top-1/2 right-20 w-16 h-16 bg-gradient-to-br from-yellow-400/20 to-orange-400/20 rounded-full blur-lg animate-float-slow" />
-          </div>
+          {/* Modern Overlay */}
+          <div className="absolute inset-0 bg-gradient-to-br from-black/40 via-black/20 to-black/40" />
+          <div className="absolute inset-0 bg-gradient-to-t from-red-900/20 via-transparent to-blue-900/20" />
 
           {/* Hero Content */}
-          <div className="relative z-20 text-center px-4 max-w-4xl mx-auto animate-fade-in-up">
-            <div className="mb-8 relative">
-              <div className="absolute inset-0 bg-gradient-to-r from-blue-400/20 via-purple-400/20 to-red-400/20 rounded-full blur-2xl animate-pulse" />
-              <Image
-                src="/pictures/assets/img/he/3.png"
-                width={200}
-                height={200}
-                alt="Governor Abba Kabir Yusuf"
-                className="w-48 h-48 rounded-full mx-auto border-4 border-white/20 shadow-2xl relative z-10 animate-scale-in"
-              />
-              <div className="absolute inset-0 border-2 border-dashed border-white/10 rounded-full animate-spin-slow" />
+          <div className="relative z-20 text-center px-4 max-w-6xl mx-auto py-20">
+            {/* Profile Image Section */}
+            <div className="mb-12 relative">
+              <div className="relative inline-block">
+                <div className="absolute inset-0 bg-gradient-to-r from-red-500/30 to-blue-500/30 rounded-full blur-xl" />
+                <Image
+                  src="/pictures/assets/img/he/3.png"
+                  width={240}
+                  height={240}
+                  alt="Governor Abba Kabir Yusuf"
+                  className="w-60 h-60 rounded-full mx-auto border-4 border-white/30 shadow-2xl relative z-10 object-cover"
+                />
+                <div className="absolute -inset-4 border border-white/20 rounded-full" />
+              </div>
             </div>
 
-            <h1 className="text-6xl md:text-8xl font-bold mb-6 bg-gradient-to-r from-gray-900 via-blue-800 to-red-800 bg-clip-text text-transparent animate-slide-in-left">
-              His Excellency
-            </h1>
+            {/* Title Section */}
+            <div className="mb-8">
+              <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold mb-4 text-white leading-tight">
+                His Excellency
+              </h1>
+              <h2 className="text-2xl md:text-4xl lg:text-5xl font-semibold mb-6 bg-gradient-to-r from-red-400 to-red-600 bg-clip-text text-transparent">
+                Alh. Abba Kabir Yusuf
+              </h2>
+              <div className="w-24 h-1 bg-gradient-to-r from-red-500 to-blue-500 mx-auto mb-6" />
+            </div>
 
-            <h2 className="text-3xl md:text-5xl font-semibold mb-8 text-red-600 animate-slide-in-right">
-              Alh. Abba Kabir Yusuf
-            </h2>
-
-            <p className="text-xl md:text-2xl mb-12 text-gray-700 leading-relaxed animate-fade-in">
-              A Journey of Excellence, Leadership, and Service to Kano State
+            {/* Description */}
+            <p className="text-lg md:text-xl lg:text-2xl mb-12 text-white/90 leading-relaxed max-w-4xl mx-auto">
+              Executive Governor of Kano State - A Journey of Excellence, Leadership, and Unwavering Service
             </p>
 
-            <div className="flex items-center justify-center gap-4 mb-12 animate-fade-in-up">
+            {/* Stats Cards */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-12 max-w-4xl mx-auto">
+              <div className="bg-white/10 backdrop-blur-md rounded-xl p-4 border border-white/20">
+                <div className="text-2xl md:text-3xl font-bold text-white mb-1">60+</div>
+                <div className="text-sm text-white/80">Years of Life</div>
+              </div>
+              <div className="bg-white/10 backdrop-blur-md rounded-xl p-4 border border-white/20">
+                <div className="text-2xl md:text-3xl font-bold text-white mb-1">30+</div>
+                <div className="text-sm text-white/80">Years of Service</div>
+              </div>
+              <div className="bg-white/10 backdrop-blur-md rounded-xl p-4 border border-white/20">
+                <div className="text-2xl md:text-3xl font-bold text-white mb-1">15M+</div>
+                <div className="text-sm text-white/80">People Served</div>
+              </div>
+              <div className="bg-white/10 backdrop-blur-md rounded-xl p-4 border border-white/20">
+                <div className="text-2xl md:text-3xl font-bold text-white mb-1">44</div>
+                <div className="text-sm text-white/80">LGAs Impacted</div>
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-12">
               <Button
                 onClick={toggleAudio}
                 variant="outline"
                 size="lg"
-                className="bg-white/80 border-gray-300 text-gray-700 hover:bg-white hover:border-red-500 backdrop-blur-sm transition-all duration-300 hover:scale-105"
+                className="bg-white/20 border-white/30 text-white hover:bg-white/30 backdrop-blur-md transition-all duration-300 hover:scale-105 min-w-[140px]"
               >
                 {isPlaying ? <Pause className="w-5 h-5 mr-2" /> : <Play className="w-5 h-5 mr-2" />}
                 {isPlaying ? "Pause" : "Play"} Music
@@ -426,47 +446,55 @@ export default function AboutPage() {
                 onClick={toggleMute}
                 variant="outline"
                 size="lg"
-                className="bg-white/80 border-gray-300 text-gray-700 hover:bg-white hover:border-red-500 backdrop-blur-sm transition-all duration-300 hover:scale-105"
+                className="bg-white/20 border-white/30 text-white hover:bg-white/30 backdrop-blur-md transition-all duration-300 hover:scale-105"
               >
                 {isMuted ? <VolumeX className="w-5 h-5" /> : <Volume2 className="w-5 h-5" />}
               </Button>
             </div>
 
+            {/* Scroll Indicator */}
             <div className="animate-bounce">
-              <ChevronDown className="w-8 h-8 mx-auto text-gray-600" />
-              <p className="text-sm text-gray-600 mt-2">Scroll to explore his story</p>
+              <ChevronDown className="w-8 h-8 mx-auto text-white/70" />
+              <p className="text-sm text-white/70 mt-2">Scroll to explore his remarkable journey</p>
             </div>
           </div>
         </section>
 
         {/* Interactive Timeline */}
-        <section className="relative py-20 bg-gradient-to-b from-white via-gray-50 to-white">
+        <section className="relative py-20 bg-gradient-to-b from-gray-50 to-white">
           <div className="container mx-auto px-4">
-            <div className="text-center mb-20 animate-fade-in-up">
-              <h2 className="text-5xl md:text-7xl font-bold mb-8 bg-gradient-to-r from-blue-400 via-purple-400 to-red-400 bg-clip-text text-transparent">
+            {/* Section Header */}
+            <div className="text-center mb-20">
+              <div className="inline-flex items-center gap-2 bg-red-100 text-red-600 px-4 py-2 rounded-full text-sm font-medium mb-6">
+                <Calendar className="w-4 h-4" />
+                Life Journey
+              </div>
+              <h2 className="text-4xl md:text-6xl font-bold mb-6 text-gray-900">
                 Timeline of Excellence
               </h2>
-              <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-                Explore the remarkable journey that shaped a visionary leader
+              <p className="text-lg md:text-xl text-gray-600 max-w-3xl mx-auto leading-relaxed">
+                Discover the remarkable milestones that shaped a visionary leader's journey from humble beginnings to transformational governance
               </p>
+              <div className="w-24 h-1 bg-gradient-to-r from-red-500 to-blue-500 mx-auto mt-8" />
             </div>
 
-            {/* Timeline Progress */}
-            <div className="relative mb-20">
-              <div className="absolute left-1/2 transform -translate-x-1/2 w-1 h-full bg-gradient-to-b from-blue-500 via-purple-500 to-red-500 opacity-30" />
-            </div>
-
-            {/* Timeline Events */}
-            <div className="space-y-32">
-              {timelineEvents.map((event, index) => (
-                <TimelineEvent
-                  key={event.id}
-                  event={event}
-                  index={index}
-                  isEven={index % 2 === 0}
-                  isVisible={visibleEvents.has(index)}
-                />
-              ))}
+            {/* Timeline Container */}
+            <div className="relative">
+              {/* Timeline Line */}
+              <div className="absolute left-4 md:left-1/2 transform md:-translate-x-1/2 w-0.5 h-full bg-gradient-to-b from-red-500 via-blue-500 to-red-500 opacity-20" />
+              
+              {/* Timeline Events */}
+              <div className="space-y-16 md:space-y-24">
+                {timelineEvents.map((event, index) => (
+                  <TimelineEvent
+                    key={event.id}
+                    event={event}
+                    index={index}
+                    isEven={index % 2 === 0}
+                    isVisible={visibleEvents.has(index)}
+                  />
+                ))}
+              </div>
             </div>
           </div>
         </section>
@@ -654,94 +682,113 @@ function TimelineEvent({ event, index, isEven, isVisible }: {
   return (
     <div
       data-timeline-event
-      className={`flex flex-col lg:flex-row items-center gap-12 transition-all duration-1000 ${
-        isEven ? '' : 'lg:flex-row-reverse'
-      } ${
+      className={`relative transition-all duration-1000 ${
         isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-20'
       }`}
     >
-      {/* Timeline Dot */}
-      <div className="absolute left-1/2 transform -translate-x-1/2 z-20 hidden lg:block">
-        <div className={`w-16 h-16 rounded-full bg-gradient-to-r ${event.color} flex items-center justify-center border-4 border-white shadow-2xl transition-all duration-500 ${
-          isVisible ? 'scale-100 rotate-0' : 'scale-0 rotate-180'
+      {/* Mobile Timeline Dot */}
+      <div className="absolute left-4 top-8 transform -translate-x-1/2 z-20 md:hidden">
+        <div className={`w-8 h-8 rounded-full bg-gradient-to-r ${event.color} flex items-center justify-center border-2 border-white shadow-lg transition-all duration-500 ${
+          isVisible ? 'scale-100' : 'scale-0'
         }`}>
-          <IconComponent className="w-8 h-8 text-white" />
+          <IconComponent className="w-4 h-4 text-white" />
         </div>
       </div>
 
-      {/* Image Card */}
-      <div className={`w-full lg:w-1/3 transition-all duration-700 ${
-        isVisible ? 'opacity-100 translate-x-0' : `opacity-0 ${isEven ? '-translate-x-20' : 'translate-x-20'}`
-      }`}>
-        <Card className="bg-white/90 backdrop-blur-lg border-gray-200 hover:bg-white hover:shadow-lg transition-all duration-500 hover:scale-105 hover:rotate-1">
-          <CardContent className="p-0">
-            <div className="relative overflow-hidden rounded-lg cursor-pointer" onClick={() => setShowGallery(true)}>
-              <Image
-                src={event.image}
-                width={400}
-                height={300}
-                alt={event.title}
-                className="w-full h-64 object-cover transition-transform duration-700 hover:scale-110"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
-              <div className="absolute top-4 left-4">
-                <Badge className={`bg-gradient-to-r ${event.color} text-white`}>
-                  {event.year}
-                </Badge>
-              </div>
-              <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
-                <Button variant="outline" size="sm" className="text-gray-700 border-gray-300 bg-white/80 backdrop-blur-sm hover:bg-white">
-                  <Globe className="w-4 h-4 mr-2" />
-                  View Gallery
-                </Button>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+      {/* Desktop Timeline Dot */}
+      <div className="absolute left-1/2 top-8 transform -translate-x-1/2 z-20 hidden md:block">
+        <div className={`w-12 h-12 rounded-full bg-gradient-to-r ${event.color} flex items-center justify-center border-4 border-white shadow-xl transition-all duration-500 ${
+          isVisible ? 'scale-100 rotate-0' : 'scale-0 rotate-180'
+        }`}>
+          <IconComponent className="w-6 h-6 text-white" />
+        </div>
       </div>
 
-      {/* Content */}
-      <div className={`w-full lg:w-2/3 transition-all duration-700 delay-200 ${
-        isVisible ? 'opacity-100 translate-x-0' : `opacity-0 ${isEven ? 'translate-x-20' : '-translate-x-20'}`
+      {/* Content Container */}
+      <div className={`grid grid-cols-1 md:grid-cols-2 gap-8 items-start ${
+        isEven ? '' : 'md:grid-flow-col-dense'
       }`}>
-        <Card className="bg-white/90 backdrop-blur-lg border-gray-200 hover:bg-white hover:shadow-lg transition-all duration-500">
-          <CardContent className="p-8">
-            <div className="flex items-center gap-4 mb-6">
-              <div className={`w-16 h-16 rounded-full bg-gradient-to-r ${event.color} flex items-center justify-center lg:hidden`}>
-                <IconComponent className="w-8 h-8 text-white" />
+        
+        {/* Image Section */}
+        <div className={`ml-12 md:ml-0 transition-all duration-700 ${
+          isEven ? 'md:pr-8' : 'md:pl-8 md:col-start-2'
+        } ${
+          isVisible ? 'opacity-100 translate-x-0' : `opacity-0 ${isEven ? '-translate-x-20' : 'translate-x-20'}`
+        }`}>
+          <Card className="bg-white border border-gray-200 hover:shadow-lg transition-all duration-300 overflow-hidden">
+            <CardContent className="p-0">
+              <div className="relative cursor-pointer group" onClick={() => setShowGallery(true)}>
+                <Image
+                  src={event.image}
+                  width={400}
+                  height={300}
+                  alt={event.title}
+                  className="w-full h-64 object-cover transition-transform duration-500 group-hover:scale-105"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent" />
+                
+                {/* Year Badge */}
+                <div className="absolute top-4 left-4">
+                  <Badge className={`bg-gradient-to-r ${event.color} text-white font-semibold px-3 py-1`}>
+                    {event.year}
+                  </Badge>
+                </div>
+                
+                {/* Hover Overlay */}
+                <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                  <Button variant="outline" size="sm" className="bg-white/90 border-white text-gray-700 hover:bg-white">
+                    <Globe className="w-4 h-4 mr-2" />
+                    View Gallery
+                  </Button>
+                </div>
               </div>
-              <div>
-                <h3 className="text-2xl font-bold text-gray-900">{event.title}</h3>
-                <p className="text-lg text-gray-600">{event.subtitle}</p>
-              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Content Section */}
+        <div className={`ml-12 md:ml-0 transition-all duration-700 delay-200 ${
+          isEven ? 'md:pl-8' : 'md:pr-8 md:col-start-1'
+        } ${
+          isVisible ? 'opacity-100 translate-x-0' : `opacity-0 ${isEven ? 'translate-x-20' : '-translate-x-20'}`
+        }`}>
+          <div className="space-y-6">
+            {/* Header */}
+            <div>
+              <h3 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2">{event.title}</h3>
+              <p className="text-lg text-gray-600 mb-4">{event.subtitle}</p>
+              <div className={`w-16 h-1 bg-gradient-to-r ${event.color} rounded-full`} />
             </div>
 
-            <p className="text-gray-700 mb-6 leading-relaxed">{event.description}</p>
+            {/* Description */}
+            <p className="text-gray-700 leading-relaxed text-lg">{event.description}</p>
 
             {/* Quote Section */}
-            <div className="bg-blue-50 rounded-lg p-4 mb-6 border-l-4 border-blue-400">
-              <Quote className="w-6 h-6 text-blue-500 mb-2" />
-              <p className="text-gray-700 italic">"{event.quote}"</p>
+            <div className="bg-gray-50 rounded-xl p-6 border-l-4 border-red-500">
+              <Quote className="w-6 h-6 text-red-500 mb-3" />
+              <p className="text-gray-700 italic font-medium">"{event.quote}"</p>
             </div>
 
-            <div className="space-y-3">
-              <h4 className="text-lg font-semibold text-gray-900 mb-3 flex items-center gap-2">
+            {/* Key Facts */}
+            <div>
+              <h4 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
                 <Zap className="w-5 h-5 text-yellow-500" />
-                Key Facts
+                Key Highlights
               </h4>
-              {event.facts.map((fact: string, i: number) => (
-                <div
-                  key={i}
-                  className="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-50 transition-colors"
-                  style={{ animationDelay: `${i * 0.1 + 0.3}s` }}
-                >
-                  <div className="w-2 h-2 bg-red-500 rounded-full" />
-                  <span className="text-gray-700">{fact}</span>
-                </div>
-              ))}
+              <div className="space-y-3">
+                {event.facts.map((fact: string, i: number) => (
+                  <div
+                    key={i}
+                    className="flex items-start gap-3 p-3 rounded-lg bg-white border border-gray-100 hover:border-gray-200 transition-colors"
+                  >
+                    <div className="w-2 h-2 bg-red-500 rounded-full mt-2 flex-shrink-0" />
+                    <span className="text-gray-700 leading-relaxed">{fact}</span>
+                  </div>
+                ))}
+              </div>
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       </div>
 
       {/* Gallery Modal */}
