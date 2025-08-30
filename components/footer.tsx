@@ -1,6 +1,13 @@
-import Image from "next/image"
-import Link from "next/link"
-import { Facebook, Twitter, Linkedin, Youtube, Phone, Mail } from "lucide-react"
+import Image from "next/image";
+import Link from "next/link";
+import {
+  Facebook,
+  Twitter,
+  Linkedin,
+  Youtube,
+  Phone,
+  Mail,
+} from "lucide-react";
 
 export default function Footer() {
   return (
@@ -18,8 +25,8 @@ export default function Footer() {
               />
             </Link>
             <p className="text-gray-300 leading-relaxed">
-              AKY Media Center - Your trusted source for the latest updates on Governor Abba Kabir Yusuf's initiatives,
-              policies, and developments shaping Kano State.
+              AKY Digital Hub serves as a bridge between Alh. Abba Kabir Yusuf
+              and the people of Kano.
             </p>
             <div className="flex space-x-4">
               <Link
@@ -53,22 +60,42 @@ export default function Footer() {
             <h4 className="text-xl font-bold mb-6">Quick Links</h4>
             <ul className="space-y-3">
               <li>
-                <Link href="/" className="text-gray-300 hover:text-white transition-colors">
+                <Link
+                  href="/"
+                  className="text-gray-300 hover:text-white transition-colors"
+                >
                   Home
                 </Link>
               </li>
               <li>
-                <Link href="/about" className="text-gray-300 hover:text-white transition-colors">
+                <Link
+                  href="/achievements"
+                  className="text-gray-300 hover:text-white transition-colors"
+                >
+                  Achievements
+                </Link>
+              </li>
+              <li>
+                <Link
+                  href="/news"
+                  className="text-gray-300 hover:text-white transition-colors"
+                >
+                  News
+                </Link>
+              </li>
+              <li>
+                <Link
+                  href="/about"
+                  className="text-gray-300 hover:text-white transition-colors"
+                >
                   About Us
                 </Link>
               </li>
               <li>
-                <Link href="/news" className="text-gray-300 hover:text-white transition-colors">
-                  Latest News
-                </Link>
-              </li>
-              <li>
-                <Link href="/contact" className="text-gray-300 hover:text-white transition-colors">
+                <Link
+                  href="/contact"
+                  className="text-gray-300 hover:text-white transition-colors"
+                >
                   Contact Us
                 </Link>
               </li>
@@ -84,7 +111,10 @@ export default function Footer() {
               </div>
               <div>
                 <p className="text-gray-600 text-sm mb-1">Call Or Message</p>
-                <a href="tel:+2347074222252" className="text-gray-900 font-bold text-lg">
+                <a
+                  href="tel:+2347074222252"
+                  className="text-gray-900 font-bold text-lg"
+                >
                   +2347074222252
                 </a>
               </div>
@@ -96,7 +126,10 @@ export default function Footer() {
               </div>
               <div>
                 <p className="text-gray-600 text-sm mb-1">Email Address:</p>
-                <a href="mailto:info@abbakabiryusuf.com" className="text-gray-900 font-bold text-base">
+                <a
+                  href="mailto:info@abbakabiryusuf.com"
+                  className="text-gray-900 font-bold text-base"
+                >
                   info@abbakabiryusuf.com
                 </a>
               </div>
@@ -106,7 +139,7 @@ export default function Footer() {
 
         <div className="border-t border-gray-800 pt-6 pb-6">
           <p className="text-center text-gray-400">
-            &copy; Copyright 2025 AKY Media Center Designed by{" "}
+            &copy; Copyright 2025 AKY Digital Hub Designed by{" "}
             <Link
               href="https://techlife.ng"
               target="_blank"
@@ -118,5 +151,5 @@ export default function Footer() {
         </div>
       </div>
     </footer>
-  )
+  );
 }

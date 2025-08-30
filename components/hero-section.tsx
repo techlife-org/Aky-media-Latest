@@ -71,7 +71,7 @@ export default function HeroSection() {
             {/* Badge */}
             <div className="inline-flex items-center gap-2 bg-red-100 text-red-700 px-4 py-2 rounded-full text-sm font-medium">
               <Star className="w-4 h-4 fill-current" />
-              Welcome to the AKY Media
+              Welcome to the AKY Digital Hub
             </div>
 
             {/* Main Heading */}
@@ -79,13 +79,14 @@ export default function HeroSection() {
               <h1 className="text-6xl lg:text-7xl font-bold text-gray-900 leading-tight">
                 <span className="bg-gradient-to-r from-red-600 to-red-800 bg-clip-text text-transparent">AKY</span>
                 <br />
-                <span className="text-gray-800">Media</span>
+                <span className="text-gray-800">Digital Hub</span>
               </h1>
 
               <div className="space-y-4">
-                <p className="text-2xl text-gray-700 font-medium">Personal Website of</p>
+                <p className="text-2xl text-gray-700 font-medium">The personal digital platform of</p>
                 {/* <p className="text-xl text-red-600 font-semibold">Alh. Abba Kabir Yusuf</p> */}
-                <p className="text-xl text-red-600 font-semibold">The Executive Governor, Kano State</p>
+                <p className="text-xl text-red-600 font-bold">His Excellency Alh. Abba Kabir Yusuf</p>
+                <p className="text-xl text-gray-600 font-medium" style={{ fontStyle: "italic" }}>The Executive Governor of Kano State.</p>
               </div>
             </div>
 

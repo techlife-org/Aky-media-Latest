@@ -55,7 +55,10 @@ import {
   Send,
   MoreHorizontal,
   Plus,
-  ChevronRight
+  ChevronRight,
+  Loader2,
+  Wifi,
+  WifiOff
 } from "lucide-react"
 import { toast } from "sonner"
 import ProgramApplicationForm from "@/components/program-application-form"
@@ -167,6 +170,31 @@ export default function ResponsiveYouthDashboard() {
     videos: VideoContent[]
   }>({ news: [], music: [], videos: [] })
   
+  // Desktop search states
+  const [desktopMusicSearchQuery, setDesktopMusicSearchQuery] = useState("")
+  const [showDesktopMusicSearch, setShowDesktopMusicSearch] = useState(false)
+  const [selectedGenre, setSelectedGenre] = useState<string>('all')
+  const [showGenreFilter, setShowGenreFilter] = useState(false)
+  
+  // Mobile music search states
+  const [mobileMusicSearchQuery, setMobileMusicSearchQuery] = useState("")
+  const [showMobileMusicSearch, setShowMobileMusicSearch] = useState(false)
+  
+  // Loading states for performance optimization
+  const [isLoadingMusic, setIsLoadingMusic] = useState(false)
+  const [musicLoadError, setMusicLoadError] = useState<string | null>(null)
+  const [audioLoadingStates, setAudioLoadingStates] = useState<Record<string, boolean>>({})
+  const [preloadedAudio, setPreloadedAudio] = useState<Record<string, HTMLAudioElement>>({})
+  
+  // Music player states
+  const [currentTrack, setCurrentTrack] = useState<MusicTrack | null>(null)
+  const [isPlaying, setIsPlaying] = useState(false)
+  const [currentTime, setCurrentTime] = useState(0)
+  const [duration, setDuration] = useState(0)
+  const [volume, setVolume] = useState(1)
+  const [likedTracks, setLikedTracks] = useState<Set<string>>(new Set())
+  const [buffering, setBuffering] = useState(false)
+  
   const audioRef = useRef<HTMLAudioElement>(null)
   const videoRef = useRef<HTMLVideoElement>(null)
 
@@ -234,6 +262,191 @@ export default function ResponsiveYouthDashboard() {
     const filtered = getFilteredResults()
     return filtered.news.length + filtered.music.length + filtered.videos.length
   }
+
+  // Get unique genres from music tracks
+  const getAvailableGenres = () => {
+    const genres = music.map(track => track.genre)
+    return ['all', ...Array.from(new Set(genres))]
+  }
+
+  // Desktop music filtering function
+  const getFilteredMusic = () => {
+    let filteredMusic = music
+    
+    // Apply search filter
+    if (desktopMusicSearchQuery.trim()) {
+      const query = desktopMusicSearchQuery.toLowerCase().trim()
+      filteredMusic = filteredMusic.filter(track =>
+        track.title.toLowerCase().includes(query) ||
+        track.artist.toLowerCase().includes(query) ||
+        track.genre.toLowerCase().includes(query)
+      )
+    }
+    
+    // Apply genre filter
+    if (selectedGenre !== 'all') {
+      filteredMusic = filteredMusic.filter(track => track.genre === selectedGenre)
+    }
+    
+    return filteredMusic
+  }
+
+  // Mobile music filtering function
+  const getMobileFilteredMusic = () => {
+    let filteredMusic = music
+    
+    // Apply search filter
+    if (mobileMusicSearchQuery.trim()) {
+      const query = mobileMusicSearchQuery.toLowerCase().trim()
+      filteredMusic = filteredMusic.filter(track =>
+        track.title.toLowerCase().includes(query) ||
+        track.artist.toLowerCase().includes(query) ||
+        track.genre.toLowerCase().includes(query)
+      )
+    }
+    
+    return filteredMusic
+  }
+
+  // Optimized audio preloading
+  const preloadAudio = async (track: MusicTrack) => {
+    if (preloadedAudio[track._id] || track.audioUrl === '#') return
+    
+    try {
+      const audio = new Audio()
+      audio.preload = 'metadata'
+      audio.src = track.audioUrl
+      
+      await new Promise((resolve, reject) => {
+        audio.addEventListener('loadedmetadata', resolve)
+        audio.addEventListener('error', reject)
+        setTimeout(reject, 5000) // 5 second timeout
+      })
+      
+      setPreloadedAudio(prev => ({ ...prev, [track._id]: audio }))
+    } catch (error) {
+      console.warn(`Failed to preload audio for ${track.title}:`, error)
+    }
+  }
+
+  // Enhanced music player functions
+  const handleLikeTrack = (trackId: string) => {
+    setLikedTracks(prev => {
+      const newLiked = new Set(prev)
+      if (newLiked.has(trackId)) {
+        newLiked.delete(trackId)
+      } else {
+        newLiked.add(trackId)
+      }
+      return newLiked
+    })
+  }
+
+  const handlePlayTrack = async (track: MusicTrack) => {
+    if (track.audioUrl === '#') {
+      toast.error('Audio not available for this track')
+      return
+    }
+
+    setCurrentTrack(track)
+    setAudioLoadingStates(prev => ({ ...prev, [track._id]: true }))
+    setBuffering(true)
+    
+    try {
+      if (currentlyPlaying === track._id) {
+        // Toggle play/pause for current track
+        if (audioRef.current) {
+          if (isPlaying) {
+            audioRef.current.pause()
+            setIsPlaying(false)
+          } else {
+            await audioRef.current.play()
+            setIsPlaying(true)
+          }
+        }
+      } else {
+        // Play new track
+        if (audioRef.current) {
+          // Use preloaded audio if available
+          const preloaded = preloadedAudio[track._id]
+          if (preloaded) {
+            audioRef.current.src = preloaded.src
+          } else {
+            audioRef.current.src = track.audioUrl
+          }
+          
+          audioRef.current.currentTime = 0
+          await audioRef.current.play()
+          setIsPlaying(true)
+        }
+        setCurrentlyPlaying(track._id)
+      }
+    } catch (error) {
+      console.error('Error playing track:', error)
+      toast.error('Failed to play track. Please try again.')
+      setIsPlaying(false)
+    } finally {
+      setAudioLoadingStates(prev => ({ ...prev, [track._id]: false }))
+      setBuffering(false)
+    }
+  }
+
+  // Preload next tracks for better performance
+  useEffect(() => {
+    if (music.length > 0) {
+      // Preload first 3 tracks
+      music.slice(0, 3).forEach(track => {
+        preloadAudio(track)
+      })
+    }
+  }, [music])
+
+  // Audio event handlers with better error handling
+  useEffect(() => {
+    const audio = audioRef.current
+    if (!audio) return
+
+    const updateTime = () => setCurrentTime(audio.currentTime)
+    const updateDuration = () => setDuration(audio.duration || 0)
+    const handleEnded = () => {
+      setIsPlaying(false)
+      setCurrentlyPlaying(null)
+      setCurrentTrack(null)
+    }
+    const handlePlay = () => {
+      setIsPlaying(true)
+      setBuffering(false)
+    }
+    const handlePause = () => setIsPlaying(false)
+    const handleWaiting = () => setBuffering(true)
+    const handleCanPlay = () => setBuffering(false)
+    const handleError = (e: Event) => {
+      console.error('Audio error:', e)
+      setIsPlaying(false)
+      setBuffering(false)
+      toast.error('Audio playback error')
+    }
+
+    audio.addEventListener('timeupdate', updateTime)
+    audio.addEventListener('loadedmetadata', updateDuration)
+    audio.addEventListener('ended', handleEnded)
+    audio.addEventListener('play', handlePlay)
+    audio.addEventListener('pause', handlePause)
+    audio.addEventListener('waiting', handleWaiting)
+    audio.addEventListener('canplay', handleCanPlay)
+    audio.addEventListener('error', handleError)
+
+    return () => {
+      audio.removeEventListener('timeupdate', updateTime)
+      audio.removeEventListener('loadedmetadata', updateDuration)
+      audio.removeEventListener('ended', handleEnded)
+      audio.removeEventListener('play', handlePlay)
+      audio.removeEventListener('pause', handlePause)
+      audio.removeEventListener('waiting', handleWaiting)
+      audio.removeEventListener('canplay', handleCanPlay)
+      audio.removeEventListener('error', handleError)
+    }
+  }, [])
 
   const checkAuthentication = async () => {
     const token = localStorage.getItem("youthToken")
@@ -318,50 +531,91 @@ export default function ResponsiveYouthDashboard() {
         setPrograms([])
       }
 
-      // Load music with fallback
+      // Load music with optimized loading and fallback
+      setIsLoadingMusic(true)
+      setMusicLoadError(null)
       try {
-        const musicRes = await fetch("/api/youth/music")
+        const musicRes = await fetch("/api/youth/music", {
+          headers: {
+            'Cache-Control': 'max-age=300' // 5 minute cache
+          }
+        })
         if (musicRes.ok) {
           const musicData = await musicRes.json()
-          setMusic(musicData.data || [])
+          const tracks = musicData.data || []
+          setMusic(tracks)
+          
+          // Preload first track for instant playback
+          if (tracks.length > 0 && tracks[0].audioUrl !== '#') {
+            preloadAudio(tracks[0])
+          }
         } else {
-          // Fallback sample music
-          setMusic([
+          // Enhanced fallback sample music with better variety
+          const fallbackMusic = [
             {
               _id: 'sample-music-1',
               title: 'Youth Anthem',
               artist: 'AKY Artists',
               genre: 'Inspirational',
-              audioUrl: '#',
+              audioUrl: 'https://www.soundjay.com/misc/sounds/bell-ringing-05.wav',
               duration: 180,
               playCount: 1250,
-              likes: 89
+              likes: 89,
+              coverImageUrl: 'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=300&h=300&fit=crop'
             },
             {
               _id: 'sample-music-2',
               title: 'Dreams Come True',
               artist: 'Kano Youth Choir',
               genre: 'Motivational',
-              audioUrl: '#',
+              audioUrl: 'https://www.soundjay.com/misc/sounds/bell-ringing-05.wav',
               duration: 240,
               playCount: 890,
-              likes: 67
+              likes: 67,
+              coverImageUrl: 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=300&h=300&fit=crop'
             },
             {
               _id: 'sample-music-3',
               title: 'Rise Up',
               artist: 'Youth Voices',
               genre: 'Hip Hop',
-              audioUrl: '#',
+              audioUrl: 'https://www.soundjay.com/misc/sounds/bell-ringing-05.wav',
               duration: 200,
               playCount: 750,
-              likes: 45
+              likes: 45,
+              coverImageUrl: 'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=300&h=300&fit=crop'
+            },
+            {
+              _id: 'sample-music-4',
+              title: 'Future Leaders',
+              artist: 'AKY Collective',
+              genre: 'Pop',
+              audioUrl: 'https://www.soundjay.com/misc/sounds/bell-ringing-05.wav',
+              duration: 195,
+              playCount: 1100,
+              likes: 78,
+              coverImageUrl: 'https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=300&h=300&fit=crop'
+            },
+            {
+              _id: 'sample-music-5',
+              title: 'Unity Song',
+              artist: 'Northern Voices',
+              genre: 'Folk',
+              audioUrl: 'https://www.soundjay.com/misc/sounds/bell-ringing-05.wav',
+              duration: 220,
+              playCount: 650,
+              likes: 92,
+              coverImageUrl: 'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=300&h=300&fit=crop'
             }
-          ])
+          ]
+          setMusic(fallbackMusic)
         }
       } catch (error) {
         console.error('Error loading music:', error)
+        setMusicLoadError('Failed to load music. Please try again.')
         setMusic([])
+      } finally {
+        setIsLoadingMusic(false)
       }
 
       // Load videos with fallback
@@ -510,19 +764,45 @@ export default function ResponsiveYouthDashboard() {
   }
 
   const handlePlayMusic = (track: MusicTrack) => {
-    if (currentlyPlaying === track._id) {
-      if (audioRef.current) {
-        audioRef.current.pause()
-      }
-      setCurrentlyPlaying(null)
-    } else {
-      if (audioRef.current) {
-        audioRef.current.src = track.audioUrl
-        audioRef.current.play()
-      }
-      setCurrentlyPlaying(track._id)
-    }
+    handlePlayTrack(track)
   }
+
+  // Skeleton loader component
+  const MusicSkeleton = () => (
+    <div className="animate-pulse">
+      <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl">
+        <div className="w-12 h-12 bg-gray-300 rounded-lg flex-shrink-0" />
+        <div className="flex-1 min-w-0 space-y-2">
+          <div className="h-4 bg-gray-300 rounded w-3/4" />
+          <div className="h-3 bg-gray-300 rounded w-1/2" />
+          <div className="h-3 bg-gray-300 rounded w-1/4" />
+        </div>
+        <div className="w-8 h-8 bg-gray-300 rounded" />
+      </div>
+    </div>
+  )
+
+  // Desktop skeleton loader
+  const DesktopMusicSkeleton = () => (
+    <div className="animate-pulse">
+      <Card className="overflow-hidden">
+        <div className="aspect-square bg-gray-300" />
+        <CardContent className="p-4 space-y-3">
+          <div className="h-4 bg-gray-300 rounded w-3/4" />
+          <div className="h-3 bg-gray-300 rounded w-1/2" />
+          <div className="flex items-center justify-between">
+            <div className="h-3 bg-gray-300 rounded w-1/4" />
+            <div className="h-3 bg-gray-300 rounded w-1/4" />
+          </div>
+          <div className="flex gap-2">
+            <div className="h-8 bg-gray-300 rounded flex-1" />
+            <div className="h-8 w-8 bg-gray-300 rounded" />
+            <div className="h-8 w-8 bg-gray-300 rounded" />
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  )
 
   const handlePlayVideo = (video: VideoContent) => {
     setCurrentVideo(video._id)
@@ -1041,60 +1321,217 @@ export default function ResponsiveYouthDashboard() {
 
           {/* Music Tab */}
           {activeTab === "music" && (
-            <div className="p-4 space-y-4">
-              <div className="flex items-center justify-between">
-                <h2 className="text-xl font-bold text-gray-900">Music</h2>
-                <Button variant="ghost" size="sm">
-                  <Search className="w-5 h-5" />
-                </Button>
+            <div className="space-y-0">
+              {/* Header */}
+              <div className="bg-gradient-to-r from-purple-600 via-pink-600 to-red-600 p-6 text-white">
+                <div className="flex items-center justify-between mb-4">
+                  <div>
+                    <h2 className="text-2xl font-bold">Music</h2>
+                    <p className="text-purple-100 text-sm">Discover amazing tracks</p>
+                  </div>
+                  <Button 
+                    variant="ghost" 
+                    size="sm"
+                    onClick={() => setShowMobileMusicSearch(!showMobileMusicSearch)}
+                    className="text-white hover:bg-white/20"
+                  >
+                    <Search className="w-5 h-5" />
+                  </Button>
+                </div>
+                
+                {/* Search Input */}
+                {showMobileMusicSearch && (
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                    <Input
+                      placeholder="Search music..."
+                      value={mobileMusicSearchQuery}
+                      onChange={(e) => setMobileMusicSearchQuery(e.target.value)}
+                      className="pl-10 pr-4 py-2 w-full bg-white/20 border-white/30 text-white placeholder:text-white/70"
+                    />
+                  </div>
+                )}
+                
+                {/* Stats */}
+                <div className="grid grid-cols-3 gap-3 mt-4">
+                  <div className="bg-white/10 rounded-lg p-3 text-center">
+                    <div className="text-lg font-bold">{music.length}</div>
+                    <div className="text-xs text-purple-100">Tracks</div>
+                  </div>
+                  <div className="bg-white/10 rounded-lg p-3 text-center">
+                    <div className="text-lg font-bold">{getAvailableGenres().length - 1}</div>
+                    <div className="text-xs text-purple-100">Genres</div>
+                  </div>
+                  <div className="bg-white/10 rounded-lg p-3 text-center">
+                    <div className="text-lg font-bold">{likedTracks.size}</div>
+                    <div className="text-xs text-purple-100">Liked</div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="p-4">
+                {/* Loading State */}
+                {isLoadingMusic ? (
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-center py-8">
+                      <Loader2 className="w-8 h-8 animate-spin text-purple-500" />
+                      <span className="ml-2 text-gray-600">Loading music...</span>
+                    </div>
+                    {[...Array(3)].map((_, i) => (
+                      <MusicSkeleton key={i} />
+                    ))}
+                  </div>
+                ) : musicLoadError ? (
+                  <div className="text-center py-12">
+                    <WifiOff className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                    <p className="text-gray-500 mb-2">{musicLoadError}</p>
+                    <Button 
+                      onClick={() => loadContent()}
+                      className="bg-gradient-to-r from-purple-500 to-pink-600 hover:from-purple-600 hover:to-pink-700 text-white"
+                    >
+                      <Wifi className="w-4 h-4 mr-2" />
+                      Retry
+                    </Button>
+                  </div>
+                ) : getMobileFilteredMusic().length > 0 ? (
+                  <div className="space-y-4">
+                    {mobileMusicSearchQuery.trim() && (
+                      <div className="flex items-center justify-between">
+                        <p className="text-sm text-gray-600">
+                          {getMobileFilteredMusic().length} result{getMobileFilteredMusic().length !== 1 ? 's' : ''} for "{mobileMusicSearchQuery}"
+                        </p>
+                      </div>
+                    )}
+                    
+                    {/* Music List */}
+                    <div className="space-y-3">
+                      {getMobileFilteredMusic().map((track, index) => {
+                        const isCurrentTrack = currentlyPlaying === track._id
+                        const isLiked = likedTracks.has(track._id)
+                        const isLoading = audioLoadingStates[track._id]
+                        
+                        return (
+                          <div key={track._id} className={`relative overflow-hidden rounded-2xl ${isCurrentTrack ? 'bg-gradient-to-r from-purple-50 to-pink-50 border-2 border-purple-200' : 'bg-white border border-gray-100'} shadow-sm`}>
+                            <div className="flex items-center gap-4 p-4">
+                              {/* Track Number & Cover */}
+                              <div className="relative flex-shrink-0">
+                                <div className="w-14 h-14 rounded-xl overflow-hidden bg-gradient-to-br from-purple-500 to-pink-600 flex items-center justify-center">
+                                  {track.coverImageUrl ? (
+                                    <img 
+                                      src={track.coverImageUrl} 
+                                      alt={track.title}
+                                      className="w-full h-full object-cover"
+                                      loading="lazy"
+                                    />
+                                  ) : (
+                                    <Music className="w-7 h-7 text-white" />
+                                  )}
+                                </div>
+                                {isCurrentTrack && (
+                                  <div className="absolute -top-1 -right-1 w-5 h-5 bg-purple-500 rounded-full flex items-center justify-center">
+                                    {buffering ? (
+                                      <Loader2 className="w-3 h-3 text-white animate-spin" />
+                                    ) : (
+                                      <div className="w-2 h-2 bg-white rounded-full animate-pulse" />
+                                    )}
+                                  </div>
+                                )}
+                              </div>
+                              
+                              {/* Track Info */}
+                              <div className="flex-1 min-w-0">
+                                <h3 className={`font-semibold text-sm truncate ${isCurrentTrack ? 'text-purple-900' : 'text-gray-900'}`}>
+                                  {track.title}
+                                </h3>
+                                <p className={`text-xs truncate ${isCurrentTrack ? 'text-purple-600' : 'text-gray-600'}`}>
+                                  {track.artist}
+                                </p>
+                                <div className="flex items-center gap-2 mt-1">
+                                  <Badge variant={isCurrentTrack ? "default" : "secondary"} className="text-xs px-2 py-0.5">
+                                    {track.genre}
+                                  </Badge>
+                                  <span className={`text-xs ${isCurrentTrack ? 'text-purple-500' : 'text-gray-500'}`}>
+                                    {formatDuration(track.duration)}
+                                  </span>
+                                </div>
+                              </div>
+                              
+                              {/* Actions */}
+                              <div className="flex items-center gap-2">
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => handleLikeTrack(track._id)}
+                                  className={`p-2 ${isLiked ? 'text-red-500' : 'text-gray-400'} hover:text-red-500`}
+                                >
+                                  <Heart className={`w-4 h-4 ${isLiked ? 'fill-current' : ''}`} />
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  onClick={() => handlePlayMusic(track)}
+                                  disabled={isLoading}
+                                  className={`p-2 ${isCurrentTrack ? 'bg-purple-500 hover:bg-purple-600 text-white' : 'bg-gray-100 hover:bg-gray-200 text-gray-700'}`}
+                                >
+                                  {isLoading ? (
+                                    <Loader2 className="w-4 h-4 animate-spin" />
+                                  ) : isCurrentTrack && isPlaying ? (
+                                    <Pause className="w-4 h-4" />
+                                  ) : (
+                                    <Play className="w-4 h-4" />
+                                  )}
+                                </Button>
+                              </div>
+                            </div>
+                            
+                            {/* Progress Bar for Current Track */}
+                            {isCurrentTrack && duration > 0 && (
+                              <div className="px-4 pb-3">
+                                <div className="w-full bg-purple-200 rounded-full h-1">
+                                  <div 
+                                    className="bg-purple-500 h-1 rounded-full transition-all duration-300"
+                                    style={{ width: `${(currentTime / duration) * 100}%` }}
+                                  />
+                                </div>
+                                <div className="flex justify-between text-xs text-purple-600 mt-1">
+                                  <span>{formatDuration(Math.floor(currentTime))}</span>
+                                  <span>{formatDuration(Math.floor(duration))}</span>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="text-center py-12">
+                    {mobileMusicSearchQuery.trim() ? (
+                      <div>
+                        <Search className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                        <p className="text-gray-500 mb-2">No music found</p>
+                        <p className="text-sm text-gray-400">Try different search terms</p>
+                      </div>
+                    ) : (
+                      <div className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-2xl p-8">
+                        <div className="w-16 h-16 bg-gradient-to-br from-purple-500 to-pink-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                          <Music className="w-8 h-8 text-white" />
+                        </div>
+                        <h3 className="text-lg font-semibold text-gray-900 mb-2">No Music Available</h3>
+                        <p className="text-gray-600 mb-4 text-sm">Discover amazing tracks when they're available</p>
+                        <Button 
+                          onClick={() => loadContent()} 
+                          className="bg-gradient-to-r from-purple-500 to-pink-600 hover:from-purple-600 hover:to-pink-700 text-white"
+                        >
+                          <Music className="w-4 h-4 mr-2" />
+                          Refresh
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
               
-              {music.length > 0 ? (
-                <div className="space-y-3">
-                  {music.map((track) => (
-                    <div key={track._id} className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl">
-                      <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-pink-600 rounded-lg flex items-center justify-center flex-shrink-0">
-                        {track.coverImageUrl ? (
-                          <img 
-                            src={track.coverImageUrl} 
-                            alt={track.title}
-                            className="w-full h-full object-cover rounded-lg"
-                          />
-                        ) : (
-                          <Music className="w-6 h-6 text-white" />
-                        )}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <h3 className="font-medium text-sm truncate">{track.title}</h3>
-                        <p className="text-xs text-gray-600 truncate">{track.artist}</p>
-                        <p className="text-xs text-gray-500">{formatDuration(track.duration)}</p>
-                      </div>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => handlePlayMusic(track)}
-                        className="p-2"
-                      >
-                        {currentlyPlaying === track._id ? (
-                          <Pause className="w-5 h-5" />
-                        ) : (
-                          <Play className="w-5 h-5" />
-                        )}
-                      </Button>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-12">
-                  <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <Music className="w-8 h-8 text-gray-400" />
-                  </div>
-                  <p className="text-gray-500 mb-4">No music available</p>
-                  <Button onClick={() => loadContent()}>Refresh</Button>
-                </div>
-              )}
-              
-              <audio ref={audioRef} onEnded={() => setCurrentlyPlaying(null)} />
+              <audio ref={audioRef} />
             </div>
           )}
 
@@ -1653,109 +2090,336 @@ export default function ResponsiveYouthDashboard() {
             {/* Music Tab */}
             {activeTab === "music" && (
               <div className="space-y-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h2 className="text-xl font-bold text-gray-900">Music Library</h2>
-                    <p className="text-gray-600">Discover and enjoy curated music content</p>
+                {/* Header with Gradient Background */}
+                <div className="bg-gradient-to-r from-purple-600 via-pink-600 to-red-600 rounded-2xl p-8 text-white">
+                  <div className="flex items-center justify-between mb-6">
+                    <div>
+                      <h2 className="text-3xl font-bold mb-2">Music Library</h2>
+                      <p className="text-purple-100">Discover and enjoy curated music content</p>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <div className="relative">
+                        {showDesktopMusicSearch ? (
+                          <div className="flex items-center gap-2">
+                            <div className="relative">
+                              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                              <Input
+                                placeholder="Search music..."
+                                value={desktopMusicSearchQuery}
+                                onChange={(e) => setDesktopMusicSearchQuery(e.target.value)}
+                                className="pl-10 pr-4 py-2 w-64 bg-white/20 border-white/30 text-white placeholder:text-white/70"
+                              />
+                            </div>
+                            <Button variant="ghost" size="sm" onClick={() => {
+                              setShowDesktopMusicSearch(false)
+                              setDesktopMusicSearchQuery("")
+                            }} className="text-white hover:bg-white/20">
+                              <X className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        ) : (
+                          <Button variant="ghost" size="sm" onClick={() => setShowDesktopMusicSearch(true)} className="text-white hover:bg-white/20">
+                            <Search className="w-4 h-4 mr-2" />
+                            Search
+                          </Button>
+                        )}
+                      </div>
+                      <div className="relative">
+                        {showGenreFilter ? (
+                          <div className="flex items-center gap-2">
+                            <select
+                              value={selectedGenre}
+                              onChange={(e) => setSelectedGenre(e.target.value)}
+                              className="px-3 py-2 bg-white/20 border border-white/30 rounded-md text-sm text-white focus:outline-none focus:ring-2 focus:ring-white/50"
+                            >
+                              {getAvailableGenres().map((genre) => (
+                                <option key={genre} value={genre} className="text-gray-900">
+                                  {genre === 'all' ? 'All Genres' : genre}
+                                </option>
+                              ))}
+                            </select>
+                            <Button variant="ghost" size="sm" onClick={() => {
+                              setShowGenreFilter(false)
+                              setSelectedGenre('all')
+                            }} className="text-white hover:bg-white/20">
+                              <X className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        ) : (
+                          <Button variant="ghost" size="sm" onClick={() => setShowGenreFilter(true)} className="text-white hover:bg-white/20">
+                            <Filter className="w-4 h-4 mr-2" />
+                            Filter by Genre
+                          </Button>
+                        )}
+                      </div>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <Button variant="outline" size="sm">
-                      <Search className="w-4 h-4 mr-2" />
-                      Search
-                    </Button>
-                    <Button variant="outline" size="sm">
-                      <Filter className="w-4 h-4 mr-2" />
-                      Filter by Genre
-                    </Button>
+                  
+                  {/* Stats */}
+                  <div className="grid grid-cols-3 gap-4">
+                    <div className="bg-white/10 rounded-lg p-4 text-center">
+                      <div className="text-2xl font-bold">{music.length}</div>
+                      <div className="text-sm text-purple-100">Total Tracks</div>
+                    </div>
+                    <div className="bg-white/10 rounded-lg p-4 text-center">
+                      <div className="text-2xl font-bold">{getAvailableGenres().length - 1}</div>
+                      <div className="text-sm text-purple-100">Genres</div>
+                    </div>
+                    <div className="bg-white/10 rounded-lg p-4 text-center">
+                      <div className="text-2xl font-bold">{likedTracks.size}</div>
+                      <div className="text-sm text-purple-100">Liked</div>
+                    </div>
                   </div>
                 </div>
 
-                {music.length > 0 ? (
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {music.map((track) => (
-                      <Card key={track._id} className="overflow-hidden hover:shadow-lg transition-all duration-200">
-                        <CardContent className="p-6">
-                          <div className="flex items-center gap-4 mb-4">
-                            <div className="w-16 h-16 bg-gradient-to-br from-purple-400 to-pink-400 rounded-lg flex items-center justify-center flex-shrink-0">
-                              {track.coverImageUrl ? (
-                                <img 
-                                  src={track.coverImageUrl} 
-                                  alt={track.title}
-                                  className="w-full h-full object-cover rounded-lg"
-                                />
-                              ) : (
-                                <Music className="w-8 h-8 text-white" />
-                              )}
-                            </div>
-                            
-                            <div className="flex-1 min-w-0">
-                              <h3 className="font-semibold truncate">{track.title}</h3>
-                              <p className="text-sm text-gray-600 truncate">{track.artist}</p>
-                              <Badge variant="outline" className="text-xs mt-1">{track.genre}</Badge>
-                            </div>
-                          </div>
-
-                          <div className="flex items-center justify-between text-sm text-gray-500 mb-4">
-                            <span>{formatDuration(track.duration)}</span>
-                            <div className="flex items-center gap-4">
-                              <span className="flex items-center gap-1">
-                                <Play className="w-3 h-3" />
-                                {track.playCount}
-                              </span>
-                              <span className="flex items-center gap-1">
-                                <Heart className="w-3 h-3" />
-                                {track.likes}
-                              </span>
-                            </div>
-                          </div>
-
-                          <div className="flex items-center gap-2">
-                            <Button
-                              size="sm"
-                              onClick={() => handlePlayMusic(track)}
-                              className={`flex-1 ${currentlyPlaying === track._id ? "bg-red-500 hover:bg-red-600" : ""}`}
-                            >
-                              {currentlyPlaying === track._id ? (
-                                <Pause className="w-4 h-4 mr-2" />
-                              ) : (
-                                <Play className="w-4 h-4 mr-2" />
-                              )}
-                              {currentlyPlaying === track._id ? "Pause" : "Play"}
-                            </Button>
-                            <Button variant="outline" size="sm">
-                              <Heart className="w-4 h-4" />
-                            </Button>
-                            <Button variant="outline" size="sm">
-                              <Share2 className="w-4 h-4" />
-                            </Button>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    ))}
+                {/* Loading State */}
+                {isLoadingMusic ? (
+                  <div className="space-y-6">
+                    <div className="flex items-center justify-center py-8">
+                      <Loader2 className="w-8 h-8 animate-spin text-purple-500" />
+                      <span className="ml-2 text-gray-600">Loading music library...</span>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                      {[...Array(8)].map((_, i) => (
+                        <DesktopMusicSkeleton key={i} />
+                      ))}
+                    </div>
                   </div>
-                ) : (
+                ) : musicLoadError ? (
                   <div className="text-center py-12">
-                    <div className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-2xl p-12 max-w-md mx-auto">
-                      <div className="w-20 h-20 bg-gradient-to-br from-purple-500 to-pink-600 rounded-full flex items-center justify-center mx-auto mb-6">
-                        <Music className="w-10 h-10 text-white" />
-                      </div>
-                      <h3 className="text-xl font-bold text-gray-900 mb-3">No Music Yet</h3>
-                      <p className="text-gray-600 mb-6 leading-relaxed">
-                        Inspirational and educational music content is being curated for your enjoyment. Stay tuned!
-                      </p>
+                    <div className="bg-gray-50 rounded-2xl p-12 max-w-md mx-auto">
+                      <WifiOff className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+                      <h3 className="text-lg font-semibold text-gray-900 mb-2">{musicLoadError}</h3>
+                      <p className="text-gray-600 mb-6">Please check your connection and try again</p>
                       <Button 
-                        className="bg-gradient-to-r from-purple-500 to-pink-600 hover:from-purple-600 hover:to-pink-700 text-white"
                         onClick={() => loadContent()}
+                        className="bg-gradient-to-r from-purple-500 to-pink-600 hover:from-purple-600 hover:to-pink-700 text-white"
                       >
-                        <Music className="w-4 h-4 mr-2" />
-                        Refresh Music
+                        <Wifi className="w-4 h-4 mr-2" />
+                        Retry Loading
                       </Button>
                     </div>
                   </div>
+                ) : getFilteredMusic().length > 0 ? (
+                  <div className="space-y-6">
+                    {(desktopMusicSearchQuery.trim() || selectedGenre !== 'all') && (
+                      <div className="flex items-center justify-between bg-gray-50 rounded-lg p-4">
+                        <p className="text-sm text-gray-600">
+                          <span className="font-semibold">{getFilteredMusic().length}</span> result{getFilteredMusic().length !== 1 ? 's' : ''}
+                          {desktopMusicSearchQuery.trim() && ` for "${desktopMusicSearchQuery}"`}
+                          {selectedGenre !== 'all' && ` in ${selectedGenre}`}
+                        </p>
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          onClick={() => {
+                            setDesktopMusicSearchQuery("")
+                            setSelectedGenre('all')
+                            setShowDesktopMusicSearch(false)
+                            setShowGenreFilter(false)
+                          }}
+                        >
+                          Clear Filters
+                        </Button>
+                      </div>
+                    )}
+                    
+                    {/* Music Grid */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                      {getFilteredMusic().map((track, index) => {
+                        const isCurrentTrack = currentlyPlaying === track._id
+                        const isLiked = likedTracks.has(track._id)
+                        const isLoading = audioLoadingStates[track._id]
+                        
+                        return (
+                          <Card key={track._id} className={`group overflow-hidden transition-all duration-300 hover:shadow-xl hover:scale-105 ${isCurrentTrack ? 'ring-2 ring-purple-500 shadow-lg' : ''}`}>
+                            <div className="relative">
+                              {/* Cover Image */}
+                              <div className="aspect-square bg-gradient-to-br from-purple-400 to-pink-400 relative overflow-hidden">
+                                {track.coverImageUrl ? (
+                                  <img 
+                                    src={track.coverImageUrl} 
+                                    alt={track.title}
+                                    className="w-full h-full object-cover"
+                                    loading="lazy"
+                                  />
+                                ) : (
+                                  <div className="w-full h-full flex items-center justify-center">
+                                    <Music className="w-16 h-16 text-white" />
+                                  </div>
+                                )}
+                                
+                                {/* Overlay */}
+                                <div className={`absolute inset-0 bg-black/40 flex items-center justify-center transition-opacity duration-300 ${isCurrentTrack ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}>
+                                  <Button
+                                    size="lg"
+                                    onClick={() => handlePlayMusic(track)}
+                                    disabled={isLoading}
+                                    className="bg-white/90 hover:bg-white text-gray-900 rounded-full w-16 h-16 p-0"
+                                  >
+                                    {isLoading ? (
+                                      <Loader2 className="w-6 h-6 animate-spin" />
+                                    ) : isCurrentTrack && isPlaying ? (
+                                      <Pause className="w-6 h-6" />
+                                    ) : (
+                                      <Play className="w-6 h-6 ml-1" />
+                                    )}
+                                  </Button>
+                                </div>
+                                
+                                {/* Playing Indicator */}
+                                {isCurrentTrack && (
+                                  <div className="absolute top-3 right-3">
+                                    <div className="bg-purple-500 text-white px-2 py-1 rounded-full text-xs font-medium flex items-center gap-1">
+                                      {buffering ? (
+                                        <Loader2 className="w-3 h-3 animate-spin" />
+                                      ) : (
+                                        <div className="w-2 h-2 bg-white rounded-full animate-pulse" />
+                                      )}
+                                      {buffering ? 'Loading' : 'Playing'}
+                                    </div>
+                                  </div>
+                                )}
+                                
+                                {/* Like Button */}
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => handleLikeTrack(track._id)}
+                                  className={`absolute top-3 left-3 p-2 rounded-full ${isLiked ? 'bg-red-500 text-white' : 'bg-black/20 text-white hover:bg-red-500'}`}
+                                >
+                                  <Heart className={`w-4 h-4 ${isLiked ? 'fill-current' : ''}`} />
+                                </Button>
+                              </div>
+                              
+                              {/* Progress Bar for Current Track */}
+                              {isCurrentTrack && duration > 0 && (
+                                <div className="absolute bottom-0 left-0 right-0 h-1 bg-black/20">
+                                  <div 
+                                    className="h-full bg-purple-500 transition-all duration-300"
+                                    style={{ width: `${(currentTime / duration) * 100}%` }}
+                                  />
+                                </div>
+                              )}
+                            </div>
+                            
+                            <CardContent className="p-4">
+                              {/* Track Info */}
+                              <div className="mb-3">
+                                <h3 className={`font-semibold truncate ${isCurrentTrack ? 'text-purple-900' : 'text-gray-900'}`}>
+                                  {track.title}
+                                </h3>
+                                <p className={`text-sm truncate ${isCurrentTrack ? 'text-purple-600' : 'text-gray-600'}`}>
+                                  {track.artist}
+                                </p>
+                              </div>
+                              
+                              {/* Genre & Duration */}
+                              <div className="flex items-center justify-between mb-3">
+                                <Badge variant={isCurrentTrack ? "default" : "secondary"} className="text-xs">
+                                  {track.genre}
+                                </Badge>
+                                <span className={`text-xs ${isCurrentTrack ? 'text-purple-500' : 'text-gray-500'}`}>
+                                  {formatDuration(track.duration)}
+                                </span>
+                              </div>
+                              
+                              {/* Stats */}
+                              <div className="flex items-center justify-between text-xs text-gray-500 mb-3">
+                                <span className="flex items-center gap-1">
+                                  <Play className="w-3 h-3" />
+                                  {track.playCount.toLocaleString()}
+                                </span>
+                                <span className="flex items-center gap-1">
+                                  <Heart className="w-3 h-3" />
+                                  {track.likes.toLocaleString()}
+                                </span>
+                              </div>
+                              
+                              {/* Actions */}
+                              <div className="flex items-center gap-2">
+                                <Button
+                                  size="sm"
+                                  onClick={() => handlePlayMusic(track)}
+                                  disabled={isLoading}
+                                  className={`flex-1 ${isCurrentTrack ? 'bg-purple-500 hover:bg-purple-600 text-white' : 'bg-gray-100 hover:bg-gray-200 text-gray-700'}`}
+                                >
+                                  {isLoading ? (
+                                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                  ) : isCurrentTrack && isPlaying ? (
+                                    <Pause className="w-4 h-4 mr-2" />
+                                  ) : (
+                                    <Play className="w-4 h-4 mr-2" />
+                                  )}
+                                  {isLoading ? "Loading" : isCurrentTrack && isPlaying ? "Pause" : "Play"}
+                                </Button>
+                                <Button variant="outline" size="sm" className="p-2">
+                                  <Share2 className="w-4 h-4" />
+                                </Button>
+                              </div>
+                            </CardContent>
+                          </Card>
+                        )
+                      })}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="text-center py-12">
+                    {(desktopMusicSearchQuery.trim() || selectedGenre !== 'all') ? (
+                      <div className="bg-gray-50 rounded-2xl p-12 max-w-md mx-auto">
+                        <Search className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+                        <h3 className="text-lg font-semibold text-gray-900 mb-2">No music found</h3>
+                        <p className="text-gray-600 mb-6">Try different search terms or genre</p>
+                        <Button 
+                          onClick={() => {
+                            setDesktopMusicSearchQuery("")
+                            setSelectedGenre('all')
+                            setShowDesktopMusicSearch(false)
+                            setShowGenreFilter(false)
+                          }}
+                          className="bg-gradient-to-r from-purple-500 to-pink-600 hover:from-purple-600 hover:to-pink-700 text-white"
+                        >
+                          Clear Filters
+                        </Button>
+                      </div>
+                    ) : (
+                      <div className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-2xl p-12 max-w-md mx-auto">
+                        <div className="w-20 h-20 bg-gradient-to-br from-purple-500 to-pink-600 rounded-full flex items-center justify-center mx-auto mb-6">
+                          <Music className="w-10 h-10 text-white" />
+                        </div>
+                        <h3 className="text-xl font-bold text-gray-900 mb-3">No Music Yet</h3>
+                        <p className="text-gray-600 mb-6 leading-relaxed">
+                          Inspirational and educational music content is being curated for your enjoyment. Stay tuned!
+                        </p>
+                        <Button 
+                          className="bg-gradient-to-r from-purple-500 to-pink-600 hover:from-purple-600 hover:to-pink-700 text-white"
+                          onClick={() => loadContent()}
+                        >
+                          <Music className="w-4 h-4 mr-2" />
+                          Refresh Music
+                        </Button>
+                      </div>
+                    )}
+                  </div>
                 )}
                 
-                {/* Hidden audio element for music playback */}
-                <audio ref={audioRef} onEnded={() => setCurrentlyPlaying(null)} />
+                {/* Enhanced Audio Element */}
+                <audio 
+                  ref={audioRef} 
+                  preload="metadata"
+                  onLoadedMetadata={() => {
+                    if (audioRef.current) {
+                      setDuration(audioRef.current.duration)
+                    }
+                  }}
+                  onTimeUpdate={() => {
+                    if (audioRef.current) {
+                      setCurrentTime(audioRef.current.currentTime)
+                    }
+                  }}
+                  onPlay={() => setIsPlaying(true)}
+                  onPause={() => setIsPlaying(false)}
+                />
               </div>
             )}
 
