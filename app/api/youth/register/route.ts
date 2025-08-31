@@ -103,20 +103,7 @@ export async function POST(request: Request) {
       );
     }
 
-    // Validate password strength
-    if (password.length < 8) {
-      return NextResponse.json(
-        { error: 'Password must be at least 8 characters long' },
-        { status: 400 }
-      );
-    }
-
-    if (!/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/.test(password)) {
-      return NextResponse.json(
-        { error: 'Password must contain at least one uppercase letter, one lowercase letter, and one number' },
-        { status: 400 }
-      );
-    }
+    // Password validation removed - only check if passwords match (already done above)
 
     // Validate full name format
     if (!/^[a-zA-Z\s'-]+$/.test(fullName.trim())) {

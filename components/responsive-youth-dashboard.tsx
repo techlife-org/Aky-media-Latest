@@ -684,7 +684,7 @@ export default function ResponsiveYouthDashboard() {
           const sampleNews = [
             {
               id: 'sample-1',
-              title: 'Welcome to His Excellency\'s Youth Program',
+              title: 'Welcome to AKY Digital Hub',
               content: 'We are excited to launch this comprehensive youth development program aimed at empowering the youth of Kano State with skills, opportunities, and resources for a brighter future.',
               doc_type: 'announcement',
               created_at: new Date().toISOString(),
@@ -743,7 +743,7 @@ export default function ResponsiveYouthDashboard() {
         const sampleNews = [
           {
             id: 'sample-1',
-            title: 'Welcome to His Excellency\'s Youth Program',
+            title: 'Welcome to AKY Digital Hub',
             content: 'We are excited to launch this comprehensive youth development program aimed at empowering the youth of Kano State with skills, opportunities, and resources for a brighter future.',
             doc_type: 'announcement',
             created_at: new Date().toISOString(),
@@ -1963,7 +1963,7 @@ export default function ResponsiveYouthDashboard() {
               <div className="space-y-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <h2 className="text-xl font-bold text-gray-900">Youth Programs</h2>
+                    <h2 className="text-xl font-bold text-gray-900">Programs</h2>
                     <p className="text-gray-600">Discover and apply to development programs</p>
                   </div>
                   <div className="flex items-center gap-2">
@@ -2072,7 +2072,7 @@ export default function ResponsiveYouthDashboard() {
                       </div>
                       <h3 className="text-xl font-bold text-gray-900 mb-3">No Programs Yet</h3>
                       <p className="text-gray-600 mb-6 leading-relaxed">
-                        New youth development programs are being prepared for you. Check back soon for exciting opportunities!
+                        New development programs are being prepared for you. Check back soon for exciting opportunities!
                       </p>
                       <Button 
                         className="bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white"

@@ -59,11 +59,11 @@ export async function POST(
       
       // Notification content that would be sent:
       const notificationMessage = `
-Youth Program Registration Update
+User Program Registration Update
 
 Dear ${youth.fullName},
 
-We regret to inform you that your registration for His Excellency's Youth Program has been rejected.
+We regret to inform you that your registration for His Excellency's User Program has been rejected.
 
 📄 Reason for Rejection:
 ${reason}
@@ -76,27 +76,27 @@ If you believe this is an error or need clarification, please contact our suppor
 🔄 Reapplication:
 You may be eligible to reapply after addressing the issues mentioned above.
 
-Thank you for your interest in the Youth Program.
+Thank you for your interest in the User Program.
 
 Best regards,
-His Excellency's Youth Program Team
+His Excellency's User Program Team
       `;
       
       console.log('📄 Rejection Notification Content:', notificationMessage);
       
       // TODO: Implement actual email/SMS sending here
-      // await sendEmail(youth.email, "Youth Program Registration Update", notificationMessage);
+      // await sendEmail(youth.email, "User Program Registration Update", notificationMessage);
       // await sendSMS(youth.phone, notificationMessage);
       // await sendWhatsApp(youth.phone, notificationMessage);
     }
 
     return NextResponse.json({
       success: true,
-      message: 'Youth rejected successfully'
+      message: 'User rejected successfully'
     });
 
   } catch (error) {
-    console.error('Error rejecting youth:', error);
+    console.error('Error rejecting user:', error);
     return NextResponse.json(
       { error: error instanceof Error ? error.message : 'Internal server error' },
       { status: 500 }

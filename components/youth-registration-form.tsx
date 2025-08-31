@@ -242,9 +242,9 @@ export default function YouthRegistrationForm() {
       <div className="container mx-auto px-4 max-w-2xl">
         <Card className="shadow-xl border-0">
           <CardHeader className="text-center bg-gradient-to-r from-red-600 to-orange-600 text-white rounded-t-lg">
-            <CardTitle className="text-2xl font-bold">Youth Program Registration</CardTitle>
+            <CardTitle className="text-2xl font-bold">User Program Registration</CardTitle>
             <CardDescription className="text-red-100">
-              Join His Excellency's Youth Program - Empowering Kano Youth
+              Join His Excellency's User Program - Empowering Kano Youth
             </CardDescription>
           </CardHeader>
           

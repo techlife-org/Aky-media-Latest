@@ -233,7 +233,7 @@ export default function MobileYouthDashboard() {
           const sampleNews = [
             {
               id: 'sample-1',
-              title: 'Welcome to His Excellency\'s Youth Program',
+              title: 'Welcome to AKY Digital Hub',
               content: 'We are excited to launch this comprehensive youth development program aimed at empowering the youth of Kano State with skills, opportunities, and resources for a brighter future.',
               doc_type: 'announcement',
               created_at: new Date().toISOString(),
@@ -267,7 +267,7 @@ export default function MobileYouthDashboard() {
         const sampleNews = [
           {
             id: 'sample-1',
-            title: 'Welcome to His Excellency\'s Youth Program',
+            title: 'Welcome to AKY Digital Hub',
             content: 'We are excited to launch this comprehensive youth development program aimed at empowering the youth of Kano State with skills, opportunities, and resources for a brighter future.',
             doc_type: 'announcement',
             created_at: new Date().toISOString(),
@@ -497,7 +497,7 @@ export default function MobileYouthDashboard() {
         {/* Programs Tab */}
         {activeTab === "programs" && (
           <div className="p-4 space-y-4">
-            <h2 className="text-xl font-bold text-gray-900 mb-4">Youth Programs</h2>
+            <h2 className="text-xl font-bold text-gray-900 mb-4">Programs</h2>
             {programs.length > 0 ? (
               programs.map((program) => {
                 const isDeadlinePassed = program.applicationDeadline && new Date() > new Date(program.applicationDeadline)
@@ -584,7 +584,7 @@ export default function MobileYouthDashboard() {
                   </div>
                   <h3 className="text-xl font-bold text-gray-900 mb-3">No Programs Yet</h3>
                   <p className="text-gray-600 mb-6 leading-relaxed">
-                    New youth development programs are being prepared for you. Check back soon for exciting opportunities!
+                    New development programs are being prepared for you. Check back soon for exciting opportunities!
                   </p>
                   <div className="space-y-3">
                     <div className="flex items-center justify-center gap-2 text-sm text-gray-500">
