@@ -140,7 +140,7 @@ interface NewsItem {
 export default function ResponsiveYouthDashboard() {
   const router = useRouter()
   const [youthData, setYouthData] = useState<YouthData | null>(null)
-  const [activeTab, setActiveTab] = useState("home")
+  const [activeTab, setActiveTab] = useState("overview")
   const [programs, setPrograms] = useState<Program[]>([])
   const [music, setMusic] = useState<MusicTrack[]>([])
   const [videos, setVideos] = useState<VideoContent[]>([])
@@ -510,7 +510,8 @@ export default function ResponsiveYouthDashboard() {
               benefits: ['Certificate', 'Job Placement', 'Mentorship'],
               status: 'active',
               applicationRequired: true,
-              totalApplications: 150
+              totalApplications: 150,
+              requiredDocuments: []
             },
             {
               _id: 'sample-prog-2',
@@ -522,7 +523,8 @@ export default function ResponsiveYouthDashboard() {
               benefits: ['Startup Grant', 'Business Plan', 'Networking'],
               status: 'active',
               applicationRequired: true,
-              totalApplications: 89
+              totalApplications: 89,
+              requiredDocuments: []
             }
           ])
         }
@@ -946,118 +948,178 @@ export default function ResponsiveYouthDashboard() {
 
         {/* Mobile Content */}
         <div className="pb-16">
-          {/* Home Feed */}
-          {activeTab === "home" && (
-            <div className="space-y-0">
-              {/* Stories Section */}
-              <div className="p-4 border-b border-gray-100">
-                <div className="flex items-center gap-4 overflow-x-auto pb-2">
-                  <div className="flex flex-col items-center gap-2 flex-shrink-0">
-                    <div className="relative">
-                      <Avatar className="w-16 h-16 border-2 border-gray-300">
-                        <AvatarImage src={youthData.profilePicture?.url} />
-                        <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-600 text-white">
-                          {youthData.fullName.split(' ').map(n => n[0]).join('')}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center">
-                        <Plus className="w-4 h-4 text-white" />
-                      </div>
-                    </div>
-                    <span className="text-xs text-gray-600">Your Story</span>
+          {/* Overview Content */}
+          {activeTab === "overview" && (
+            <div className="p-4 space-y-6">
+              {/* Welcome Section */}
+              <div className="bg-gradient-to-r from-blue-500 to-purple-600 rounded-2xl p-6 text-white">
+                <div className="flex items-center gap-4 mb-4">
+                  <Avatar className="w-16 h-16 border-2 border-white/20">
+                    <AvatarImage src={youthData.profilePicture?.url} />
+                    <AvatarFallback className="bg-white/20 text-white text-xl">
+                      {youthData.fullName.split(' ').map(n => n[0]).join('')}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div>
+                    <h2 className="text-xl font-bold">Welcome back!</h2>
+                    <p className="text-blue-100">{youthData.fullName}</p>
+                    <p className="text-blue-200 text-sm">{youthData.uniqueId}</p>
                   </div>
-                  
-                  {/* Sample stories */}
-                  {['Programs', 'Music', 'Videos', 'News'].map((story, index) => (
-                    <div key={story} className="flex flex-col items-center gap-2 flex-shrink-0">
-                      <Avatar className="w-16 h-16 border-2 border-gradient-to-r from-pink-500 to-orange-500 p-0.5">
-                        <div className="w-full h-full bg-gradient-to-br from-blue-400 to-purple-600 rounded-full flex items-center justify-center">
-                          <span className="text-white text-sm font-bold">{story[0]}</span>
-                        </div>
-                      </Avatar>
-                      <span className="text-xs text-gray-600">{story}</span>
-                    </div>
-                  ))}
                 </div>
               </div>
 
-              {/* Feed Posts */}
-              <div className="space-y-0">
-                {news.map((item) => {
-                  const imageAttachment = item.attachments?.find(att => att.type === 'image')
-                  const isLiked = likedPosts.has(item.id)
-                  
-                  return (
-                    <div key={item.id} className="bg-white border-b border-gray-100">
-                      {/* Post Header */}
-                      <div className="flex items-center justify-between p-3">
-                        <div className="flex items-center gap-3">
-                          <Avatar className="w-8 h-8">
-                            <AvatarImage src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop&crop=face" />
-                            <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-600 text-white text-xs font-bold">
-                              AKY
-                            </AvatarFallback>
-                          </Avatar>
-                          <div>
-                            <p className="font-semibold text-sm">{item.title}</p>
-                            <p className="text-xs text-gray-500">{new Date(item.created_at).toLocaleDateString()}</p>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Post Image */}
-                      {imageAttachment && (
-                        <div className="aspect-square bg-gray-100">
-                          <img 
-                            src={imageAttachment.url} 
-                            alt={item.title}
-                            className="w-full h-full object-cover"
-                          />
-                        </div>
-                      )}
-
-                      {/* Post Actions */}
-                      <div className="p-3">
-                        <div className="flex items-center justify-between mb-3">
-                          <div className="flex items-center gap-4">
-                            <Button 
-                              variant="ghost" 
-                              size="sm" 
-                              className="p-0 hover:bg-transparent"
-                              onClick={() => handleLikePost(item.id)}
-                            >
-                              <Heart className={`w-6 h-6 ${isLiked ? 'fill-red-500 text-red-500' : 'text-gray-900'}`} />
-                            </Button>
-                            <Button variant="ghost" size="sm" className="p-0 hover:bg-transparent">
-                              <MessageCircle className="w-6 h-6 text-gray-900" />
-                            </Button>
-                            <Button variant="ghost" size="sm" className="p-0 hover:bg-transparent">
-                              <Send className="w-6 h-6 text-gray-900" />
-                            </Button>
-                          </div>
-                          <Button variant="ghost" size="sm" className="p-0 hover:bg-transparent">
-                            <Bookmark className="w-6 h-6 text-gray-900" />
-                          </Button>
-                        </div>
-
-                        {/* Likes */}
-                        <p className="font-semibold text-sm mb-2">{(item.views || 0) + (isLiked ? 1 : 0)} likes</p>
-
-                        {/* Caption */}
-                        <div className="space-y-1">
-                          <p className="text-sm">
-                            <span className="font-semibold">akyprogram</span> {item.title}
-                          </p>
-                          <p className="text-sm text-gray-600 line-clamp-2">{item.content}</p>
-                          <Button variant="ghost" className="p-0 h-auto text-sm text-gray-500 hover:bg-transparent">
-                            View all comments
-                          </Button>
-                        </div>
-                      </div>
+              {/* Stats Grid */}
+              <div className="grid grid-cols-2 gap-4">
+                <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200">
+                  <CardContent className="p-4 text-center">
+                    <div className="w-12 h-12 bg-blue-500 rounded-full flex items-center justify-center mx-auto mb-2">
+                      <BookOpen className="w-6 h-6 text-white" />
                     </div>
-                  )
-                })}
+                    <p className="text-2xl font-bold text-blue-700">{programs.length}</p>
+                    <p className="text-blue-600 text-sm">Programs</p>
+                  </CardContent>
+                </Card>
+
+                <Card className="bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200">
+                  <CardContent className="p-4 text-center">
+                    <div className="w-12 h-12 bg-purple-500 rounded-full flex items-center justify-center mx-auto mb-2">
+                      <Music className="w-6 h-6 text-white" />
+                    </div>
+                    <p className="text-2xl font-bold text-purple-700">{music.length}</p>
+                    <p className="text-purple-600 text-sm">Music</p>
+                  </CardContent>
+                </Card>
+
+                <Card className="bg-gradient-to-br from-green-50 to-green-100 border-green-200">
+                  <CardContent className="p-4 text-center">
+                    <div className="w-12 h-12 bg-green-500 rounded-full flex items-center justify-center mx-auto mb-2">
+                      <Video className="w-6 h-6 text-white" />
+                    </div>
+                    <p className="text-2xl font-bold text-green-700">{videos.length}</p>
+                    <p className="text-green-600 text-sm">Videos</p>
+                  </CardContent>
+                </Card>
+
+                <Card className="bg-gradient-to-br from-orange-50 to-orange-100 border-orange-200">
+                  <CardContent className="p-4 text-center">
+                    <div className="w-12 h-12 bg-orange-500 rounded-full flex items-center justify-center mx-auto mb-2">
+                      <FileText className="w-6 h-6 text-white" />
+                    </div>
+                    <p className="text-2xl font-bold text-orange-700">{news.length}</p>
+                    <p className="text-orange-600 text-sm">News</p>
+                  </CardContent>
+                </Card>
               </div>
+
+              {/* Quick Actions */}
+              <div className="space-y-3">
+                <h3 className="font-semibold text-gray-900">Quick Actions</h3>
+                <div className="grid grid-cols-2 gap-3">
+                  <Button 
+                    onClick={() => setActiveTab("programs")}
+                    className="bg-blue-500 hover:bg-blue-600 text-white h-12"
+                  >
+                    <BookOpen className="w-5 h-5 mr-2" />
+                    View Programs
+                  </Button>
+                  <Button 
+                    onClick={() => setActiveTab("music")}
+                    className="bg-purple-500 hover:bg-purple-600 text-white h-12"
+                  >
+                    <Music className="w-5 h-5 mr-2" />
+                    Play Music
+                  </Button>
+                </div>
+              </div>
+
+              {/* Recent Programs */}
+              {programs.length > 0 && (
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <h3 className="font-semibold text-gray-900">Recent Programs</h3>
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      onClick={() => setActiveTab("programs")}
+                      className="text-blue-600"
+                    >
+                      View All
+                      <ChevronRight className="w-4 h-4 ml-1" />
+                    </Button>
+                  </div>
+                  <div className="space-y-3">
+                    {programs.slice(0, 2).map((program) => (
+                      <Card key={program._id} className="border-0 shadow-sm bg-gray-50">
+                        <CardContent className="p-4">
+                          <div className="flex items-start gap-3">
+                            <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                              <BookOpen className="w-5 h-5 text-blue-600" />
+                            </div>
+                            <div className="flex-1">
+                              <h4 className="font-medium text-sm mb-1">{program.title}</h4>
+                              <p className="text-xs text-gray-600 mb-2 line-clamp-2">{program.description}</p>
+                              <div className="flex items-center gap-2">
+                                <Badge variant="secondary" className="text-xs">{program.category}</Badge>
+                                <span className="text-xs text-gray-500">• {program.duration}</span>
+                              </div>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Latest News */}
+              {news.length > 0 && (
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <h3 className="font-semibold text-gray-900">Latest News</h3>
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      onClick={() => setActiveTab("news")}
+                      className="text-green-600"
+                    >
+                      View All
+                      <ChevronRight className="w-4 h-4 ml-1" />
+                    </Button>
+                  </div>
+                  <div className="space-y-3">
+                    {news.slice(0, 2).map((item) => {
+                      const imageAttachment = item.attachments?.find(att => att.type === 'image')
+                      return (
+                        <Card key={item.id} className="border-0 shadow-sm bg-gray-50">
+                          <CardContent className="p-4">
+                            <div className="flex gap-3">
+                              {imageAttachment && (
+                                <div className="w-16 h-16 bg-gray-200 rounded-lg overflow-hidden flex-shrink-0">
+                                  <img 
+                                    src={imageAttachment.url} 
+                                    alt={item.title}
+                                    className="w-full h-full object-cover"
+                                  />
+                                </div>
+                              )}
+                              <div className="flex-1">
+                                <h4 className="font-medium text-sm mb-1 line-clamp-2">{item.title}</h4>
+                                <p className="text-xs text-gray-600 mb-2 line-clamp-2">{item.content}</p>
+                                <div className="flex items-center gap-2">
+                                  <Badge variant="outline" className="text-xs">{item.doc_type || 'News'}</Badge>
+                                  <span className="text-xs text-gray-500">
+                                    {new Date(item.created_at).toLocaleDateString()}
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      )
+                    })}
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
@@ -1719,10 +1781,10 @@ export default function ResponsiveYouthDashboard() {
         <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 px-4 py-2 lg:hidden">
           <div className="flex items-center justify-around">
             <button
-              onClick={() => setActiveTab("home")}
-              className={`p-2 ${activeTab === "home" ? "text-black" : "text-gray-400"}`}
+              onClick={() => setActiveTab("overview")}
+              className={`p-2 ${activeTab === "overview" ? "text-black" : "text-gray-400"}`}
             >
-              <Home className={`w-6 h-6 ${activeTab === "home" ? "fill-current" : ""}`} />
+              <Home className={`w-6 h-6 ${activeTab === "overview" ? "fill-current" : ""}`} />
             </button>
             <button
               onClick={() => setActiveTab("search")}

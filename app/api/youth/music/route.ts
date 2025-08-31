@@ -10,7 +10,7 @@ const audioTracks = [
     genre: "Tijjani Gandu",
     audioUrl: "https://archive.org/download/aky_20250624/koHasidin.mp3",
     duration: 381, // 06:21 in seconds
-    coverImageUrl: "/pictures/logo.png",
+    coverImageUrl: "/pictures/logo1.png",
     playCount: 1250,
     likes: 89,
     status: "active"
@@ -22,7 +22,7 @@ const audioTracks = [
     genre: "Tijjani Gandu",
     audioUrl: "https://archive.org/download/aky_20250624/kareemi.mp3",
     duration: 663, // 11:03 in seconds
-    coverImageUrl: "/pictures/logo.png",
+    coverImageUrl: "/pictures/logo1.png",
     playCount: 980,
     likes: 67,
     status: "active"
@@ -34,7 +34,7 @@ const audioTracks = [
     genre: "Billy-o",
     audioUrl: "https://archive.org/download/aky_20250624/abbaBilly.mp3",
     duration: 663,
-    coverImageUrl: "/pictures/logo.png",
+    coverImageUrl: "/pictures/logo1.png",
     playCount: 1100,
     likes: 78,
     status: "active"
@@ -46,7 +46,7 @@ const audioTracks = [
     genre: "Ali Jita & Ado Gwanja",
     audioUrl: "https://archive.org/download/aky_20250624/allahGaAbba.mp3",
     duration: 663,
-    coverImageUrl: "/pictures/logo.png",
+    coverImageUrl: "/pictures/logo1.png",
     playCount: 1500,
     likes: 120,
     status: "active"
@@ -58,7 +58,7 @@ const audioTracks = [
     genre: "Tijjani Gandu",
     audioUrl: "https://archive.org/download/aky_20250624/danFarinGida.mp3",
     duration: 783, // 13:03
-    coverImageUrl: "/pictures/logo.png",
+    coverImageUrl: "/pictures/logo1.png",
     playCount: 890,
     likes: 56,
     status: "active"
@@ -70,7 +70,7 @@ const audioTracks = [
     genre: "Tijjani Gandu",
     audioUrl: "https://archive.org/download/aky_20250624/lambaDaya.mp3",
     duration: 312, // 5:12
-    coverImageUrl: "/pictures/logo.png",
+    coverImageUrl: "/pictures/logo1.png",
     playCount: 750,
     likes: 45,
     status: "active"
@@ -82,7 +82,7 @@ const audioTracks = [
     genre: "Tijjani Gandu",
     audioUrl: "https://archive.org/download/aky_20250624/hasbunallahu.mp3",
     duration: 310, // 5:10
-    coverImageUrl: "/pictures/logo.png",
+    coverImageUrl: "/pictures/logo1.png",
     playCount: 680,
     likes: 42,
     status: "active"
@@ -94,7 +94,7 @@ const audioTracks = [
     genre: "Tijjani Gandu",
     audioUrl: "https://archive.org/download/aky_20250624/sakoNa.mp3",
     duration: 248, // 4:08
-    coverImageUrl: "/pictures/logo.png",
+    coverImageUrl: "/pictures/logo1.png",
     playCount: 590,
     likes: 38,
     status: "active"
@@ -106,7 +106,7 @@ const audioTracks = [
     genre: "Tijjani Gandu",
     audioUrl: "https://archive.org/download/aky_20250624/sunaJiSunaGani.mp3",
     duration: 359, // 5:59
-    coverImageUrl: "/pictures/logo.png",
+    coverImageUrl: "/pictures/logo1.png",
     playCount: 720,
     likes: 48,
     status: "active"
@@ -118,7 +118,7 @@ const audioTracks = [
     genre: "Tijjani Gandu",
     audioUrl: "https://archive.org/download/aky_20250624/gaAbbaGaComrd.mp3",
     duration: 386, // 6:26
-    coverImageUrl: "/pictures/logo.png",
+    coverImageUrl: "/pictures/logo1.png",
     playCount: 820,
     likes: 52,
     status: "active"
