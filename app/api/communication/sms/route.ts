@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { https } from 'follow-redirects'
 
 interface SMSMessage {
   to: string | string[]
@@ -7,9 +6,10 @@ interface SMSMessage {
   from?: string
 }
 
-const INFOBIP_BASE_URL = 'api.infobip.com'
-const INFOBIP_API_KEY = process.env.INFOBIP_API_KEY
-const INFOBIP_FROM = process.env.INFOBIP_FROM || '447491163443'
+// Termii SMS API Configuration
+const TERMII_BASE_URL = 'https://api.ng.termii.com/api'
+const TERMII_API_KEY = process.env.TERMII_API_KEY
+const TERMII_SENDER_ID = process.env.TERMII_SENDER_ID || process.env.TERMII_FROM
 
 export async function POST(request: NextRequest) {
   try {
@@ -31,9 +31,32 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    if (!INFOBIP_API_KEY) {
+    if (!TERMII_API_KEY) {
       return NextResponse.json(
-        { success: false, error: 'Infobip API key not configured' },
+        { 
+          success: false, 
+          error: 'Termii API key not configured',
+          details: 'Please add TERMII_API_KEY to your environment variables',
+          setup: {
+            provider: 'Termii - Nigerian SMS Provider',
+            step1: 'Sign up at https://termii.com/',
+            step2: 'Verify your account and complete KYC',
+            step3: 'Get your API key from the dashboard',
+            step4: 'Add TERMII_API_KEY to .env file',
+            step5: 'Set TERMII_SENDER_ID for custom sender name',
+            pricing: 'Competitive rates for Nigeria and global',
+            features: [
+              'SMS delivery to Nigeria and globally',
+              'High delivery rates',
+              'Real-time delivery reports',
+              'Bulk SMS support',
+              'OTP and verification services',
+              'Voice messaging',
+              'WhatsApp messaging',
+              'Local Nigerian support'
+            ]
+          }
+        },
         { status: 500 }
       )
     }
@@ -52,7 +75,7 @@ export async function POST(request: NextRequest) {
         return cleanPhone
       }
       
-      // If phone starts with 234 (Nigeria), add + prefix
+      // If phone starts with 234 (Nigeria), add +
       if (cleanPhone.startsWith('234')) {
         return '+' + cleanPhone
       }
@@ -64,22 +87,24 @@ export async function POST(request: NextRequest) {
       
       // If phone doesn't start with country code, assume Nigeria and add +234
       if (cleanPhone.length === 10 || cleanPhone.length === 11) {
-        // Remove leading 0 if present and add +234
         const localNumber = cleanPhone.startsWith('0') ? cleanPhone.substring(1) : cleanPhone
         return '+234' + localNumber
       }
       
-      // For other formats, add + if not present
-      return cleanPhone.startsWith('+') ? cleanPhone : '+' + cleanPhone
+      // For other formats, ensure it starts with +
+      if (!cleanPhone.startsWith('+')) {
+        cleanPhone = '+' + cleanPhone
+      }
+      
+      return cleanPhone
     }
 
     const formattedRecipients = recipients.map(formatPhoneNumber)
 
     // Validate formatted phone numbers
     const validatePhoneNumber = (phone: string): boolean => {
-      // Check if phone number is in valid international format
-      const phoneRegex = /^\+[1-9]\d{1,14}$/
-      return phoneRegex.test(phone) && phone.length >= 10 && phone.length <= 16
+      const phoneRegex = /^\+\d{10,15}$/
+      return phoneRegex.test(phone)
     }
 
     const invalidNumbers = formattedRecipients.filter(phone => !validatePhoneNumber(phone))
@@ -94,96 +119,92 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Prepare SMS data for Infobip
-    const smsData = {
-      messages: [
-        {
-          destinations: formattedRecipients.map(phone => ({ to: phone })),
-          from: from || INFOBIP_FROM,
-          text: message
-        }
-      ]
+    // Prepare SMS payload for Termii
+    const smsPayload = {
+      to: formattedRecipients.join(','), // Termii supports comma-separated recipients
+      sms: message,
+      type: 'plain',
+      api_key: TERMII_API_KEY,
+      channel: 'generic'
     }
+    
+    // Add sender ID - use provided, configured, or default
+    smsPayload.from = from || TERMII_SENDER_ID || 'Termii'
 
-    // Send SMS via Infobip API using follow-redirects https module
-    const result = await new Promise((resolve, reject) => {
-      const options = {
+    // Send SMS via Termii API
+    try {
+      const response = await fetch(`${TERMII_BASE_URL}/sms/send`, {
         method: 'POST',
-        hostname: INFOBIP_BASE_URL,
-        path: '/sms/2/text/advanced',
         headers: {
-          'Authorization': `App ${INFOBIP_API_KEY}`,
           'Content-Type': 'application/json',
-          'Accept': 'application/json'
         },
-        maxRedirects: 20
+        body: JSON.stringify(smsPayload)
+      })
+
+      const result = await response.json()
+      
+      console.log('Termii SMS Response:', {
+        status: response.status,
+        ok: response.ok,
+        result
+      })
+
+      if (response.ok && (result.message_id || result.message === 'Successfully Sent')) {
+        const successCount = formattedRecipients.length
+
+        const results = formattedRecipients.map((recipient, index) => ({
+          recipient: recipient,
+          success: true,
+          messageId: result.message_id || `termii_${Date.now()}_${index}`,
+          status: 'sent',
+          description: 'Message sent successfully via Termii'
+        }))
+
+        console.log('SMS sent successfully via Termii:', {
+          recipients: formattedRecipients.length,
+          type: isBulk ? 'bulk' : 'single',
+          successCount: successCount
+        })
+
+        return NextResponse.json({
+          success: true,
+          data: {
+            originalRecipients: recipients,
+            formattedRecipients: formattedRecipients,
+            type: isBulk ? 'bulk' : 'single',
+            sentAt: new Date().toISOString(),
+            successCount: successCount,
+            totalCount: results.length,
+            results: results,
+            provider: 'Termii SMS API',
+            messageId: result.message_id,
+            balance: result.balance
+          },
+          message: `SMS sent successfully to ${successCount}/${results.length} recipient(s)`
+        })
+      } else {
+        console.error('SMS failed via Termii:', result)
+        return NextResponse.json(
+          {
+            success: false,
+            error: result.message || 'Failed to send SMS',
+            details: result,
+            provider: 'Termii SMS API'
+          },
+          { status: response.status || 400 }
+        )
       }
 
-      const req = https.request(options, (res) => {
-        const chunks: Buffer[] = []
-
-        res.on('data', (chunk) => {
-          chunks.push(chunk)
-        })
-
-        res.on('end', () => {
-          const body = Buffer.concat(chunks)
-          try {
-            const responseData = JSON.parse(body.toString())
-            resolve(responseData)
-          } catch (error) {
-            reject(new Error('Invalid JSON response'))
-          }
-        })
-
-        res.on('error', (error) => {
-          reject(error)
-        })
-      })
-
-      req.on('error', (error) => {
-        reject(error)
-      })
-
-      req.write(JSON.stringify(smsData))
-      req.end()
-    })
-
-    const responseData = result as any
-
-    // Check if the response indicates success
-    if (responseData.messages && responseData.messages.length > 0) {
-      const firstMessage = responseData.messages[0]
-      
-      console.log('SMS sent successfully:', {
-        messageId: firstMessage.messageId,
-        recipients: formattedRecipients.length,
-        type: isBulk ? 'bulk' : 'single',
-        status: firstMessage.status
-      })
-
-      return NextResponse.json({
-        success: true,
-        data: {
-          messageId: firstMessage.messageId,
-          originalRecipients: recipients,
-          formattedRecipients: formattedRecipients,
-          type: isBulk ? 'bulk' : 'single',
-          sentAt: new Date().toISOString(),
-          status: firstMessage.status,
-          response: responseData
-        },
-        message: `SMS sent successfully to ${formattedRecipients.length} recipient(s)`
-      })
-    } else {
-      console.error('Infobip API error:', responseData)
+    } catch (apiError: any) {
+      console.error('Termii SMS API error:', apiError)
       return NextResponse.json(
         {
           success: false,
-          error: 'Failed to send SMS',
-          details: responseData.requestError?.serviceException?.text || 'Unknown error'
+          error: 'Failed to connect to Termii SMS API',
+          details: apiError.message,
+          provider: 'Termii SMS API'
         },
-        { status: 400 }
+        { status: 500 }
       )
     }
 
@@ -194,85 +215,216 @@ export async function POST(request: NextRequest) {
       {
         success: false,
         error: 'Failed to send SMS',
-        details: error.message
+        details: error.message,
+        provider: 'Termii SMS API'
       },
       { status: 500 }
     )
   }
 }
 
-// GET endpoint to check SMS service status
+// GET endpoint to check SMS service status with billing information
 export async function GET() {
   try {
-    if (!INFOBIP_API_KEY) {
+    if (!TERMII_API_KEY) {
       return NextResponse.json(
-        { success: false, error: 'Infobip API key not configured' },
+        {
+          success: false,
+          error: 'Termii API key not configured',
+          billing: {
+            provider: 'Termii SMS API',
+            signupUrl: 'https://termii.com/',
+            pricingUrl: 'https://termii.com/pricing',
+            documentation: 'https://developers.termii.com/',
+            features: [
+              'SMS delivery to Nigeria and globally',
+              'High delivery rates',
+              'Real-time delivery reports',
+              'Bulk SMS campaigns',
+              'OTP and verification services',
+              'Voice messaging',
+              'WhatsApp messaging',
+              'Email verification',
+              'Local Nigerian support',
+              'Competitive pricing'
+            ],
+            pricing: {
+              nigeria: {
+                price: 'Competitive rates for Nigerian networks',
+                currency: 'NGN/USD',
+                note: 'Volume discounts available'
+              },
+              global: {
+                price: 'Global SMS delivery available',
+                currency: 'USD',
+                note: 'Rates vary by destination country'
+              }
+            },
+            setup: {
+              step1: 'Sign up at termii.com',
+              step2: 'Complete KYC verification',
+              step3: 'Add funds to your account',
+              step4: 'Get API key from dashboard',
+              step5: 'Configure sender ID'
+            }
+          }
+        },
         { status: 500 }
       )
     }
 
-    // Check account balance via Infobip API
-    const result = await new Promise((resolve, reject) => {
-      const options = {
+    // Check account balance via Termii API
+    try {
+      const response = await fetch(`${TERMII_BASE_URL}/get-balance?api_key=${TERMII_API_KEY}`, {
         method: 'GET',
-        hostname: INFOBIP_BASE_URL,
-        path: '/account/1/balance',
         headers: {
-          'Authorization': `App ${INFOBIP_API_KEY}`,
-          'Accept': 'application/json'
-        },
-        maxRedirects: 20
+          'Content-Type': 'application/json'
+        }
+      })
+
+      const result = await response.json()
+
+      if (response.ok && result.balance !== undefined) {
+        const balance = parseFloat(result.balance) || 0
+        const currency = result.currency || 'NGN'
+        
+        // Calculate estimated SMS count based on average price (₦15 per SMS)
+        const estimatedSmsCount = Math.floor(balance / 15)
+        
+        return NextResponse.json({
+          success: true,
+          service: 'SMS (Termii)',
+          status: 'active',
+          account: {
+            balance: balance,
+            currency: currency,
+            estimatedSmsCount: estimatedSmsCount,
+            lowBalanceWarning: balance < 1000, // ₦1000 threshold
+            lastChecked: new Date().toISOString()
+          },
+          billing: {
+            provider: 'Termii SMS API',
+            topUpUrl: 'https://accounts.termii.com/billing',
+            pricingUrl: 'https://termii.com/pricing',
+            supportUrl: 'https://termii.com/contact',
+            dashboardUrl: 'https://accounts.termii.com',
+            features: [
+              'SMS delivery to Nigeria and globally',
+              'High delivery rates',
+              'Real-time delivery reports',
+              'Bulk SMS campaigns',
+              'OTP and verification services',
+              'Voice messaging',
+              'WhatsApp messaging',
+              'Email verification',
+              'Local Nigerian support',
+              'Competitive pricing'
+            ],
+            pricing: {
+              nigeria: {
+                price: '₦10 - ₦20 per SMS',
+                currency: 'NGN',
+                note: 'Volume discounts available. Rates vary by network.'
+              },
+              global: {
+                price: 'Competitive global rates',
+                currency: 'USD',
+                note: 'International SMS delivery available'
+              },
+              recommendations: {
+                starter: {
+                  amount: '₦5,000',
+                  smsCount: '~250-500 SMS',
+                  suitable: 'Small businesses, testing'
+                },
+                business: {
+                  amount: '₦20,000',
+                  smsCount: '~1,000-2,000 SMS',
+                  suitable: 'Medium businesses, campaigns'
+                },
+                enterprise: {
+                  amount: '₦50,000+',
+                  smsCount: '~2,500+ SMS',
+                  suitable: 'Large organizations, bulk campaigns'
+                }
+              }
+            },
+            paymentMethods: [
+              'Bank Transfer',
+              'Card Payment',
+              'USSD',
+              'Bank Deposit',
+              'Online Banking'
+            ]
+          },
+          capabilities: {
+            textMessages: true,
+            unicodeMessages: true,
+            longMessages: true,
+            bulkMessaging: true,
+            scheduledMessages: false,
+            twoWayMessaging: true,
+            deliveryReports: true,
+            numberLookup: false,
+            senderIdSupport: true,
+            otpServices: true,
+            voiceMessaging: true,
+            whatsappMessaging: true
+          },
+          message: `SMS service is ready. Balance: ₦${balance} (~${estimatedSmsCount} SMS)`
+        })
+      } else {
+        return NextResponse.json(
+          {
+            success: false,
+            service: 'SMS (Termii)',
+            status: 'error',
+            error: result.message || 'Failed to check balance',
+            billing: {
+              provider: 'Termii SMS API',
+              signupUrl: 'https://termii.com/',
+              loginUrl: 'https://accounts.termii.com',
+              supportUrl: 'https://termii.com/contact',
+              troubleshooting: [
+                'Check if API key is valid',
+                'Ensure account is active and verified',
+                'Verify account has sufficient balance',
+                'Check account status in Termii dashboard',
+                'Contact Termii support if issues persist'
+              ]
+            }
+          },
+          { status: response.status }
+        )
       }
 
-      const req = https.request(options, (res) => {
-        const chunks: Buffer[] = []
-
-        res.on('data', (chunk) => {
-          chunks.push(chunk)
-        })
-
-        res.on('end', () => {
-          const body = Buffer.concat(chunks)
-          try {
-            const responseData = JSON.parse(body.toString())
-            resolve({ status: res.statusCode, data: responseData })
-          } catch (error) {
-            reject(new Error('Invalid JSON response'))
-          }
-        })
-
-        res.on('error', (error) => {
-          reject(error)
-        })
-      })
-
-      req.on('error', (error) => {
-        reject(error)
-      })
-
-      req.end()
-    })
-
-    const response = result as any
-
-    if (response.status === 200) {
-      return NextResponse.json({
-        success: true,
-        service: 'SMS (Infobip)',
-        status: 'active',
-        balance: response.data.balance,
-        currency: response.data.currency,
-        message: 'SMS service is ready'
-      })
-    } else {
+    } catch (apiError: any) {
+      console.error('Termii API error:', apiError)
+      
       return NextResponse.json(
         {
           success: false,
-          service: 'SMS (Infobip)',
+          service: 'SMS (Termii)',
           status: 'error',
-          error: response.data.requestError?.serviceException?.text || 'Failed to check balance'
+          error: 'Failed to connect to Termii API',
+          details: apiError.message,
+          billing: {
+            provider: 'Termii SMS API',
+            signupUrl: 'https://termii.com/',
+            pricingUrl: 'https://termii.com/pricing',
+            documentationUrl: 'https://developers.termii.com/',
+            supportUrl: 'https://termii.com/contact',
+            quickStart: [
+              '1. Sign up at termii.com',
+              '2. Complete KYC verification',
+              '3. Add funds using bank transfer or card',
+              '4. Get your API key from the dashboard',
+              '5. Add TERMII_API_KEY to environment variables',
+              '6. Set TERMII_SENDER_ID for custom sender name'
+            ]
+          }
         },
-        { status: response.status }
+        { status: 500 }
       )
     }
 
@@ -282,9 +434,16 @@ export async function GET() {
     return NextResponse.json(
       {
         success: false,
-        service: 'SMS (Infobip)',
+        service: 'SMS (Termii)',
         status: 'error',
-        error: error.message
+        error: error.message,
+        billing: {
+          provider: 'Termii SMS API',
+          signupUrl: 'https://termii.com/',
+          pricingUrl: 'https://termii.com/pricing',
+          documentationUrl: 'https://developers.termii.com/',
+          supportUrl: 'https://termii.com/contact'
+        }
       },
       { status: 500 }
     )

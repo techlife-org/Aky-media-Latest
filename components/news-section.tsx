@@ -38,7 +38,11 @@ export default function NewsSection() {
         // Use relative URL for client-side fetches
         const response = await fetch("/api/news", {
           method: "GET",
-          headers: { "Content-Type": "application/json" },
+          headers: { 
+            "Content-Type": "application/json",
+            "Accept": "application/json"
+          },
+          cache: "no-store",
         })
 
         if (!response.ok) {
