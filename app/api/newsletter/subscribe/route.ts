@@ -1,7 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { MongoClient, ObjectId } from 'mongodb';
 import { withCors } from "@/lib/cors"
-import { NotificationService } from '@/lib/notification-service';
+import { EnhancedNotificationService } from '@/lib/enhanced-notification-service';
 import { validateAndFormatPhone } from '@/lib/phone-utils';
 import { z } from 'zod';
 
@@ -110,25 +110,29 @@ async function handler(request: NextRequest) {
 
       // Send welcome notifications in the background
       try {
-        const notificationService = new NotificationService();
-        const notificationResults = await notificationService.sendWelcomeNotifications(email, formattedPhone, name);
+        const notificationService = new EnhancedNotificationService();
+        const notificationResults = await notificationService.sendSubscriberNotifications({
+          email,
+          phone: formattedPhone,
+          name
+        });
 
         // Update subscriber with notification status
         const updateData: any = {
           updatedAt: new Date()
         };
 
-        if (notificationResults.email) {
+        if (notificationResults.email?.success) {
           updateData.welcomeEmailSent = true;
           updateData.welcomeEmailSentAt = new Date();
         }
 
-        if (notificationResults.sms) {
+        if (notificationResults.sms?.success) {
           updateData.welcomeSMSSent = true;
           updateData.welcomeSMSSentAt = new Date();
         }
 
-        if (notificationResults.whatsapp) {
+        if (notificationResults.whatsapp?.success) {
           updateData.welcomeWhatsAppSent = true;
           updateData.welcomeWhatsAppSentAt = new Date();
         }

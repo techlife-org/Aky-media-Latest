@@ -2,11 +2,13 @@ import { type NextRequest, NextResponse } from "next/server"
 import { connectToDatabase } from "@/lib/mongodb"
 
 export async function GET(request: NextRequest) {
+  console.log("[Broadcast Status API] Received request")
   try {
     let db
     try {
       const dbConnection = await connectToDatabase()
       db = dbConnection.db
+      console.log("[Broadcast Status API] Database connected successfully")
     } catch (error) {
       console.error("Database connection error:", error)
       return NextResponse.json(
@@ -39,7 +41,10 @@ export async function GET(request: NextRequest) {
         new Promise((_, reject) => setTimeout(() => reject(new Error("Database query timeout")), 5000)),
       ])) as any
 
+      console.log("[Broadcast Status API] Broadcast query result:", broadcast)
+      
       if (!broadcast) {
+        console.log("[Broadcast Status API] No active broadcast found")
         return NextResponse.json({
           isActive: false,
           broadcast: null,

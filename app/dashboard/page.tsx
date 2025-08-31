@@ -46,11 +46,35 @@ export default function DashboardPage() {
   const fetchDashboardData = async () => {
     try {
       const response = await fetch("/api/dashboard/stats")
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`)
+      }
       const data = await response.json()
-      setStats(data.stats)
-      setRecentVisitors(data.recentVisitors)
+      
+      // Ensure we have valid stats data with fallback values
+      const statsData = data.stats || {}
+      setStats({
+        totalVisitors: statsData.totalVisitors || 0,
+        todayVisitors: statsData.todayVisitors || 0,
+        subscribers: statsData.subscribers || 0,
+        contactMessages: statsData.contactMessages || 0,
+        pageViews: statsData.pageViews || 0,
+        bounceRate: statsData.bounceRate || 0,
+      })
+      
+      setRecentVisitors(data.recentVisitors || [])
     } catch (error) {
       console.error("Error fetching dashboard data:", error)
+      // Set fallback data on error
+      setStats({
+        totalVisitors: 0,
+        todayVisitors: 0,
+        subscribers: 0,
+        contactMessages: 0,
+        pageViews: 0,
+        bounceRate: 0,
+      })
+      setRecentVisitors([])
     } finally {
       setLoading(false)
     }
@@ -59,42 +83,42 @@ export default function DashboardPage() {
   const statCards = [
     {
       title: "Total Visitors",
-      value: stats.totalVisitors.toLocaleString(),
+      value: (stats?.totalVisitors || 0).toLocaleString(),
       icon: Users,
       color: "bg-blue-500",
       change: "+12%",
     },
     {
       title: "Today's Visitors",
-      value: stats.todayVisitors.toLocaleString(),
+      value: (stats?.todayVisitors || 0).toLocaleString(),
       icon: TrendingUp,
       color: "bg-green-500",
       change: "+8%",
     },
     {
       title: "Newsletter Subscribers",
-      value: stats.subscribers.toLocaleString(),
+      value: (stats?.subscribers || 0).toLocaleString(),
       icon: Mail,
       color: "bg-purple-500",
       change: "+15%",
     },
     {
       title: "Contact Messages",
-      value: stats.contactMessages.toLocaleString(),
+      value: (stats?.contactMessages || 0).toLocaleString(),
       icon: MessageSquare,
       color: "bg-red-500",
       change: "+5%",
     },
     {
       title: "Page Views",
-      value: stats.pageViews.toLocaleString(),
+      value: (stats?.pageViews || 0).toLocaleString(),
       icon: Eye,
       color: "bg-orange-500",
       change: "+18%",
     },
     {
       title: "Bounce Rate",
-      value: `${stats.bounceRate}%`,
+      value: `${stats?.bounceRate || 0}%`,
       icon: BarChart3,
       color: "bg-gray-500",
       change: "-3%",

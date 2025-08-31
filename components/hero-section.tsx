@@ -18,8 +18,22 @@ export default function HeroSection() {
   useEffect(() => {
     const checkBroadcastStatus = async () => {
       try {
-        const response = await fetch("/api/broadcast/status")
+        console.log("[Hero Section] Fetching broadcast status from /api/broadcast/status")
+        const response = await fetch("/api/broadcast/status", {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          cache: "no-store",
+        })
+        
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`)
+        }
+        
         const data = await response.json()
+        console.log("[Hero Section] Broadcast status response:", data)
+        
         setIsLiveBroadcast(data.isActive)
         if (data.isActive) {
           setBroadcastInfo({
@@ -29,7 +43,7 @@ export default function HeroSection() {
           })
         }
       } catch (error) {
-        console.error("Error checking broadcast status:", error)
+        console.error("[Hero Section] Error checking broadcast status:", error)
         setIsLiveBroadcast(false)
       }
     }

@@ -76,9 +76,9 @@ export default function YouthLogin() {
       <div className="container mx-auto px-4 max-w-md">
         <Card className="shadow-2xl border-0">
           <CardHeader className="text-center bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-t-lg">
-            <CardTitle className="text-2xl font-bold">Youth Dashboard Login</CardTitle>
+            <CardTitle className="text-2xl font-bold">User Dashboard Login</CardTitle>
             <CardDescription className="text-blue-100">
-              Access your His Excellency's Youth Program dashboard
+              {/* Access your His Excellency's Youth Program dashboard */}
             </CardDescription>
           </CardHeader>
           

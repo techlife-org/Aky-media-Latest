@@ -55,7 +55,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
     { name: "Broadcast Control", href: "/dashboard/broadcast", icon: Radio },
     { name: "Communication Center", href: "/dashboard/communication", icon: Send },
-    { name: "Youth Management", href: "/dashboard/youth-management", icon: UserCheck },
+    { name: "User Management", href: "/dashboard/youth-management", icon: UserCheck },
     { name: "Project Management", href: "/dashboard/project-management", icon: FolderKanban },
     { name: "Achievements", href: "/dashboard/achievements", icon: BarChart3 },
     { name: "News Management", href: "/dashboard/news", icon: Newspaper },

@@ -18,15 +18,15 @@
 
 ### 🔹 **2. Admin Management Test**
 1. **Access Admin Dashboard**: http://localhost:3001/dashboard
-2. **Navigate to Youth Management**: Click "Youth Management" in sidebar
-3. **View Youth List**: See all registered youth with details
+2. **Navigate to User Management**: Click "User Management" in sidebar
+3. **View User List**: See all registered users with details
 4. **Test Approve Function**:
-   - Click green checkmark button for a pending youth
+   - Click green checkmark button for a pending user
    - Verify status changes to "Approved"
    - Check console for approval notification logs
 
 5. **Test Reject Function**:
-   - Click red X button for a pending youth
+   - Click red X button for a pending user
    - Enter rejection reason
    - Verify status changes to "Rejected"
    - Check console for rejection notification logs
@@ -46,7 +46,7 @@
 ### 🔹 **4. Youth Dashboard Test**
 1. **Verify Authentication**: Only approved youth can access full features
 2. **Test Tabs**:
-   - **Programs**: View available youth programs
+   - **Programs**: View available programs
    - **Music**: Browse and play music content
    - **Videos**: Watch educational and entertainment videos
    - **Profile**: View personal information
@@ -70,11 +70,11 @@
 - ✅ Status: "Pending" by default
 
 ### **Admin Management**:
-- ✅ View all youth registrations
+- ✅ View all user registrations
 - ✅ Filter by status, LGA, search
 - ✅ Approve/Reject with reasons
 - ✅ Export data to CSV
-- ✅ View detailed youth profiles
+- ✅ View detailed user profiles
 
 ### **Youth Authentication**:
 - ✅ Login with Unique ID + Password

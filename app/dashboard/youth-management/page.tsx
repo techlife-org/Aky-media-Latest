@@ -246,9 +246,9 @@ export default function YouthManagement() {
                     </div>
                     <div>
                       <h1 className="text-4xl font-bold bg-gradient-to-r from-gray-900 via-blue-800 to-indigo-800 bg-clip-text text-transparent">
-                        Youth Management
+                        User Management
                       </h1>
-                      <p className="text-gray-600 text-lg">Manage youth registrations, approvals, and engagement</p>
+                      <p className="text-gray-600 text-lg">Manage user registrations, approvals, and engagement</p>
                     </div>
                   </div>
                 </div>
@@ -275,7 +275,7 @@ export default function YouthManagement() {
                     <Users className="w-7 h-7 text-white" />
                   </div>
                   <div>
-                    <p className="text-sm font-medium text-blue-700">Total Youth</p>
+                    <p className="text-sm font-medium text-blue-700">Total Users</p>
                     <p className="text-3xl font-bold text-blue-900">{youth.length}</p>
                     <p className="text-xs text-blue-600 flex items-center gap-1">
                       <TrendingUp className="w-3 h-3" />
@@ -393,10 +393,10 @@ export default function YouthManagement() {
               <div className="flex items-center justify-between">
                 <div>
                   <CardTitle className="text-2xl font-bold text-gray-900">
-                    Youth Registrations ({filteredYouth.length})
+                    User Registrations ({filteredYouth.length})
                   </CardTitle>
                   <CardDescription className="text-gray-600">
-                    Review and manage youth program registrations
+                    Review and manage User program registrations
                   </CardDescription>
                 </div>
                 <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
@@ -409,7 +409,7 @@ export default function YouthManagement() {
                 <Table>
                   <TableHeader>
                     <TableRow className="bg-gray-50/50">
-                      <TableHead className="font-semibold text-gray-700">Youth</TableHead>
+                      <TableHead className="font-semibold text-gray-700">User</TableHead>
                       <TableHead className="font-semibold text-gray-700">Contact</TableHead>
                       <TableHead className="font-semibold text-gray-700">Location</TableHead>
                       <TableHead className="font-semibold text-gray-700">Occupation</TableHead>
@@ -490,7 +490,7 @@ export default function YouthManagement() {
                               </DialogTrigger>
                               <DialogContent className="max-w-3xl">
                                 <DialogHeader>
-                                  <DialogTitle className="text-2xl font-bold text-gray-900">Youth Details</DialogTitle>
+                                  <DialogTitle className="text-2xl font-bold text-gray-900">User Details</DialogTitle>
                                   <DialogDescription className="text-gray-600">
                                     Complete information for {selectedYouth?.fullName}
                                   </DialogDescription>
@@ -666,8 +666,8 @@ export default function YouthManagement() {
                   <div className="w-20 h-20 bg-gradient-to-br from-gray-100 to-gray-200 rounded-full flex items-center justify-center mx-auto mb-4">
                     <Users className="w-10 h-10 text-gray-400" />
                   </div>
-                  <h3 className="text-lg font-semibold text-gray-900 mb-2">No youth found</h3>
-                  <p className="text-gray-500">No youth found matching your search criteria</p>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2">No user found</h3>
+                  <p className="text-gray-500">No user found matching your search criteria</p>
                 </div>
               )}
             </CardContent>

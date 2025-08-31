@@ -9,7 +9,10 @@
     "build": "next build",
     "dev": "next dev",
     "lint": "next lint",
-    "start": "next start"
+    "start": "next start",
+    "check-communication": "echo 'Communication services: WhatsApp (Termii), SMS (Termii), Email (Hostinger SMTP)'",
+    "init-templates": "node scripts/init-templates.js",
+    "test-templates": "echo 'Use POST /api/communication/test-templates to test the template system'"
   },
   "dependencies": {
     "@aws-sdk/credential-providers": "latest",
@@ -82,7 +85,6 @@
     "sonner": "latest",
     "tailwind-merge": "^2.5.5",
     "tailwindcss-animate": "^1.0.7",
-    "twilio": "^5.8.0",
     "vaul": "latest",
     "zod": "^3.24.1"
   },

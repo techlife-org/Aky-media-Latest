@@ -129,7 +129,7 @@ export default function Header() {
                     className="border-2 border-blue-600/20 bg-blue-50/50 text-blue-700 hover:bg-blue-100 hover:border-blue-600/40 shadow-md hover:shadow-lg transition-all duration-300 transform hover:scale-105 flex items-center gap-2 px-6 backdrop-blur-sm"
                   >
                     <Users className="w-4 h-4" />
-                    <span className="font-medium">Youth Dashboard</span>
+                    <span className="font-medium">Login</span>
                   </Button>
                 </Link>
               </div>
