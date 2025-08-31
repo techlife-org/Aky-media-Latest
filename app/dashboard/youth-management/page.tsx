@@ -246,9 +246,9 @@ export default function YouthManagement() {
                     </div>
                     <div>
                       <h1 className="text-4xl font-bold bg-gradient-to-r from-gray-900 via-blue-800 to-indigo-800 bg-clip-text text-transparent">
-                        Youth Management
+                        User Management
                       </h1>
-                      <p className="text-gray-600 text-lg">Manage youth registrations, approvals, and engagement</p>
+                      <p className="text-gray-600 text-lg">Manage user registrations, approvals, and engagement</p>
                     </div>
                   </div>
                 </div>
@@ -275,7 +275,7 @@ export default function YouthManagement() {
                     <Users className="w-7 h-7 text-white" />
                   </div>
                   <div>
-                    <p className="text-sm font-medium text-blue-700">Total Youth</p>
+                    <p className="text-sm font-medium text-blue-700">Total Users</p>
                     <p className="text-3xl font-bold text-blue-900">{youth.length}</p>
                     <p className="text-xs text-blue-600 flex items-center gap-1">
                       <TrendingUp className="w-3 h-3" />
