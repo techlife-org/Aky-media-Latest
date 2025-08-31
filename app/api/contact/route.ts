@@ -1,6 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { connectToDatabase } from "@/lib/mongodb"
 import { EnhancedNotificationService } from '@/lib/enhanced-notification-service'
+import { validateAndFormatPhone } from '@/lib/phone-utils'
 
 export async function POST(request: NextRequest) {
   try {
@@ -16,6 +17,22 @@ export async function POST(request: NextRequest) {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
     if (!emailRegex.test(email)) {
       return NextResponse.json({ message: "Please enter a valid email address" }, { status: 400 })
+    }
+
+    // Validate and format phone number if provided
+    let formattedPhone = null;
+    if (mobile && mobile.trim()) {
+      const phoneValidation = validateAndFormatPhone(mobile.trim());
+      if (!phoneValidation.isValid) {
+        return NextResponse.json(
+          { 
+            success: false, 
+            message: phoneValidation.error || 'Please enter a valid phone number'
+          },
+          { status: 400 }
+        );
+      }
+      formattedPhone = phoneValidation.formattedPhone;
     }
 
     let db
@@ -39,12 +56,20 @@ export async function POST(request: NextRequest) {
       firstName,
       lastName,
       email,
-      mobile: mobile || "",
+      mobile: formattedPhone || mobile || "",
       subject,
       message,
       status: "new",
       createdAt: new Date(),
       readAt: null,
+      // Add notification tracking fields
+      confirmationEmailSent: false,
+      confirmationSMSSent: false,
+      confirmationWhatsAppSent: false,
+      metadata: {
+        ip: request.headers.get('x-forwarded-for') || request.ip,
+        userAgent: request.headers.get('user-agent'),
+      }
     }
 
     const result = await db.collection("contacts").insertOne(contactMessage)
@@ -55,7 +80,7 @@ export async function POST(request: NextRequest) {
         const notificationService = new EnhancedNotificationService();
         const notificationResults = await notificationService.sendContactNotifications({
           email,
-          mobile,
+          mobile: formattedPhone || mobile,
           firstName,
           lastName,
           subject
@@ -92,7 +117,7 @@ export async function POST(request: NextRequest) {
             type: 'contact_notifications',
             contactId: result.insertedId,
             email,
-            mobile,
+            mobile: formattedPhone || mobile,
             errors: notificationResults.errors,
             timestamp: new Date()
           });
@@ -105,13 +130,13 @@ export async function POST(request: NextRequest) {
           type: 'contact_notifications',
           contactId: result.insertedId,
           email,
-          mobile,
+          mobile: formattedPhone || mobile,
           error: notificationError instanceof Error ? notificationError.message : 'Unknown error',
           timestamp: new Date()
         });
       }
 
-      const notificationMessage = mobile 
+      const notificationMessage = formattedPhone 
         ? "Thank you for your message! We'll get back to you within 30 minutes during business hours. Please check your email, SMS, and WhatsApp for confirmation."
         : "Thank you for your message! We'll get back to you within 30 minutes during business hours. Please check your email for confirmation.";
 

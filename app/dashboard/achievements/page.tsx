@@ -76,6 +76,7 @@ export default function AchievementsPage() {
   const [deleteModalOpen, setDeleteModalOpen] = useState(false)
   const [achievementToDelete, setAchievementToDelete] = useState<Achievement | null>(null)
   const [deleteLoading, setDeleteLoading] = useState(false)
+  const [isSending, setIsSending] = useState<string | null>(null)
 
   useEffect(() => {
     fetchAchievements()
@@ -168,6 +169,41 @@ export default function AchievementsPage() {
   const handleView = (achievement: Achievement) => {
     setSelectedAchievement(achievement)
     setViewModalOpen(true)
+  }
+
+  const sendAchievementNotification = async (achievementId: string) => {
+    try {
+      setIsSending(achievementId)
+      console.log('[Achievement Management] Sending notification for achievement:', achievementId)
+      const response = await fetch("/api/dashboard/achievements/notify", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ achievementId }),
+      })
+
+      if (!response.ok) {
+        throw new Error("Failed to send achievement notification")
+      }
+
+      const result = await response.json()
+
+      toast({
+        title: "Success",
+        description: result.message || "Achievement notification sent successfully",
+        className: "bg-green-50 border-green-200 text-green-800",
+      })
+    } catch (error) {
+      console.error("Error sending achievement notification:", error)
+      toast({
+        title: "Error",
+        description: "Failed to send achievement notification. Please try again.",
+        variant: "destructive",
+      })
+    } finally {
+      setIsSending(null)
+    }
   }
 
   const getStatusBadge = (status: string) => {
@@ -531,6 +567,13 @@ export default function AchievementsPage() {
                               Edit Achievement
                             </DropdownMenuItem>
                             <DropdownMenuItem 
+                              onClick={() => sendAchievementNotification(achievement._id)}
+                              disabled={isSending === achievement._id}
+                            >
+                              <Zap className="mr-2 h-4 w-4" />
+                              {isSending === achievement._id ? "Sending..." : "Send Notification"}
+                            </DropdownMenuItem>
+                            <DropdownMenuItem 
                               className="text-red-600 focus:text-red-600" 
                               onClick={() => handleDeleteClick(achievement)}
                             >
@@ -608,6 +651,16 @@ export default function AchievementsPage() {
                       >
                         <Edit className="w-4 h-4 mr-1" />
                         Edit
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => sendAchievementNotification(achievement._id)}
+                        disabled={isSending === achievement._id}
+                        className="flex-1 border-purple-200 text-purple-600 hover:bg-purple-50 hover:border-purple-300 transition-all duration-200"
+                      >
+                        <Zap className="w-4 h-4 mr-1" />
+                        {isSending === achievement._id ? "Sending..." : "Notify"}
                       </Button>
                     </div>
                   </CardContent>
