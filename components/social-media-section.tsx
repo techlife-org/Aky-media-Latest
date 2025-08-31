@@ -26,7 +26,7 @@ const socialMediaPlatforms = [
   {
     name: "Instagram",
     handle: "@abba_kabir_yusuf",
-    url: "https://www.instagram.com/abba_kabir_yusuf?igsh=MzR0NWNodG56amZw",
+    url: "https://www.instagram.com/aky_digital?igsh=Y2w2Nnlvejl0djBu",
     image: "/pictures/instagram.jpg",
     icon: InstagramIcon,
     color: "from-pink-500 to-purple-600",
