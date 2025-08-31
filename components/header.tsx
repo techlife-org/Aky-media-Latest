@@ -75,6 +75,14 @@ export default function Header() {
                 <span className="relative z-10">About</span>
                 <div className="absolute inset-0 bg-gradient-to-r from-indigo-500/10 to-indigo-600/10 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
               </Link>
+
+              <Link 
+                href="/audio" 
+                className="relative px-4 py-2 text-gray-700 hover:text-indigo-600 transition-all duration-300 font-medium rounded-lg hover:bg-indigo-50 group"
+              >
+                <span className="relative z-10">Music</span>
+                <div className="absolute inset-0 bg-gradient-to-r from-indigo-500/10 to-indigo-600/10 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+              </Link>
               <Link 
                 href="/contact" 
                 className="relative px-4 py-2 text-gray-700 hover:text-green-600 transition-all duration-300 font-medium rounded-lg hover:bg-green-50 group"

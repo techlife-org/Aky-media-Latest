@@ -1,6 +1,6 @@
 import Link from "next/link"
 import { Card, CardContent } from "@/components/ui/card"
-import { ExternalLink, Users, Globe, Camera, MessageCircle, Facebook, Twitter, InstagramIcon, X } from "lucide-react"
+import { ExternalLink, Users, Facebook, Twitter, InstagramIcon, X, Youtube } from "lucide-react"
 
 const socialMediaPlatforms = [
   {
@@ -34,14 +34,14 @@ const socialMediaPlatforms = [
     description: "Visual stories of development projects and state activities",
   },
   {
-    name: "Official Website",
-    handle: "abbakabiryusuf.com",
-    url: "#",
+    name: "youtube",
+    handle: "aky_digital_hub",
+    url: "https://www.youtube.com/channel/UCItndHwRDg4rQ0-DgBRv4Wg",
     image: "/pictures/website.png",
-    icon: Globe,
+    icon: Youtube,
     color: "from-red-600 to-red-800",
-    followers: "Official",
-    description: "Complete information hub for government policies and initiatives",
+    followers: "1.2M",
+    description: "Official YouTube channel for government updates and community engagement", 
   },
 ]
 
@@ -69,7 +69,7 @@ export default function SocialMediaSection() {
             </span>
           </h2>
           <p className="text-xl text-gray-600 max-w-3xl mx-auto leading-relaxed">
-            Stay connected with His Excellency Alh. Abba Kabir Yusuf through our official social media platforms.
+            Stay connected with His Excellency Alh. Abba Kabir Yusuf through his official social media platforms.
           </p>
         </div>
 
