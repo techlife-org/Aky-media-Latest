@@ -37,11 +37,31 @@ async function generateUniqueId(lgaCode: string, db: any): Promise<string> {
   return `${prefix}-${sequence}`;
 }
 
-// Helper function to validate NIN format (basic validation)
+// Enhanced NIN validation function according to Nigerian NIN standards
 function validateNIN(nin: string): boolean {
-  // NIN should be 11 digits
-  const ninRegex = /^\d{11}$/;
-  return ninRegex.test(nin);
+  // Remove any spaces or special characters
+  const cleanNIN = nin.replace(/\s+/g, '');
+  
+  // Check if it's exactly 11 digits
+  if (!/^\d{11}$/.test(cleanNIN)) {
+    return false;
+  }
+  
+  // Additional NIN validation rules for Nigerian NIN
+  // NIN should not start with 0
+  if (cleanNIN.startsWith('0')) {
+    return false;
+  }
+  
+  // Check for obvious invalid patterns (all same digits, sequential)
+  const allSameDigits = /^(.)\1{10}$/.test(cleanNIN);
+  const sequential = /^(0123456789|1234567890|9876543210|0987654321)/.test(cleanNIN);
+  
+  if (allSameDigits || sequential) {
+    return false;
+  }
+  
+  return true;
 }
 
 // Helper function to validate phone number
@@ -83,17 +103,12 @@ export async function POST(request: Request) {
       );
     }
 
-    // Validate password strength
-    if (password.length < 8) {
-      return NextResponse.json(
-        { error: 'Password must be at least 8 characters long' },
-        { status: 400 }
-      );
-    }
+    // Password validation removed - only check if passwords match (already done above)
 
-    if (!/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/.test(password)) {
+    // Validate full name format
+    if (!/^[a-zA-Z\s'-]+$/.test(fullName.trim())) {
       return NextResponse.json(
-        { error: 'Password must contain at least one uppercase letter, one lowercase letter, and one number' },
+        { error: 'Full name can only contain letters, spaces, hyphens, and apostrophes' },
         { status: 400 }
       );
     }
@@ -115,12 +130,24 @@ export async function POST(request: Request) {
       );
     }
 
-    // Validate NIN
+    // Enhanced NIN validation
     if (!validateNIN(ninNumber)) {
-      return NextResponse.json(
-        { error: 'Invalid NIN format. NIN must be 11 digits' },
-        { status: 400 }
-      );
+      if (!/^\d{11}$/.test(ninNumber.replace(/\s+/g, ''))) {
+        return NextResponse.json(
+          { error: 'Invalid NIN format. NIN must be exactly 11 digits' },
+          { status: 400 }
+        );
+      } else if (ninNumber.replace(/\s+/g, '').startsWith('0')) {
+        return NextResponse.json(
+          { error: 'Invalid NIN format. NIN cannot start with 0' },
+          { status: 400 }
+        );
+      } else {
+        return NextResponse.json(
+          { error: 'Invalid NIN format. Please enter a valid Nigerian NIN' },
+          { status: 400 }
+        );
+      }
     }
 
     // Validate LGA
@@ -225,10 +252,10 @@ export async function POST(request: Request) {
     const youth = {
       _id: new ObjectId(),
       fullName,
-      email,
+      email: email.toLowerCase(),
       phone,
       dateOfBirth: new Date(dateOfBirth),
-      age: calculatedAge,
+      age: age,
       ninNumber,
       password: hashedPassword,
       ninDocument: {
@@ -250,6 +277,11 @@ export async function POST(request: Request) {
       emailVerified: false,
       phoneVerified: false,
       loginAttempts: 0,
+      metadata: {
+        ip: clientIP,
+        userAgent: userAgent,
+        location: 'Unknown'
+      },
       notifications: {
         email: true,
         sms: true,
@@ -279,9 +311,9 @@ export async function POST(request: Request) {
         uniqueId,
         fullName,
         lga,
-        email,
+        email: email.toLowerCase(),
         phone,
-        registeredAt: youthData.registeredAt
+        registeredAt: youth.registeredAt
       }
     });
 

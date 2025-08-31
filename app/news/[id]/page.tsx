@@ -246,14 +246,35 @@ export default function NewsDetailPage() {
             {/* Featured Images */}
             {blog.attachments && blog.attachments.length > 0 && (
               <div className="mb-8">
-                <AutoCarousel
-                  images={blog.attachments.map((att) => att.url)}
-                  title={blog.title}
-                  className="h-96"
-                  aspectRatio="video"
-                  showControls={true}
-                  autoAdvanceInterval={5000}
-                />
+                <div className="relative overflow-hidden rounded-xl shadow-lg">
+                  <AutoCarousel
+                    images={blog.attachments.filter(att => att.type === 'image').map((att) => att.url)}
+                    title={blog.title}
+                    className="h-96 md:h-[500px]"
+                    aspectRatio="video"
+                    showControls={true}
+                    autoAdvanceInterval={6000}
+                  />
+                  {blog.attachments.filter(att => att.type === 'image').length > 1 && (
+                    <div className="absolute bottom-4 left-4 bg-black/50 text-white px-3 py-1 rounded-full text-sm backdrop-blur-sm">
+                      {blog.attachments.filter(att => att.type === 'image').length} Images
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+            
+            {/* Fallback Image if no attachments */}
+            {(!blog.attachments || blog.attachments.length === 0) && (
+              <div className="mb-8">
+                <div className="relative h-96 md:h-[500px] bg-gradient-to-br from-gray-100 to-gray-200 rounded-xl flex items-center justify-center overflow-hidden">
+                  <div className="text-center">
+                    <div className="text-6xl mb-4">📰</div>
+                    <h3 className="text-xl font-semibold text-gray-600 mb-2">News Article</h3>
+                    <p className="text-gray-500">{blog.doc_type || 'General News'}</p>
+                  </div>
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/10 to-transparent" />
+                </div>
               </div>
             )}
 
@@ -287,19 +308,27 @@ export default function NewsDetailPage() {
                 {relatedBlogs.map((relatedBlog) => (
                   <Card key={relatedBlog.id} className="overflow-hidden hover:shadow-lg transition-shadow">
                     {/* Related Blog Images */}
-                    <div className="relative h-48">
-                      {relatedBlog.attachments && relatedBlog.attachments.length > 0 ? (
+                    <div className="relative h-48 overflow-hidden">
+                      {relatedBlog.attachments && relatedBlog.attachments.filter(att => att.type === 'image').length > 0 ? (
                         <AutoCarousel
-                          images={relatedBlog.attachments.map((att) => att.url)}
+                          images={relatedBlog.attachments.filter(att => att.type === 'image').map((att) => att.url)}
                           title={relatedBlog.title}
                           className="h-full"
                           aspectRatio="auto"
                           showControls={false}
-                          autoAdvanceInterval={5000}
+                          autoAdvanceInterval={7000}
                         />
                       ) : (
-                        <div className="w-full h-full bg-gray-100 flex items-center justify-center">
-                          <span className="text-4xl">📰</span>
+                        <div className="w-full h-full bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center">
+                          <div className="text-center">
+                            <span className="text-4xl mb-2 block">📰</span>
+                            <span className="text-xs text-gray-500">{relatedBlog.doc_type || 'News'}</span>
+                          </div>
+                        </div>
+                      )}
+                      {relatedBlog.attachments && relatedBlog.attachments.filter(att => att.type === 'image').length > 1 && (
+                        <div className="absolute top-2 right-2 bg-black/50 text-white px-2 py-1 rounded text-xs backdrop-blur-sm">
+                          +{relatedBlog.attachments.filter(att => att.type === 'image').length - 1}
                         </div>
                       )}
                     </div>

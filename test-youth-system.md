@@ -46,7 +46,7 @@
 ### 🔹 **4. Youth Dashboard Test**
 1. **Verify Authentication**: Only approved youth can access full features
 2. **Test Tabs**:
-   - **Programs**: View available youth programs
+   - **Programs**: View available programs
    - **Music**: Browse and play music content
    - **Videos**: Watch educational and entertainment videos
    - **Profile**: View personal information

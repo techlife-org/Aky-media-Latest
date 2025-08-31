@@ -31,8 +31,8 @@ export default function Header() {
       <header className="bg-white/95 backdrop-blur-md shadow-lg border-b border-gray-200/50 sticky top-0 z-50">
         <div className="container mx-auto px-4">
           <div className="flex items-center justify-between h-20">
-            {/* Enhanced Logo Section */}
-            <Link href="/" className="flex items-center gap-3 group">
+            {/* Logo Section */}
+            <Link href="/" className="flex items-center group">
               <div className="relative">
                 <div className="absolute inset-0 bg-gradient-to-r from-red-500/20 to-blue-500/20 rounded-full blur-lg group-hover:blur-xl transition-all duration-300"></div>
                 <Image
@@ -42,12 +42,6 @@ export default function Header() {
                   height={60}
                   className="h-14 w-auto relative z-10 group-hover:scale-105 transition-transform duration-300"
                 />
-              </div>
-              <div className="hidden sm:block">
-                <h1 className="text-xl font-bold bg-gradient-to-r from-red-600 via-blue-600 to-green-600 bg-clip-text text-transparent">
-                  AKY Media
-                </h1>
-                <p className="text-xs text-gray-500 font-medium">Kano State Government</p>
               </div>
             </Link>
 
@@ -79,6 +73,14 @@ export default function Header() {
                 className="relative px-4 py-2 text-gray-700 hover:text-indigo-600 transition-all duration-300 font-medium rounded-lg hover:bg-indigo-50 group"
               >
                 <span className="relative z-10">About</span>
+                <div className="absolute inset-0 bg-gradient-to-r from-indigo-500/10 to-indigo-600/10 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+              </Link>
+
+              <Link 
+                href="/audio" 
+                className="relative px-4 py-2 text-gray-700 hover:text-indigo-600 transition-all duration-300 font-medium rounded-lg hover:bg-indigo-50 group"
+              >
+                <span className="relative z-10">Music</span>
                 <div className="absolute inset-0 bg-gradient-to-r from-indigo-500/10 to-indigo-600/10 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
               </Link>
               <Link 
@@ -127,7 +129,7 @@ export default function Header() {
                     className="border-2 border-blue-600/20 bg-blue-50/50 text-blue-700 hover:bg-blue-100 hover:border-blue-600/40 shadow-md hover:shadow-lg transition-all duration-300 transform hover:scale-105 flex items-center gap-2 px-6 backdrop-blur-sm"
                   >
                     <Users className="w-4 h-4" />
-                    <span className="font-medium">Youth Dashboard</span>
+                    <span className="font-medium">Login</span>
                   </Button>
                 </Link>
               </div>

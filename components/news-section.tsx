@@ -201,7 +201,7 @@ export default function NewsSection() {
           <div className="text-center mb-16">
             <h2 className="text-4xl lg:text-5xl font-bold text-gray-900 mb-4">Latest News</h2>
             <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-              Stay updated with the latest developments and achievements from the Governor's office
+            Stay informed with the latest updates, projects, and announcements from Governor Abba Kabir Yusuf.
             </p>
           </div>
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
@@ -227,7 +227,7 @@ export default function NewsSection() {
         <div className="text-center mb-16">
           <h2 className="text-4xl lg:text-5xl font-bold text-gray-900 mb-4">Latest News</h2>
           <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-            Stay updated with the latest developments and achievements from the Governor's office
+            Stay informed with the latest updates, projects, and announcements from Governor Abba Kabir Yusuf.
           </p>
           {error && (
             <div className="mt-4 p-4 bg-yellow-100 border border-yellow-400 rounded-lg">

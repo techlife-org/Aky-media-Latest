@@ -37,8 +37,8 @@ function RegistrationSuccessContent() {
 
   const shareRegistration = async () => {
     const shareData = {
-      title: "Youth Program Registration Successful",
-      text: `I've successfully registered for His Excellency's Youth Program! My unique ID is: ${uniqueId}`,
+      title: "User Program Registration Successful",
+      text: `I've successfully registered for His Excellency's User Program! My unique ID is: ${uniqueId}`,
       url: window.location.origin + "/register"
     }
 
@@ -78,7 +78,7 @@ function RegistrationSuccessContent() {
             Registration Successful! 🎉
           </h1>
           <p className="text-lg text-gray-600">
-            Welcome to His Excellency's Youth Program
+            Welcome to AKY Digital Hub
           </p>
         </div>
 
@@ -197,7 +197,7 @@ function RegistrationSuccessContent() {
                 <div>
                   <h4 className="font-semibold">Access Your Dashboard</h4>
                   <p className="text-sm text-gray-600">
-                    Use your unique ID to access your youth dashboard and stay updated on program activities.
+                    Use your unique ID to access your User Program dashboard and stay updated on program activities.
                   </p>
                 </div>
               </div>

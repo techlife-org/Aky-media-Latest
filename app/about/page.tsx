@@ -92,14 +92,13 @@ const timelineEvents = [
     title: "Technical Excellence",
     subtitle: "National Diploma Achievement",
     description: "Earned a National Diploma in Civil Engineering from the Federal Polytechnic, Mubi, demonstrating his passion for infrastructure development and technical innovation that would later shape his governance approach.",
-    image: "/pictures/assets/img/about/3.png",
+    image: "/pictures/assets/img/about/TechnicalExcellence.jpeg",
     category: "education",
     icon: BookOpen,
     color: "from-emerald-500 to-teal-600",
     bgColor: "from-emerald-50 to-teal-100",
     gallery: [
-      "/pictures/assets/img/about/3.png",
-      "/pictures/assets/img/about/4.png"
+      "/pictures/assets/img/about/TechnicalExcellence.jpeg",
     ],
     facts: [
       "National Diploma in Civil Engineering",
@@ -114,14 +113,13 @@ const timelineEvents = [
     title: "Advanced Learning",
     subtitle: "Higher Education & Specialization",
     description: "Obtained Higher National Diploma in Civil Engineering with specialization in Water Resources/Environmental Engineering from Kaduna Polytechnic, plus postgraduate diploma and master's degree in Business Administration from Bayero University, Kano.",
-    image: "/pictures/assets/img/about/4.png",
+    image: "/pictures/assets/img/about/AdvancedLearning.jpeg",
     category: "education",
     icon: Trophy,
     color: "from-purple-500 to-violet-600",
     bgColor: "from-purple-50 to-violet-100",
     gallery: [
-      "/pictures/assets/img/about/4.png",
-      "/pictures/assets/img/about/5.png"
+      "/pictures/assets/img/about/AdvancedLearning.jpeg",
     ],
     facts: [
       "HND in Civil Engineering",
@@ -136,13 +134,13 @@ const timelineEvents = [
     title: "National Service",
     subtitle: "Serving the Nation",
     description: "Completed National Youth Service Corps at the Kaduna Environmental Protection Agency (KEPA), where he gained valuable experience in environmental management and public service.",
-    image: "/pictures/assets/img/about/5.png",
+    image: "/pictures/assets/img/about/NationalService.jpeg",
     category: "service",
     icon: Users,
     color: "from-orange-500 to-amber-600",
     bgColor: "from-orange-50 to-amber-100",
     gallery: [
-      "/pictures/assets/img/about/5.png"
+      "/pictures/assets/img/about/NationalService.jpeg",
     ],
     facts: [
       "NYSC at KEPA, Kaduna",
@@ -157,14 +155,13 @@ const timelineEvents = [
     title: "Educational Leadership",
     subtitle: "Chairman Governing Board",
     description: "Served as Chairman of the Governing Board of the National Institute for Educational Planning and Administration (NIEPA), Ondo State, contributing to national educational policy development.",
-    image: "/pictures/assets/img/about/6.png",
+    image: "/pictures/assets/img/about/EducationalLeadership.jpeg",
     category: "leadership",
     icon: Lightbulb,
     color: "from-cyan-500 to-blue-600",
     bgColor: "from-cyan-50 to-blue-100",
     gallery: [
-      "/pictures/assets/img/about/6.png",
-      "/pictures/assets/img/about/7.png"
+      "/pictures/assets/img/about/EducationalLeadership.jpeg",
     ],
     facts: [
       "Chairman of NIEPA Governing Board",
@@ -179,14 +176,18 @@ const timelineEvents = [
     title: "Infrastructure Development",
     subtitle: "Commissioner of Works",
     description: "Became Commissioner of Works, Housing and Transport in 2011 when Kwankwaso was re-elected as governor of Kano State, overseeing major infrastructure projects that transformed the state.",
-    image: "/pictures/assets/img/about/7.png",
+    image: "/pictures/assets/img/about/InfrastructureDevelopment.jpeg",
     category: "government",
     icon: Building,
     color: "from-red-500 to-pink-600",
     bgColor: "from-red-50 to-pink-100",
     gallery: [
-      "/pictures/assets/img/about/7.png",
-      "/pictures/assets/img/he/1.png"
+      "/pictures/assets/img/about/InfrastructureDevelopment.jpeg",
+      "/pictures/assets/img/about/InfrastructureDevelopment1.jpeg",
+      "/pictures/assets/img/about/InfrastructureDevelopment2.jpeg",
+      "/pictures/assets/img/about/InfrastructureDevelopment3.jpeg",
+      "/pictures/assets/img/about/InfrastructureDevelopment4.jpeg",
+
     ],
     facts: [
       "Commissioner of Works, Housing & Transport",
@@ -208,7 +209,7 @@ const timelineEvents = [
     bgColor: "from-indigo-50 to-purple-100",
     gallery: [
       "/pictures/assets/img/he/3.jpg",
-      "/pictures/assets/img/he/4.jpg"
+      "/pictures/assets/img/about/2.png",
     ],
     facts: [
       "PDP Gubernatorial Candidate",
@@ -231,7 +232,10 @@ const timelineEvents = [
     gallery: [
       "/pictures/assets/img/he/4.jpg",
       "/pictures/assets/img/he/5.png",
-      "/pictures/assets/img/he/6.png"
+      "/pictures/assets/img/he/6.png",
+      "/pictures/assets/img/about/4.png",
+      "/pictures/assets/img/about/5.png",
+      "/pictures/assets/img/about/6.png",
     ],
     facts: [
       "Elected Governor under NNPP",
@@ -723,7 +727,7 @@ function TimelineEvent({ event, index, isEven, isVisible }: {
                   width={400}
                   height={300}
                   alt={event.title}
-                  className="w-full h-64 object-cover transition-transform duration-500 group-hover:scale-105"
+                  className="w-full h-85 object-cover transition-transform duration-500 group-hover:scale-105"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent" />
                 

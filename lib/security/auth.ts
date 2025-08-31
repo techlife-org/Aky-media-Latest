@@ -27,54 +27,11 @@ export const DEFAULT_SECURITY_CONFIG: SecurityConfig = {
   lockoutDuration: 30,
   sessionTimeout: 60,
   requireTwoFactor: true,
-  requireStrongPassword: true,
+  requireStrongPassword: false,
 }
 
-// Password strength validation
-export function validatePasswordStrength(password: string): {
-  isValid: boolean
-  errors: string[]
-} {
-  const errors: string[] = []
-  
-  if (password.length < 12) {
-    errors.push("Password must be at least 12 characters long")
-  }
-  
-  if (!/[A-Z]/.test(password)) {
-    errors.push("Password must contain at least one uppercase letter")
-  }
-  
-  if (!/[a-z]/.test(password)) {
-    errors.push("Password must contain at least one lowercase letter")
-  }
-  
-  if (!/\d/.test(password)) {
-    errors.push("Password must contain at least one number")
-  }
-  
-  if (!/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password)) {
-    errors.push("Password must contain at least one special character")
-  }
-  
-  // Check for common patterns
-  const commonPatterns = [
-    /(.)\1{2,}/, // Repeated characters
-    /123456|654321|abcdef|qwerty/i, // Common sequences
-  ]
-  
-  for (const pattern of commonPatterns) {
-    if (pattern.test(password)) {
-      errors.push("Password contains common patterns and is not secure")
-      break
-    }
-  }
-  
-  return {
-    isValid: errors.length === 0,
-    errors,
-  }
-}
+// Password validation removed - no strength requirements
+// Passwords are accepted as-is without complexity validation
 
 // Hash password with salt
 export async function hashPassword(password: string): Promise<string> {

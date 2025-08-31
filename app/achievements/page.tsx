@@ -1,16 +1,16 @@
-"use client"
+"use client";
 
-import React, { useState, useEffect, useRef } from "react"
-import { usePageLoading } from "@/hooks/use-page-loading"
-import PageLoader from "@/components/page-loader"
-import Header from "@/components/header"
-import Footer from "@/components/footer"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Progress } from "@/components/ui/progress"
-import { Input } from "@/components/ui/input"
+import React, { useState, useEffect, useRef } from "react";
+import { usePageLoading } from "@/hooks/use-page-loading";
+import PageLoader from "@/components/page-loader";
+import Header from "@/components/header";
+import Footer from "@/components/footer";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Progress } from "@/components/ui/progress";
+import { Input } from "@/components/ui/input";
 import {
   Pagination,
   PaginationContent,
@@ -19,7 +19,7 @@ import {
   PaginationNext,
   PaginationPrevious,
   PaginationEllipsis,
-} from "@/components/ui/pagination"
+} from "@/components/ui/pagination";
 import {
   CheckCircle,
   Clock,
@@ -38,54 +38,54 @@ import {
   Zap,
   Car,
   X,
-} from "lucide-react"
-import { AutoCarousel } from "@/components/auto-carousel"
-import { SparkleAnimation } from "@/components/sparkle-animation"
+} from "lucide-react";
+import { AutoCarousel } from "@/components/auto-carousel";
+import { SparkleAnimation } from "@/components/sparkle-animation";
 
 interface Achievement {
-  _id: string
-  title: string
-  description: string
-  category: string
-  status: "completed" | "ongoing" | "determined"
-  progress: number
-  date: string
-  location: string
-  impact: string
-  details: string[]
-  icon: string
-  images?: string[]
-  createdAt: string
-  updatedAt: string
+  _id: string;
+  title: string;
+  description: string;
+  category: string;
+  status: "completed" | "ongoing" | "determined";
+  progress: number;
+  date: string;
+  location: string;
+  impact: string;
+  details: string[];
+  icon: string;
+  images?: string[];
+  createdAt: string;
+  updatedAt: string;
 }
 
-const ITEMS_PER_PAGE = 100
-const MAX_ITEMS = 1000
+const ITEMS_PER_PAGE = 100;
+const MAX_ITEMS = 1000;
 
 const getStatusColor = (status: string) => {
   switch (status) {
     case "completed":
-      return "bg-green-100 text-green-800 border-green-200"
+      return "bg-green-100 text-green-800 border-green-200";
     case "ongoing":
-      return "bg-blue-100 text-blue-800 border-blue-200"
+      return "bg-blue-100 text-blue-800 border-blue-200";
     case "determined":
-      return "bg-orange-100 text-orange-800 border-orange-200"
+      return "bg-orange-100 text-orange-800 border-orange-200";
     default:
-      return "bg-gray-100 text-gray-800 border-gray-200"
+      return "bg-gray-100 text-gray-800 border-gray-200";
   }
-}
+};
 
 const getStatusIcon = (status: string) => {
   switch (status) {
     case "completed":
-      return <CheckCircle className="w-4 h-4" />
+      return <CheckCircle className="w-4 h-4" />;
     case "ongoing":
     case "determined":
-      return <Clock className="w-4 h-4" />
+      return <Clock className="w-4 h-4" />;
     default:
-      return <Target className="w-4 h-4" />
+      return <Target className="w-4 h-4" />;
   }
-}
+};
 
 const getIconComponent = (iconName: string) => {
   const icons: Record<string, any> = {
@@ -101,162 +101,192 @@ const getIconComponent = (iconName: string) => {
     Shield,
     Zap,
     Car,
-  }
-  return icons[iconName] || Target
-}
+  };
+  return icons[iconName] || Target;
+};
 
 export default function AchievementPage() {
-  const { isLoading, stopLoading } = usePageLoading()
-  const [selectedCategory, setSelectedCategory] = useState("all")
-  const [selectedAchievement, setSelectedAchievement] = useState<Achievement | null>(null)
-  const [searchTerm, setSearchTerm] = useState("")
-  const [achievements, setAchievements] = useState<Achievement[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-  const [modalLoading, setModalLoading] = useState(false)
-  const [currentPage, setCurrentPage] = useState(1)
-  const hasFetched = useRef(false)
-  const [showSparkles, setShowSparkles] = useState(false)
+  const { isLoading, stopLoading } = usePageLoading();
+  const [selectedCategory, setSelectedCategory] = useState("all");
+  const [selectedAchievement, setSelectedAchievement] =
+    useState<Achievement | null>(null);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [achievements, setAchievements] = useState<Achievement[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [modalLoading, setModalLoading] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const hasFetched = useRef(false);
+  const [showSparkles, setShowSparkles] = useState(false);
 
   useEffect(() => {
     const fetchAchievements = async () => {
       try {
-        setLoading(true)
-        setError(null)
+        setLoading(true);
+        setError(null);
 
         const response = await fetch("/api/achievements", {
           next: { tags: ["achievements-public"] },
           cache: "no-store",
-        })
+        });
 
         if (!response.ok) {
-          throw new Error(`Failed to fetch achievements: ${response.statusText}`)
+          throw new Error(
+            `Failed to fetch achievements: ${response.statusText}`
+          );
         }
 
-        const data = await response.json()
-        const limitedData = data.slice(0, MAX_ITEMS)
-        setAchievements(limitedData)
-        hasFetched.current = true
+        const data = await response.json();
+        const limitedData = data.slice(0, MAX_ITEMS);
+        setAchievements(limitedData);
+        hasFetched.current = true;
       } catch (err) {
-        console.error("Error fetching achievements:", err)
-        setError(err instanceof Error ? err.message : "Failed to load achievements. Please try again later.")
+        console.error("Error fetching achievements:", err);
+        setError(
+          err instanceof Error
+            ? err.message
+            : "Failed to load achievements. Please try again later."
+        );
       } finally {
-        setLoading(false)
-        stopLoading()
+        setLoading(false);
+        stopLoading();
       }
-    }
+    };
 
     if (!hasFetched.current) {
-      fetchAchievements()
+      fetchAchievements();
     }
 
     const intervalId = setInterval(() => {
       if (document.visibilityState === "visible") {
-        fetchAchievements()
+        fetchAchievements();
       }
-    }, 30000)
+    }, 30000);
 
-    return () => clearInterval(intervalId)
-  }, [stopLoading])
+    return () => clearInterval(intervalId);
+  }, [stopLoading]);
 
   const handleAchievementClick = async (achievement: Achievement) => {
     if (selectedAchievement?._id === achievement._id) {
-      return
+      return;
     }
 
     if (achievement.status === "completed") {
-      setShowSparkles(true)
+      setShowSparkles(true);
     }
 
-    setSelectedAchievement(achievement)
-    await fetchAchievementDetails(achievement._id)
-  }
+    setSelectedAchievement(achievement);
+    await fetchAchievementDetails(achievement._id);
+  };
 
   const fetchAchievementDetails = async (id: string, retryCount = 0) => {
-    const MAX_RETRIES = 2
+    const MAX_RETRIES = 2;
 
     try {
-      setModalLoading(true)
-      setError(null)
+      setModalLoading(true);
+      setError(null);
 
       const response = await fetch(`/api/achievements/${id}`, {
         cache: "no-store",
-      })
+      });
 
       if (!response.ok) {
         if (response.status === 404) {
-          throw new Error("This achievement could not be found. It may have been removed.")
+          throw new Error(
+            "This achievement could not be found. It may have been removed."
+          );
         }
-        throw new Error(`Failed to fetch details (${response.status})`)
+        throw new Error(`Failed to fetch details (${response.status})`);
       }
 
-      const data = await response.json()
+      const data = await response.json();
       setSelectedAchievement((prev) => ({
         ...data,
         images: data.images || prev?.images || [],
-      }))
+      }));
     } catch (err) {
-      console.error("Error fetching achievement details:", err)
+      console.error("Error fetching achievement details:", err);
 
       if (retryCount < MAX_RETRIES) {
-        console.log(`Retrying... (${retryCount + 1}/${MAX_RETRIES})`)
-        await new Promise((resolve) => setTimeout(resolve, 1000 * (retryCount + 1)))
-        return fetchAchievementDetails(id, retryCount + 1)
+        console.log(`Retrying... (${retryCount + 1}/${MAX_RETRIES})`);
+        await new Promise((resolve) =>
+          setTimeout(resolve, 1000 * (retryCount + 1))
+        );
+        return fetchAchievementDetails(id, retryCount + 1);
       }
 
-      setError(err instanceof Error ? err.message : "Failed to load achievement details")
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Failed to load achievement details"
+      );
 
       if (retryCount >= MAX_RETRIES - 1) {
-        setSelectedAchievement(null)
+        setSelectedAchievement(null);
       }
     } finally {
-      setModalLoading(false)
+      setModalLoading(false);
     }
-  }
+  };
 
   // Get unique categories from achievements and sort alphabetically
-  const uniqueCategories = [...new Set(achievements.map(a => a.category))]
-    .filter(category => category) // Remove any undefined/null categories
-    .sort((a, b) => a.localeCompare(b)) // Sort alphabetically
+  const uniqueCategories = [...new Set(achievements.map((a) => a.category))]
+    .filter((category) => category) // Remove any undefined/null categories
+    .sort((a, b) => a.localeCompare(b)); // Sort alphabetically
 
   const categories = [
     { id: "all", name: "All Achievements", count: achievements.length },
-    ...uniqueCategories.map(category => ({
+    ...uniqueCategories.map((category) => ({
       id: category,
       name: category.charAt(0).toUpperCase() + category.slice(1), // Capitalize first letter
       count: achievements.filter((a) => a.category === category).length,
-    }))
-  ]
+    })),
+  ];
 
   const filteredAchievements = achievements.filter((achievement) => {
-    const matchesCategory = selectedCategory === "all" || achievement.category === selectedCategory
+    const matchesCategory =
+      selectedCategory === "all" || achievement.category === selectedCategory;
     const matchesSearch =
       achievement.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      achievement.description.toLowerCase().includes(searchTerm.toLowerCase())
-    return matchesCategory && matchesSearch
-  })
+      achievement.description.toLowerCase().includes(searchTerm.toLowerCase());
+    return matchesCategory && matchesSearch;
+  });
 
-  const totalPages = Math.ceil(filteredAchievements.length / ITEMS_PER_PAGE)
-  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE
-  const endIndex = startIndex + ITEMS_PER_PAGE
-  const paginatedAchievements = filteredAchievements.slice(startIndex, endIndex)
+  const totalPages = Math.ceil(filteredAchievements.length / ITEMS_PER_PAGE);
+  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+  const endIndex = startIndex + ITEMS_PER_PAGE;
+  const paginatedAchievements = filteredAchievements.slice(
+    startIndex,
+    endIndex
+  );
 
   useEffect(() => {
-    setCurrentPage(1)
-  }, [selectedCategory, searchTerm])
+    setCurrentPage(1);
+  }, [selectedCategory, searchTerm]);
 
-  const completedCount = achievements.filter((a) => a.status === "completed").length
-  const ongoingCount = achievements.filter((a) => a.status === "ongoing").length
-  const determinedCount = achievements.filter((a) => a.status === "determined").length
+  const completedCount = achievements.filter(
+    (a) => a.status === "completed"
+  ).length;
+  const ongoingCount = achievements.filter(
+    (a) => a.status === "ongoing"
+  ).length;
+  const determinedCount = achievements.filter(
+    (a) => a.status === "determined"
+  ).length;
   const totalProgress =
-    achievements.length > 0 ? Math.round(achievements.reduce((sum, a) => sum + a.progress, 0) / achievements.length) : 0
+    achievements.length > 0
+      ? Math.round(
+          achievements.reduce((sum, a) => sum + a.progress, 0) /
+            achievements.length
+        )
+      : 0;
 
   if (loading && !achievements.length) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-red-600"></div>
       </div>
-    )
+    );
   }
 
   if (error) {
@@ -266,12 +296,15 @@ export default function AchievementPage() {
           <div className="text-red-500 text-4xl mb-4">⚠️</div>
           <h2 className="text-2xl font-bold mb-2">Something went wrong</h2>
           <p className="text-gray-600 mb-4">{error}</p>
-          <Button onClick={() => window.location.reload()} className="bg-red-600 hover:bg-red-700 text-white">
+          <Button
+            onClick={() => window.location.reload()}
+            className="bg-red-600 hover:bg-red-700 text-white"
+          >
             Try Again
           </Button>
         </div>
       </div>
-    )
+    );
   }
 
   return (
@@ -292,25 +325,37 @@ export default function AchievementPage() {
             <div className="text-center max-w-4xl mx-auto">
               <div className="flex items-center justify-center mb-6">
                 <Award className="w-16 h-16 text-red-500 mr-4" />
-                <h1 className="text-5xl lg:text-6xl font-bold text-white">{achievements.length}+ Major Achievements</h1>
+                <h1 className="text-5xl lg:text-6xl font-bold text-white">
+                  {achievements.length}+ Major Achievements
+                </h1>
               </div>
               <p className="text-xl mb-8 text-white/90">
-                Transforming Kano State through visionary leadership and impactful governance under His Excellency, the
-                Executive Governor
+                From vision to reality, the accomplishments of Alh. Abba Kabir
+                Yusuf.
               </p>
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-12">
                 <div className="bg-white/10 backdrop-blur-sm rounded-xl p-6 border border-white/20">
-                  <div className="text-3xl font-bold text-green-600">{completedCount}</div>
-                  <div className="text-sm text-white/90">Completed Projects</div>
+                  <div className="text-3xl font-bold text-green-600">
+                    {completedCount}
+                  </div>
+                  <div className="text-sm text-white/90">
+                    Completed Projects
+                  </div>
                 </div>
                 <div className="bg-white/10 backdrop-blur-sm rounded-xl p-6 border border-white/20">
-                  <div className="text-3xl font-bold text-blue-600">{ongoingCount}</div>
+                  <div className="text-3xl font-bold text-blue-600">
+                    {ongoingCount}
+                  </div>
                   <div className="text-sm text-white/90">Ongoing Projects</div>
                 </div>
                 <div className="bg-white/10 backdrop-blur-sm rounded-xl p-6 border border-white/20">
-                  <div className="text-3xl font-bold text-orange-600">{determinedCount}</div>
-                  <div className="text-sm text-white/90">Determined Projects</div>
+                  <div className="text-3xl font-bold text-orange-600">
+                    {determinedCount}
+                  </div>
+                  <div className="text-sm text-white/90">
+                    Determined Projects
+                  </div>
                 </div>
               </div>
             </div>
@@ -332,7 +377,8 @@ export default function AchievementPage() {
               <div className="flex items-center space-x-2 text-gray-600">
                 <Filter className="w-5 h-5" />
                 <span className="text-sm">
-                  Showing {startIndex + 1}-{Math.min(endIndex, filteredAchievements.length)} of{" "}
+                  Showing {startIndex + 1}-
+                  {Math.min(endIndex, filteredAchievements.length)} of{" "}
                   {filteredAchievements.length} achievements
                 </span>
               </div>
@@ -342,7 +388,11 @@ export default function AchievementPage() {
 
         <section className="py-16">
           <div className="container mx-auto px-4">
-            <Tabs value={selectedCategory} onValueChange={setSelectedCategory} className="w-full">
+            <Tabs
+              value={selectedCategory}
+              onValueChange={setSelectedCategory}
+              className="w-full"
+            >
               <div className="mb-8">
                 {/* Mobile Dropdown for small screens */}
                 <div className="block sm:hidden mb-4">
@@ -361,7 +411,12 @@ export default function AchievementPage() {
 
                 {/* Desktop/Tablet Tab Layout - Full Width */}
                 <div className="hidden sm:block">
-                  <TabsList className="grid w-full h-auto p-3 bg-gradient-to-r from-gray-50 to-white rounded-2xl border border-gray-100" style={{gridTemplateColumns: `repeat(${categories.length}, 1fr)`}}>
+                  <TabsList
+                    className="grid w-full h-auto p-3 bg-gradient-to-r from-gray-50 to-white rounded-2xl border border-gray-100"
+                    style={{
+                      gridTemplateColumns: `repeat(${categories.length}, 1fr)`,
+                    }}
+                  >
                     {categories.map((category, index) => (
                       <TabsTrigger
                         key={category.id}
@@ -378,21 +433,21 @@ export default function AchievementPage() {
                         `}
                         style={{
                           animationDelay: `${index * 50}ms`,
-                          animationDuration: '0.6s',
-                          animationFillMode: 'both'
+                          animationDuration: "0.6s",
+                          animationFillMode: "both",
                         }}
                       >
                         {/* Active indicator */}
                         <div className="absolute -top-1 left-1/2 transform -translate-x-1/2 w-1.5 h-1.5 bg-red-500 rounded-full opacity-0 group-data-[state=active]:opacity-100 transition-opacity duration-300"></div>
-                        
+
                         {/* Category name */}
                         <span className="text-center group-data-[state=active]:font-bold transition-all duration-300 text-xs leading-tight">
                           {category.name}
                         </span>
-                        
+
                         {/* Count badge */}
-                        <Badge 
-                          variant="secondary" 
+                        <Badge
+                          variant="secondary"
                           className={`
                             text-xs px-1.5 py-0.5 min-w-[20px] h-4 flex items-center justify-center
                             transition-all duration-300 font-bold
@@ -403,7 +458,7 @@ export default function AchievementPage() {
                         >
                           {category.count}
                         </Badge>
-                        
+
                         {/* Hover effect overlay */}
                         <div className="absolute inset-0 bg-gradient-to-r from-red-500/10 to-red-600/10 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"></div>
                       </TabsTrigger>
@@ -414,12 +469,28 @@ export default function AchievementPage() {
                 {/* Filter summary */}
                 <div className="mt-4 text-center">
                   <p className="text-sm text-gray-600">
-                    {selectedCategory === 'all' ? (
-                      <span className="font-medium">Showing all <span className="text-red-600 font-bold">{filteredAchievements.length}</span> achievements</span>
+                    {selectedCategory === "all" ? (
+                      <span className="font-medium">
+                        Showing all{" "}
+                        <span className="text-red-600 font-bold">
+                          {filteredAchievements.length}
+                        </span>{" "}
+                        achievements
+                      </span>
                     ) : (
                       <span className="font-medium">
-                        Filtered by <span className="text-red-600 font-bold">{categories.find(c => c.id === selectedCategory)?.name}</span> - 
-                        <span className="text-red-600 font-bold">{filteredAchievements.length}</span> achievements found
+                        Filtered by{" "}
+                        <span className="text-red-600 font-bold">
+                          {
+                            categories.find((c) => c.id === selectedCategory)
+                              ?.name
+                          }
+                        </span>{" "}
+                        -
+                        <span className="text-red-600 font-bold">
+                          {filteredAchievements.length}
+                        </span>{" "}
+                        achievements found
                       </span>
                     )}
                   </p>
@@ -429,7 +500,7 @@ export default function AchievementPage() {
               <TabsContent value={selectedCategory} className="mt-8">
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
                   {paginatedAchievements.map((achievement) => {
-                    const IconComponent = getIconComponent(achievement.icon)
+                    const IconComponent = getIconComponent(achievement.icon);
                     return (
                       <Card
                         key={achievement._id}
@@ -437,8 +508,8 @@ export default function AchievementPage() {
                           achievement.status === "completed"
                             ? "ring-2 ring-green-200 bg-gradient-to-br from-green-50 to-emerald-50"
                             : achievement.status === "ongoing"
-                              ? "ring-2 ring-blue-200 bg-gradient-to-br from-blue-50 to-cyan-50"
-                              : "ring-2 ring-orange-200 bg-gradient-to-br from-orange-50 to-amber-50"
+                            ? "ring-2 ring-blue-200 bg-gradient-to-br from-blue-50 to-cyan-50"
+                            : "ring-2 ring-orange-200 bg-gradient-to-br from-orange-50 to-amber-50"
                         }`}
                         style={{ height: "520px" }}
                       >
@@ -452,7 +523,9 @@ export default function AchievementPage() {
                           />
                           <div className="absolute top-3 right-3">
                             <Badge
-                              className={`${getStatusColor(achievement.status)} flex items-center gap-1 text-xs shadow-lg backdrop-blur-sm`}
+                              className={`${getStatusColor(
+                                achievement.status
+                              )} flex items-center gap-1 text-xs shadow-lg backdrop-blur-sm`}
                             >
                               {getStatusIcon(achievement.status)}
                               {achievement.status.toUpperCase()}
@@ -468,8 +541,8 @@ export default function AchievementPage() {
                                 achievement.status === "completed"
                                   ? "bg-green-100"
                                   : achievement.status === "ongoing"
-                                    ? "bg-blue-100"
-                                    : "bg-orange-100"
+                                  ? "bg-blue-100"
+                                  : "bg-orange-100"
                               }`}
                             >
                               <IconComponent
@@ -477,8 +550,8 @@ export default function AchievementPage() {
                                   achievement.status === "completed"
                                     ? "text-green-600"
                                     : achievement.status === "ongoing"
-                                      ? "text-blue-600"
-                                      : "text-orange-600"
+                                    ? "text-blue-600"
+                                    : "text-orange-600"
                                 }`}
                               />
                             </div>
@@ -498,27 +571,38 @@ export default function AchievementPage() {
 
                             <div className="space-y-2">
                               <div className="flex justify-between items-center">
-                                <span className="text-xs font-medium text-gray-500">Progress</span>
-                                <span className="text-xs font-bold text-gray-700">{achievement.progress}%</span>
+                                <span className="text-xs font-medium text-gray-500">
+                                  Progress
+                                </span>
+                                <span className="text-xs font-bold text-gray-700">
+                                  {achievement.progress}%
+                                </span>
                               </div>
-                              <Progress value={achievement.progress} className="h-2 bg-gray-100" />
+                              <Progress
+                                value={achievement.progress}
+                                className="h-2 bg-gray-100"
+                              />
                             </div>
                           </div>
 
                           <div className="space-y-4 mt-4">
                             <div className="flex items-center text-gray-600 bg-gray-50 rounded-lg p-3">
                               <MapPin className="w-4 h-4 mr-2 flex-shrink-0 text-red-500" />
-                              <span className="text-sm font-medium truncate">{achievement.location}</span>
+                              <span className="text-sm font-medium truncate">
+                                {achievement.location}
+                              </span>
                             </div>
 
                             <Button
-                              onClick={() => handleAchievementClick(achievement)}
+                              onClick={() =>
+                                handleAchievementClick(achievement)
+                              }
                               className={`w-full shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105 ${
                                 achievement.status === "completed"
                                   ? "bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700"
                                   : achievement.status === "ongoing"
-                                    ? "bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700"
-                                    : "bg-gradient-to-r from-orange-600 to-amber-600 hover:from-orange-700 hover:to-amber-700"
+                                  ? "bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700"
+                                  : "bg-gradient-to-r from-orange-600 to-amber-600 hover:from-orange-700 hover:to-amber-700"
                               } text-white font-semibold`}
                             >
                               View Details
@@ -535,7 +619,7 @@ export default function AchievementPage() {
                           </div>
                         )}
                       </Card>
-                    )
+                    );
                   })}
                 </div>
 
@@ -547,10 +631,15 @@ export default function AchievementPage() {
                           <PaginationPrevious
                             href="#"
                             onClick={(e) => {
-                              e.preventDefault()
-                              if (currentPage > 1) setCurrentPage(currentPage - 1)
+                              e.preventDefault();
+                              if (currentPage > 1)
+                                setCurrentPage(currentPage - 1);
                             }}
-                            className={currentPage <= 1 ? "pointer-events-none opacity-50" : ""}
+                            className={
+                              currentPage <= 1
+                                ? "pointer-events-none opacity-50"
+                                : ""
+                            }
                           />
                         </PaginationItem>
 
@@ -560,8 +649,8 @@ export default function AchievementPage() {
                               <PaginationLink
                                 href="#"
                                 onClick={(e) => {
-                                  e.preventDefault()
-                                  setCurrentPage(1)
+                                  e.preventDefault();
+                                  setCurrentPage(1);
                                 }}
                               >
                                 1
@@ -575,25 +664,32 @@ export default function AchievementPage() {
                           </>
                         )}
 
-                        {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                          const pageNum = Math.max(1, Math.min(totalPages - 4, currentPage - 2)) + i
-                          if (pageNum > totalPages) return null
+                        {Array.from(
+                          { length: Math.min(5, totalPages) },
+                          (_, i) => {
+                            const pageNum =
+                              Math.max(
+                                1,
+                                Math.min(totalPages - 4, currentPage - 2)
+                              ) + i;
+                            if (pageNum > totalPages) return null;
 
-                          return (
-                            <PaginationItem key={pageNum}>
-                              <PaginationLink
-                                href="#"
-                                onClick={(e) => {
-                                  e.preventDefault()
-                                  setCurrentPage(pageNum)
-                                }}
-                                isActive={currentPage === pageNum}
-                              >
-                                {pageNum}
-                              </PaginationLink>
-                            </PaginationItem>
-                          )
-                        })}
+                            return (
+                              <PaginationItem key={pageNum}>
+                                <PaginationLink
+                                  href="#"
+                                  onClick={(e) => {
+                                    e.preventDefault();
+                                    setCurrentPage(pageNum);
+                                  }}
+                                  isActive={currentPage === pageNum}
+                                >
+                                  {pageNum}
+                                </PaginationLink>
+                              </PaginationItem>
+                            );
+                          }
+                        )}
 
                         {currentPage < totalPages - 2 && (
                           <>
@@ -606,8 +702,8 @@ export default function AchievementPage() {
                               <PaginationLink
                                 href="#"
                                 onClick={(e) => {
-                                  e.preventDefault()
-                                  setCurrentPage(totalPages)
+                                  e.preventDefault();
+                                  setCurrentPage(totalPages);
                                 }}
                               >
                                 {totalPages}
@@ -620,10 +716,15 @@ export default function AchievementPage() {
                           <PaginationNext
                             href="#"
                             onClick={(e) => {
-                              e.preventDefault()
-                              if (currentPage < totalPages) setCurrentPage(currentPage + 1)
+                              e.preventDefault();
+                              if (currentPage < totalPages)
+                                setCurrentPage(currentPage + 1);
                             }}
-                            className={currentPage >= totalPages ? "pointer-events-none opacity-50" : ""}
+                            className={
+                              currentPage >= totalPages
+                                ? "pointer-events-none opacity-50"
+                                : ""
+                            }
                           />
                         </PaginationItem>
                       </PaginationContent>
@@ -636,8 +737,12 @@ export default function AchievementPage() {
                     <div className="text-gray-400 mb-4">
                       <Search className="w-16 h-16 mx-auto" />
                     </div>
-                    <h3 className="text-xl font-semibold text-gray-600 mb-2">No achievements found</h3>
-                    <p className="text-gray-500">Try adjusting your search or filter criteria</p>
+                    <h3 className="text-xl font-semibold text-gray-600 mb-2">
+                      No achievements found
+                    </h3>
+                    <p className="text-gray-500">
+                      Try adjusting your search or filter criteria
+                    </p>
                   </div>
                 )}
 
@@ -662,8 +767,8 @@ export default function AchievementPage() {
                 selectedAchievement.status === "completed"
                   ? "bg-gradient-to-br from-green-500 via-emerald-600 to-teal-600"
                   : selectedAchievement.status === "ongoing"
-                    ? "bg-gradient-to-br from-blue-500 via-cyan-600 to-sky-600"
-                    : "bg-gradient-to-br from-orange-500 via-amber-600 to-yellow-600"
+                  ? "bg-gradient-to-br from-blue-500 via-cyan-600 to-sky-600"
+                  : "bg-gradient-to-br from-orange-500 via-amber-600 to-yellow-600"
               }`}
             >
               <div className="absolute inset-0 bg-black/10 rounded-t-3xl" />
@@ -679,15 +784,22 @@ export default function AchievementPage() {
                 <div className="bg-white/15 backdrop-blur-sm rounded-2xl p-6 shadow-xl border border-white/20">
                   <div className="flex items-center gap-4 mb-4">
                     <div className="bg-white/90 backdrop-blur-sm rounded-2xl p-4 shadow-lg">
-                      {React.createElement(getIconComponent(selectedAchievement.icon), {
-                        className: "w-10 h-10 text-gray-700",
-                      })}
+                      {React.createElement(
+                        getIconComponent(selectedAchievement.icon),
+                        {
+                          className: "w-10 h-10 text-gray-700",
+                        }
+                      )}
                     </div>
                     <div className="flex-1">
-                      <h2 className="text-3xl font-bold text-white mb-2">{selectedAchievement.title}</h2>
+                      <h2 className="text-3xl font-bold text-white mb-2">
+                        {selectedAchievement.title}
+                      </h2>
                       <div className="flex items-center gap-3">
                         <Badge
-                          className={`${getStatusColor(selectedAchievement.status)} flex items-center gap-1 shadow-lg`}
+                          className={`${getStatusColor(
+                            selectedAchievement.status
+                          )} flex items-center gap-1 shadow-lg`}
                         >
                           {getStatusIcon(selectedAchievement.status)}
                           {selectedAchievement.status.toUpperCase()}
@@ -713,7 +825,9 @@ export default function AchievementPage() {
                     <div className="w-2 h-2 bg-red-500 rounded-full"></div>
                     Description
                   </h3>
-                  <p className="text-gray-700 leading-relaxed text-lg">{selectedAchievement.description}</p>
+                  <p className="text-gray-700 leading-relaxed text-lg">
+                    {selectedAchievement.description}
+                  </p>
                 </div>
 
                 {selectedAchievement.images?.length ? (
@@ -738,7 +852,9 @@ export default function AchievementPage() {
                       <MapPin className="w-5 h-5 text-green-600" />
                       Location
                     </h3>
-                    <p className="text-gray-700 font-medium">{selectedAchievement.location}</p>
+                    <p className="text-gray-700 font-medium">
+                      {selectedAchievement.location}
+                    </p>
                   </div>
 
                   <div className="bg-gradient-to-br from-blue-50 to-cyan-50 rounded-2xl p-6 border border-blue-100">
@@ -746,7 +862,9 @@ export default function AchievementPage() {
                       <Target className="w-5 h-5 text-blue-600" />
                       Impact
                     </h3>
-                    <p className="text-gray-700 font-medium">{selectedAchievement.impact}</p>
+                    <p className="text-gray-700 font-medium">
+                      {selectedAchievement.impact}
+                    </p>
                   </div>
 
                   <div className="md:col-span-2 bg-gradient-to-r from-orange-50 to-amber-50 rounded-2xl p-6 border border-orange-100">
@@ -755,7 +873,10 @@ export default function AchievementPage() {
                       Progress Status
                     </h3>
                     <div className="flex items-center space-x-4">
-                      <Progress value={selectedAchievement.progress} className="h-4 flex-1 bg-white shadow-inner" />
+                      <Progress
+                        value={selectedAchievement.progress}
+                        className="h-4 flex-1 bg-white shadow-inner"
+                      />
                       <span className="text-2xl font-bold text-gray-800 bg-white px-4 py-2 rounded-xl shadow-sm">
                         {selectedAchievement.progress}%
                       </span>
@@ -763,25 +884,28 @@ export default function AchievementPage() {
                   </div>
                 </div>
 
-                {selectedAchievement.details && selectedAchievement.details.length > 0 && (
-                  <div className="bg-gradient-to-r from-indigo-50 to-purple-50 rounded-2xl p-6 border border-indigo-100">
-                    <h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
-                      <CheckCircle className="w-5 h-5 text-indigo-600" />
-                      Key Achievements
-                    </h3>
-                    <div className="grid gap-3">
-                      {selectedAchievement.details.map((detail, index) => (
-                        <div
-                          key={index}
-                          className="flex items-start gap-3 bg-white rounded-xl p-4 shadow-sm border border-indigo-100"
-                        >
-                          <CheckCircle className="w-6 h-6 text-green-500 mt-0.5 flex-shrink-0" />
-                          <span className="text-gray-700 font-medium leading-relaxed">{detail}</span>
-                        </div>
-                      ))}
+                {selectedAchievement.details &&
+                  selectedAchievement.details.length > 0 && (
+                    <div className="bg-gradient-to-r from-indigo-50 to-purple-50 rounded-2xl p-6 border border-indigo-100">
+                      <h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
+                        <CheckCircle className="w-5 h-5 text-indigo-600" />
+                        Key Achievements
+                      </h3>
+                      <div className="grid gap-3">
+                        {selectedAchievement.details.map((detail, index) => (
+                          <div
+                            key={index}
+                            className="flex items-start gap-3 bg-white rounded-xl p-4 shadow-sm border border-indigo-100"
+                          >
+                            <CheckCircle className="w-6 h-6 text-green-500 mt-0.5 flex-shrink-0" />
+                            <span className="text-gray-700 font-medium leading-relaxed">
+                              {detail}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
                     </div>
-                  </div>
-                )}
+                  )}
 
                 <div className="flex justify-end pt-6 border-t border-gray-200">
                   <Button
@@ -797,7 +921,10 @@ export default function AchievementPage() {
         </div>
       )}
 
-      <SparkleAnimation trigger={showSparkles} onComplete={() => setShowSparkles(false)} />
+      <SparkleAnimation
+        trigger={showSparkles}
+        onComplete={() => setShowSparkles(false)}
+      />
     </PageLoader>
-  )
+  );
 }

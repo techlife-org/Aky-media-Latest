@@ -852,7 +852,7 @@ export default function AudioPage() {
                 <div>
                   <div className="relative z-10">
                     <Image
-                      src="/pictures/logo.png"
+                      src="/pictures/logo1.png"
                       alt="AKY Audio Collection"
                       width={500}
                       height={400}
@@ -890,7 +890,7 @@ export default function AudioPage() {
                       <div className="flex items-center space-x-4">
                         <div className="w-16 h-16 md:w-20 md:h-20 bg-white/20 rounded-full flex items-center justify-center backdrop-blur-sm overflow-hidden border-2 border-white/30 shadow-xl">
                           <Image
-                            src="/pictures/logo.png"
+                            src="/pictures/logo1.png"
                             alt="Now Playing"
                             width={80}
                             height={80}
@@ -1118,7 +1118,7 @@ export default function AudioPage() {
                           } flex items-center justify-center overflow-hidden border-2 border-white/20 shadow-lg flex-shrink-0`}
                         >
                           <Image
-                            src="/pictures/logo.png"
+                            src="/pictures/logo1.png"
                             alt={track.name}
                             width={64}
                             height={64}

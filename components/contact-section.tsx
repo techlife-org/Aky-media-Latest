@@ -110,7 +110,7 @@ export default function ContactSection() {
                 <div className="mb-8">
                   <p className="text-red-600 font-medium text-lg mb-2">Contact us</p>
                   <h2 className="text-3xl font-bold text-gray-900 mb-4">Send Us A Message</h2>
-                  <p className="text-gray-600">Our response time is within 30 minutes during business hours</p>
+                  {/* <p className="text-gray-600">Our response time is within 30 minutes during business hours</p> */}
                 </div>
 
                 <form onSubmit={handleSubmit} className="space-y-6">
@@ -204,7 +204,7 @@ export default function ContactSection() {
                     </div>
                     <div>
                       <h3 className="text-xl font-bold mb-2">Our Address</h3>
-                      <p className="text-white/90">Government House, Kano State, Nigeria</p>
+                      <p className="text-white/90">Kano State, Nigeria</p>
                     </div>
                   </div>
 

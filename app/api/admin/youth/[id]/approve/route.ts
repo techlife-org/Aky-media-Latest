@@ -44,17 +44,17 @@ export async function POST(
 
     if (youth) {
       // Send approval notification via email, SMS, and WhatsApp
-      console.log(`✅ Youth Approved: ${youth.fullName} (${youth.uniqueId})`);
+      console.log(`✅ User Approved: ${youth.fullName} (${youth.uniqueId})`);
       console.log(`📧 Sending approval notification to: ${youth.email}`);
       console.log(`📱 Sending SMS to: ${youth.phone}`);
       
       // Notification content that would be sent:
       const notificationMessage = `
-🎉 CONGRATULATIONS! Your Youth Program Registration has been APPROVED!
+🎉 CONGRATULATIONS! Your User Program Registration has been APPROVED!
 
 Dear ${youth.fullName},
 
-We're excited to welcome you to His Excellency's Youth Program!
+We're excited to welcome you to His Excellency's User Program!
 
 🔑 Your Login Details:
 • Unique ID: ${youth.uniqueId}
@@ -64,7 +64,7 @@ We're excited to welcome you to His Excellency's Youth Program!
 ${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/youth-login
 
 📚 What's Next:
-• Login to access youth programs
+• Login to access programs
 • Explore music and video content
 • Apply for available programs
 • Stay updated with notifications
@@ -72,24 +72,24 @@ ${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/youth-login
 Welcome to the future of Kano youth empowerment!
 
 Best regards,
-His Excellency's Youth Program Team
+His Excellency's User Program Team
       `;
       
       console.log('📄 Notification Content:', notificationMessage);
       
       // TODO: Implement actual email/SMS sending here
-      // await sendEmail(youth.email, "🎉 Youth Program Registration Approved!", notificationMessage);
+      // await sendEmail(youth.email, "🎉 User Program Registration Approved!", notificationMessage);
       // await sendSMS(youth.phone, notificationMessage);
       // await sendWhatsApp(youth.phone, notificationMessage);
     }
 
     return NextResponse.json({
       success: true,
-      message: 'Youth approved successfully'
+      message: 'User approved successfully'
     });
 
   } catch (error) {
-    console.error('Error approving youth:', error);
+    console.error('Error approving user:', error);
     return NextResponse.json(
       { error: error instanceof Error ? error.message : 'Internal server error' },
       { status: 500 }
