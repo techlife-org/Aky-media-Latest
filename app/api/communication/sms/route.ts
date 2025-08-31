@@ -125,11 +125,17 @@ export async function POST(request: NextRequest) {
       sms: message,
       type: 'plain',
       api_key: TERMII_API_KEY,
-      channel: 'generic'
+      channel: 'dnd' // Use DND channel which might not require registered sender ID
     }
     
-    // Add sender ID - use provided, configured, or default
-    smsPayload.from = from || TERMII_SENDER_ID || 'Termii'
+    // Add sender ID - use provided, configured, or registered sender IDs
+    // Based on Termii account, we have 'AKY' and 'AKYMEDIA' registered (pending approval)
+    if (from || TERMII_SENDER_ID) {
+      smsPayload.from = from || TERMII_SENDER_ID;
+    } else {
+      // Use one of the registered sender IDs (even if pending)
+      smsPayload.from = 'AKY'; // This is registered in the Termii account
+    }
 
     // Send SMS via Termii API
     try {

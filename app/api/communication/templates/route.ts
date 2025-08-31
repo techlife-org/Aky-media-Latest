@@ -9,6 +9,7 @@ interface Template {
   subject?: string
   content: string
   variables: string[]
+  isActive: boolean
   createdAt: Date
   updatedAt: Date
 }
@@ -53,6 +54,18 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // Extract variables from content
+    const extractVariables = (content: string, subject?: string): string[] => {
+      const text = content + (subject || '');
+      const matches = text.match(/{{[^}]+}}/g) || [];
+      return [...new Set(matches.map(match => match.replace(/[{}]/g, '').trim()))];
+    };
+
+    // Auto-extract variables if not provided
+    if (!template.variables || template.variables.length === 0) {
+      template.variables = extractVariables(template.content, template.subject);
+    }
+
     // Validate email templates have subject
     if (template.type === 'email' && !template.subject) {
       return NextResponse.json(
@@ -65,6 +78,7 @@ export async function POST(request: NextRequest) {
     
     const templateDoc = {
       ...template,
+      isActive: template.isActive !== undefined ? template.isActive : true,
       createdAt: new Date(),
       updatedAt: new Date()
     }
@@ -132,6 +146,46 @@ export async function PUT(request: NextRequest) {
     console.error('Failed to update template:', error)
     return NextResponse.json(
       { success: false, error: 'Failed to update template' },
+      { status: 500 }
+    )
+  }
+}
+
+// DELETE - Delete template
+export async function DELETE(request: NextRequest) {
+  try {
+    const { searchParams } = new URL(request.url);
+    const id = searchParams.get('id');
+    
+    if (!id) {
+      return NextResponse.json(
+        { success: false, error: 'Template ID is required' },
+        { status: 400 }
+      )
+    }
+
+    const { db } = await connectToDatabase()
+    const { ObjectId } = require('mongodb')
+    
+    const result = await db.collection('communication_templates').deleteOne({
+      _id: new ObjectId(id)
+    })
+    
+    if (result.deletedCount === 0) {
+      return NextResponse.json(
+        { success: false, error: 'Template not found' },
+        { status: 404 }
+      )
+    }
+    
+    return NextResponse.json({
+      success: true,
+      message: 'Template deleted successfully'
+    })
+  } catch (error) {
+    console.error('Failed to delete template:', error)
+    return NextResponse.json(
+      { success: false, error: 'Failed to delete template' },
       { status: 500 }
     )
   }

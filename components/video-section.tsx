@@ -81,11 +81,7 @@ export default function VideoSection() {
     id: "fallback",
     title: "Governor Abba Kabir Yusuf - Leadership in Action",
     description: "Watch highlights from Governor Abba Kabir Yusuf's administration and key initiatives for Kano State development.",
-<<<<<<< HEAD
-    videoUrl: "https://youtu.be/iLVYuItS8e0", // Using a working YouTube video
-=======
     videoUrl: "https://www.youtube.com/watch?v=iLVYuItS8e0", // Using a working YouTube video
->>>>>>> 7af38716bb83107a492add71f84a198c7079d203
     thumbnail: null,
     category: "Government",
     createdAt: new Date().toISOString(),

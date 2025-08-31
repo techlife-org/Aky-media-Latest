@@ -159,8 +159,9 @@ export async function POST(request: NextRequest) {
           channel: 'whatsapp'
         }
         
-        // Add sender ID - use configured or default
-        messagePayload.from = TERMII_WHATSAPP_SENDER_ID || 'Termii'
+        // Add sender ID - use configured or registered sender IDs
+        // Based on Termii account, we have 'AKY' and 'AKYMEDIA' registered (pending approval)
+        messagePayload.from = TERMII_WHATSAPP_SENDER_ID || 'AKY'
 
         const response = await fetch(`${TERMII_BASE_URL}/sms/send`, {
           method: 'POST',

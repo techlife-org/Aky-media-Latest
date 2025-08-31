@@ -1,5 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { connectToDatabase } from "@/lib/mongodb"
+import { EnhancedNotificationService } from '@/lib/enhanced-notification-service'
 
 export async function POST(request: NextRequest) {
   try {
@@ -49,9 +50,74 @@ export async function POST(request: NextRequest) {
     const result = await db.collection("contacts").insertOne(contactMessage)
 
     if (result.insertedId) {
+      // Send contact notifications in the background
+      try {
+        const notificationService = new EnhancedNotificationService();
+        const notificationResults = await notificationService.sendContactNotifications({
+          email,
+          mobile,
+          firstName,
+          lastName,
+          subject
+        });
+
+        // Update contact message with notification status
+        const updateData: any = {
+          updatedAt: new Date()
+        };
+
+        if (notificationResults.email?.success) {
+          updateData.confirmationEmailSent = true;
+          updateData.confirmationEmailSentAt = new Date();
+        }
+
+        if (notificationResults.sms?.success) {
+          updateData.confirmationSMSSent = true;
+          updateData.confirmationSMSSentAt = new Date();
+        }
+
+        if (notificationResults.whatsapp?.success) {
+          updateData.confirmationWhatsAppSent = true;
+          updateData.confirmationWhatsAppSentAt = new Date();
+        }
+
+        await db.collection("contacts").updateOne(
+          { _id: result.insertedId },
+          { $set: updateData }
+        );
+
+        // Log any notification errors
+        if (notificationResults.errors.length > 0) {
+          await db.collection("notification_errors").insertOne({
+            type: 'contact_notifications',
+            contactId: result.insertedId,
+            email,
+            mobile,
+            errors: notificationResults.errors,
+            timestamp: new Date()
+          });
+        }
+
+      } catch (notificationError) {
+        console.error('Failed to send contact notifications:', notificationError);
+        // Log the error but don't fail the request
+        await db.collection("notification_errors").insertOne({
+          type: 'contact_notifications',
+          contactId: result.insertedId,
+          email,
+          mobile,
+          error: notificationError instanceof Error ? notificationError.message : 'Unknown error',
+          timestamp: new Date()
+        });
+      }
+
+      const notificationMessage = mobile 
+        ? "Thank you for your message! We'll get back to you within 30 minutes during business hours. Please check your email, SMS, and WhatsApp for confirmation."
+        : "Thank you for your message! We'll get back to you within 30 minutes during business hours. Please check your email for confirmation.";
+
       return NextResponse.json({
         success: true,
-        message: "Thank you for your message! We'll get back to you within 30 minutes during business hours.",
+        message: notificationMessage,
       })
     } else {
       throw new Error("Failed to save message")
