@@ -1,11 +1,64 @@
 import { NextRequest, NextResponse } from 'next/server'
 import nodemailer from 'nodemailer'
 
-// Simple test endpoint for email configuration
+// Create reusable transporter with comprehensive SMTP configuration
+function createTransporter() {
+  const port = parseInt(process.env.SMTP_PORT || '587')
+  const isSecure = process.env.SMTP_SECURE === 'true' || port === 465
+  
+  const config: any = {
+    host: process.env.SMTP_HOST,
+    port: port,
+    secure: isSecure, // true for 465 (SSL), false for 587 (TLS)
+    auth: {
+      user: process.env.SMTP_USER || process.env.SMTP_USERNAME,
+      pass: process.env.SMTP_PASS || process.env.SMTP_PASSWORD,
+    },
+    // Additional options for better compatibility
+    connectionTimeout: 60000, // 60 seconds
+    greetingTimeout: 30000, // 30 seconds
+    socketTimeout: 60000, // 60 seconds
+    pool: true, // Use connection pooling
+    maxConnections: 5,
+    maxMessages: 100,
+  }
+
+  // Configure TLS settings based on port and provider
+  if (!isSecure) {
+    // For TLS (port 587)
+    config.tls = {
+      rejectUnauthorized: false,
+      ciphers: 'SSLv3'
+    }
+  } else {
+    // For SSL (port 465)
+    config.tls = {
+      rejectUnauthorized: false
+    }
+  }
+
+  // Special configuration for common providers
+  const host = process.env.SMTP_HOST?.toLowerCase()
+  if (host?.includes('hostinger')) {
+    config.tls = {
+      rejectUnauthorized: false,
+      servername: process.env.SMTP_HOST
+    }
+  } else if (host?.includes('gmail')) {
+    config.service = 'gmail'
+  } else if (host?.includes('outlook') || host?.includes('hotmail')) {
+    config.service = 'hotmail'
+  }
+
+  return nodemailer.createTransport(config)
+}
+
 export async function POST(request: NextRequest) {
   try {
-    const { testEmail } = await request.json()
-    
+    const body = await request.json()
+    const { testEmail } = body
+
+    // Validate test email
     if (!testEmail) {
       return NextResponse.json(
         { success: false, error: 'Test email address is required' },
@@ -13,76 +66,47 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    if (!emailRegex.test(testEmail)) {
+      return NextResponse.json(
+        { success: false, error: 'Invalid email address format' },
+        { status: 400 }
+      )
+    }
+
     // Validate SMTP configuration
     const missingConfig = []
     if (!process.env.SMTP_HOST) missingConfig.push('SMTP_HOST')
-    if (!process.env.SMTP_USER && !process.env.SMTP_USERNAME) missingConfig.push('SMTP_USER')
-    if (!process.env.SMTP_PASS && !process.env.SMTP_PASSWORD) missingConfig.push('SMTP_PASS')
+    if (!process.env.SMTP_USER && !process.env.SMTP_USERNAME) missingConfig.push('SMTP_USER or SMTP_USERNAME')
+    if (!process.env.SMTP_PASS && !process.env.SMTP_PASSWORD) missingConfig.push('SMTP_PASS or SMTP_PASSWORD')
     
     if (missingConfig.length > 0) {
       return NextResponse.json(
         { 
           success: false, 
-          error: 'Missing SMTP configuration',
-          missing: missingConfig,
-          current: {
-            SMTP_HOST: process.env.SMTP_HOST || 'Not set',
-            SMTP_PORT: process.env.SMTP_PORT || '587',
-            SMTP_SECURE: process.env.SMTP_SECURE || 'false',
-            SMTP_USER: process.env.SMTP_USER ? process.env.SMTP_USER.substring(0, 3) + '***' : 'Not set'
+          error: 'Email service not configured properly',
+          details: `Missing environment variables: ${missingConfig.join(', ')}`,
+          configuration: {
+            host: process.env.SMTP_HOST || 'Not set',
+            port: process.env.SMTP_PORT || '587',
+            secure: process.env.SMTP_SECURE === 'true',
+            user: process.env.SMTP_USER ? process.env.SMTP_USER.substring(0, 3) + '***' : 'Not set'
           }
         },
         { status: 500 }
       )
     }
 
-    // Create transporter with detailed logging
-    const port = parseInt(process.env.SMTP_PORT || '587')
-    const isSecure = process.env.SMTP_SECURE === 'true' || port === 465
-    
-    const config: any = {
-      host: process.env.SMTP_HOST,
-      port: port,
-      secure: isSecure,
-      auth: {
-        user: process.env.SMTP_USER || process.env.SMTP_USERNAME,
-        pass: process.env.SMTP_PASS || process.env.SMTP_PASSWORD,
-      },
-      connectionTimeout: 30000,
-      greetingTimeout: 15000,
-      socketTimeout: 30000,
-      debug: true, // Enable debug logging
-      logger: true // Enable logger
-    }
+    const transporter = createTransporter()
 
-    // Configure TLS for different providers
-    const host = process.env.SMTP_HOST?.toLowerCase()
-    if (host?.includes('hostinger')) {
-      config.tls = {
-        rejectUnauthorized: false,
-        servername: process.env.SMTP_HOST
-      }
-    } else if (host?.includes('gmail')) {
-      config.service = 'gmail'
-    } else if (!isSecure) {
-      config.tls = {
-        rejectUnauthorized: false
-      }
-    }
+    // Prepare sender information
+    const senderEmail = process.env.SMTP_FROM || process.env.EMAIL_FROM || process.env.SMTP_USER
+    const senderName = process.env.EMAIL_FROM_NAME || process.env.SMTP_FROM_NAME || 'AKY Communication System'
+    const fromAddress = senderName ? `"${senderName}" <${senderEmail}>` : senderEmail
 
-    console.log('Test Email Configuration:', {
-      host: config.host,
-      port: config.port,
-      secure: config.secure,
-      service: config.service || 'custom',
-      user: config.auth.user?.substring(0, 3) + '***',
-      hasPassword: !!config.auth.pass
-    })
-
-    const transporter = nodemailer.createTransport(config)
-
-    // Step 1: Verify connection
-    console.log('Step 1: Verifying SMTP connection...')
+    // Test connection first
+    console.log('Testing SMTP connection for email test...')
     try {
       await transporter.verify()
       console.log('✅ SMTP connection verified successfully')
@@ -95,14 +119,8 @@ export async function POST(request: NextRequest) {
           error: 'SMTP connection failed',
           details: verifyError.message,
           code: verifyError.code,
-          config: {
-            host: config.host,
-            port: config.port,
-            secure: config.secure,
-            user: config.auth.user?.substring(0, 3) + '***'
-          },
           suggestions: {
-            'EAUTH': 'Check username and password',
+            'EAUTH': 'Check username and password. For Gmail, use App Password.',
             'ECONNECTION': 'Check host and port settings',
             'ETIMEDOUT': 'Check firewall and network connectivity',
             'ENOTFOUND': 'Check SMTP host address',
@@ -113,118 +131,214 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Step 2: Send test email
-    console.log('Step 2: Sending test email...')
-    const senderEmail = process.env.SMTP_FROM || process.env.EMAIL_FROM || process.env.SMTP_USER
-    const senderName = process.env.EMAIL_FROM_NAME || 'AKY Communication Test'
+    // Prepare test email content
+    const currentTime = new Date().toLocaleString()
+    const testSubject = `✅ Email Configuration Test - ${currentTime}`
     
-    const mailOptions = {
-      from: `"${senderName}" <${senderEmail}>`,
-      to: testEmail,
-      subject: 'AKY Communication System - Test Email ✅',
-      text: `Hello!
+    const testMessage = `Hello!
 
-This is a test email from the AKY Communication System.
+This is a test email from the AKY Communication System to verify your email configuration.
 
-If you received this email, your SMTP configuration is working correctly!
+📧 Email Details:
+• Sent at: ${currentTime}
+• From: ${fromAddress}
+• To: ${testEmail}
+• SMTP Host: ${process.env.SMTP_HOST}
+• SMTP Port: ${process.env.SMTP_PORT || '587'}
+• Security: ${process.env.SMTP_SECURE === 'true' ? 'SSL' : 'TLS'}
 
-Configuration Details:
-- SMTP Host: ${config.host}
-- SMTP Port: ${config.port}
-- Secure: ${config.secure ? 'Yes (SSL)' : 'No (TLS)'}
-- Sender: ${senderEmail}
+✅ If you received this email, your email configuration is working correctly!
 
-Test sent at: ${new Date().toISOString()}
+You can now use the email service to send:
+• Notifications
+• Newsletters
+• Alerts
+• Custom messages
 
 Best regards,
-AKY Communication System`,
-      html: `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-          <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px; border-radius: 10px 10px 0 0;">
-            <h1 style="margin: 0; font-size: 24px;">✅ AKY Communication System</h1>
-            <p style="margin: 10px 0 0 0; opacity: 0.9;">Test Email Successful</p>
-          </div>
-          
-          <div style="background: #f8f9fa; padding: 20px; border-radius: 0 0 10px 10px; border: 1px solid #e9ecef;">
-            <h2 style="color: #28a745; margin-top: 0;">🎉 Congratulations!</h2>
-            <p>Your SMTP configuration is working correctly. This test email was sent successfully from the AKY Communication System.</p>
-            
-            <div style="background: white; padding: 15px; border-radius: 5px; margin: 20px 0;">
-              <h3 style="margin-top: 0; color: #495057;">Configuration Details:</h3>
-              <ul style="color: #6c757d;">
-                <li><strong>SMTP Host:</strong> ${config.host}</li>
-                <li><strong>SMTP Port:</strong> ${config.port}</li>
-                <li><strong>Security:</strong> ${config.secure ? 'SSL (Secure)' : 'TLS (StartTLS)'}</li>
-                <li><strong>Sender:</strong> ${senderEmail}</li>
-                <li><strong>Test Time:</strong> ${new Date().toLocaleString()}</li>
-              </ul>
-            </div>
-            
-            <p style="color: #6c757d; font-size: 14px; margin-bottom: 0;">
-              You can now use the communication system to send emails, SMS, and WhatsApp messages.
-            </p>
-          </div>
+AKY Communication Team
+
+---
+This is an automated test email from the AKY Communication Center.`
+
+    const htmlMessage = `
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Email Configuration Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; }
+        .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px; border-radius: 8px 8px 0 0; text-align: center; }
+        .content { background: #f8f9fa; padding: 20px; border-radius: 0 0 8px 8px; border: 1px solid #e9ecef; }
+        .success { background: #d4edda; border: 1px solid #c3e6cb; color: #155724; padding: 15px; border-radius: 5px; margin: 15px 0; }
+        .info-box { background: #e3f2fd; border-left: 4px solid #2196f3; padding: 15px; margin: 15px 0; }
+        .footer { text-align: center; margin-top: 20px; padding-top: 20px; border-top: 1px solid #e9ecef; color: #6c757d; font-size: 14px; }
+        .badge { background: #007bff; color: white; padding: 3px 8px; border-radius: 12px; font-size: 12px; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>✅ Email Configuration Test</h1>
+        <p>AKY Communication System</p>
+    </div>
+    
+    <div class="content">
+        <div class="success">
+            <strong>🎉 Success!</strong> Your email configuration is working correctly!
         </div>
-      `
+        
+        <p>Hello!</p>
+        
+        <p>This is a test email from the <strong>AKY Communication System</strong> to verify your email configuration.</p>
+        
+        <div class="info-box">
+            <h3>📧 Email Configuration Details:</h3>
+            <ul>
+                <li><strong>Sent at:</strong> ${currentTime}</li>
+                <li><strong>From:</strong> ${fromAddress}</li>
+                <li><strong>To:</strong> ${testEmail}</li>
+                <li><strong>SMTP Host:</strong> ${process.env.SMTP_HOST}</li>
+                <li><strong>SMTP Port:</strong> ${process.env.SMTP_PORT || '587'}</li>
+                <li><strong>Security:</strong> <span class="badge">${process.env.SMTP_SECURE === 'true' ? 'SSL' : 'TLS'}</span></li>
+            </ul>
+        </div>
+        
+        <p>✅ If you received this email, your email configuration is working correctly!</p>
+        
+        <h3>🚀 What you can do now:</h3>
+        <ul>
+            <li>Send notifications to users</li>
+            <li>Create email newsletters</li>
+            <li>Send system alerts</li>
+            <li>Send custom messages with HTML formatting</li>
+            <li>Include attachments in your emails</li>
+        </ul>
+        
+        <p><strong>Best regards,</strong><br>
+        AKY Communication Team</p>
+    </div>
+    
+    <div class="footer">
+        <p>This is an automated test email from the AKY Communication Center.</p>
+        <p>Generated at ${currentTime}</p>
+    </div>
+</body>
+</html>`
+
+    // Prepare email options
+    const mailOptions = {
+      from: fromAddress,
+      to: testEmail,
+      subject: testSubject,
+      text: testMessage,
+      html: htmlMessage,
+      headers: {
+        'X-Mailer': 'AKY Communication System - Test',
+        'X-Priority': '3',
+        'X-MSMail-Priority': 'Normal'
+      }
     }
 
+    // Send test email
+    console.log(`Sending test email to: ${testEmail}`)
     const info = await transporter.sendMail(mailOptions)
-    console.log('✅ Test email sent successfully:', info.messageId)
+
+    console.log('Test email sent successfully:', {
+      messageId: info.messageId,
+      recipient: testEmail,
+      from: fromAddress,
+      accepted: info.accepted,
+      rejected: info.rejected
+    })
 
     return NextResponse.json({
       success: true,
-      message: 'Test email sent successfully!',
       data: {
         messageId: info.messageId,
-        testEmail: testEmail,
-        sender: senderEmail,
-        configuration: {
-          host: config.host,
-          port: config.port,
-          secure: config.secure,
-          service: config.service || 'custom'
-        },
+        recipient: testEmail,
+        subject: testSubject,
+        from: fromAddress,
+        sentAt: new Date().toISOString(),
         accepted: info.accepted,
         rejected: info.rejected,
         response: info.response,
-        sentAt: new Date().toISOString()
-      }
+        configuration: {
+          host: process.env.SMTP_HOST,
+          port: process.env.SMTP_PORT || '587',
+          secure: process.env.SMTP_SECURE === 'true',
+          user: process.env.SMTP_USER ? process.env.SMTP_USER.substring(0, 3) + '***' : 'Not set'
+        }
+      },
+      message: `Test email sent successfully to ${testEmail}. Check your inbox!`,
+      instructions: [
+        'Check your email inbox for the test message',
+        'If you don\'t see it, check your spam/junk folder',
+        'The email should arrive within a few minutes',
+        'If you received it, your email configuration is working correctly!'
+      ]
     })
 
   } catch (error: any) {
-    console.error('❌ Test email failed:', error)
-    
+    console.error('Email test error:', error)
+
+    // Handle specific nodemailer errors
+    const errorHandling: { [key: string]: { message: string, details: string, status: number } } = {
+      'EAUTH': {
+        message: 'Email authentication failed',
+        details: 'Invalid username or password. For Gmail, use App Password instead of regular password.',
+        status: 401
+      },
+      'ECONNECTION': {
+        message: 'Email server connection failed',
+        details: 'Cannot connect to SMTP server. Check host, port, and firewall settings.',
+        status: 503
+      },
+      'ETIMEDOUT': {
+        message: 'Connection timeout',
+        details: 'SMTP server took too long to respond. Check network connectivity.',
+        status: 504
+      },
+      'ENOTFOUND': {
+        message: 'SMTP server not found',
+        details: 'Cannot resolve SMTP hostname. Check SMTP_HOST setting.',
+        status: 502
+      },
+      'EENVELOPE': {
+        message: 'Invalid email address',
+        details: 'The test email address is invalid.',
+        status: 400
+      }
+    }
+
+    if (error.code && errorHandling[error.code]) {
+      const errorInfo = errorHandling[error.code]
+      return NextResponse.json(
+        {
+          success: false,
+          error: errorInfo.message,
+          details: errorInfo.details,
+          code: error.code,
+          troubleshooting: {
+            gmail: 'Use App Password: https://support.google.com/accounts/answer/185833',
+            outlook: 'Enable SMTP: https://support.microsoft.com/en-us/office/pop-imap-and-smtp-settings-8361e398-8af4-4e97-b147-6c6c4ac95353',
+            hostinger: 'Check your email credentials in cPanel',
+            yahoo: 'Generate App Password: https://help.yahoo.com/kb/generate-third-party-passwords-sln15241.html'
+          }
+        },
+        { status: errorInfo.status }
+      )
+    }
+
     return NextResponse.json(
       {
         success: false,
-        step: 'sending',
         error: 'Failed to send test email',
         details: error.message,
-        code: error.code,
-        troubleshooting: {
-          'EAUTH': 'Authentication failed - check username and password',
-          'ECONNECTION': 'Connection failed - check host and port',
-          'ETIMEDOUT': 'Connection timeout - check network and firewall',
-          'ENOTFOUND': 'Host not found - check SMTP hostname',
-          'ESOCKET': 'Socket error - try different port or security setting'
-        }
+        code: error.code
       },
       { status: 500 }
     )
   }
-}
-
-// GET endpoint for configuration check
-export async function GET() {
-  return NextResponse.json({
-    message: 'Email test endpoint ready',
-    usage: 'POST with { "testEmail": "your-email@example.com" }',
-    currentConfig: {
-      host: process.env.SMTP_HOST || 'Not configured',
-      port: process.env.SMTP_PORT || '587',
-      secure: process.env.SMTP_SECURE || 'false',
-      user: process.env.SMTP_USER ? process.env.SMTP_USER.substring(0, 3) + '***' : 'Not configured',
-      hasPassword: !!(process.env.SMTP_PASS || process.env.SMTP_PASSWORD)
-    }
-  })
 }

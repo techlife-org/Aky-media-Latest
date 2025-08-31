@@ -9,6 +9,7 @@ interface Attachment {
 }
 
 export async function GET() {
+  console.log("[News API] Received request")
   try {
     let db
     try {
@@ -26,7 +27,9 @@ export async function GET() {
     }
 
     // Fetch all news articles, sorted by creation date (newest first)
+    console.log("[News API] Fetching news from database")
     const news = await db.collection("news").find({}).sort({ created_at: -1 }).toArray()
+    console.log(`[News API] Found ${news.length} news articles`)
 
     // Convert ObjectId to string and format dates safely
     const formattedNews = news.map((article) => {
@@ -58,6 +61,7 @@ export async function GET() {
       };
     })
 
+    console.log(`[News API] Returning ${formattedNews.length} formatted news articles`)
     return NextResponse.json(formattedNews)
   } catch (error) {
     console.error("Error fetching news:", error)

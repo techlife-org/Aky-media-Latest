@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import nodemailer from 'nodemailer'
+const nodemailer = require('nodemailer')
 
 interface EmailMessage {
   to: string | string[]
@@ -17,7 +17,7 @@ interface EmailMessage {
   }>
 }
 
-// Create reusable transporter with comprehensive SMTP configuration
+// Enhanced transporter creation with better reliability
 function createTransporter() {
   const port = parseInt(process.env.SMTP_PORT || '587')
   const isSecure = process.env.SMTP_SECURE === 'true' || port === 465
@@ -30,13 +30,20 @@ function createTransporter() {
       user: process.env.SMTP_USER || process.env.SMTP_USERNAME,
       pass: process.env.SMTP_PASS || process.env.SMTP_PASSWORD,
     },
-    // Additional options for better compatibility
+    // Enhanced options for better reliability
     connectionTimeout: 60000, // 60 seconds
     greetingTimeout: 30000, // 30 seconds
     socketTimeout: 60000, // 60 seconds
     pool: true, // Use connection pooling
     maxConnections: 5,
     maxMessages: 100,
+    // Retry configuration
+    retryDelay: 3000, // 3 seconds between retries
+    maxRetries: 3,
+    // Additional security options
+    requireTLS: !isSecure, // Require TLS for non-SSL connections
+    logger: process.env.NODE_ENV === 'development', // Enable logging in development
+    debug: process.env.NODE_ENV === 'development'
   }
 
   // Configure TLS settings based on port and provider
@@ -44,12 +51,14 @@ function createTransporter() {
     // For TLS (port 587)
     config.tls = {
       rejectUnauthorized: false,
-      ciphers: 'SSLv3'
+      ciphers: 'SSLv3',
+      minVersion: 'TLSv1'
     }
   } else {
     // For SSL (port 465)
     config.tls = {
-      rejectUnauthorized: false
+      rejectUnauthorized: false,
+      minVersion: 'TLSv1'
     }
   }
 
@@ -62,22 +71,76 @@ function createTransporter() {
     }
   } else if (host?.includes('gmail')) {
     config.service = 'gmail'
+    config.tls = {
+      rejectUnauthorized: false
+    }
   } else if (host?.includes('outlook') || host?.includes('hotmail')) {
     config.service = 'hotmail'
+    config.tls = {
+      rejectUnauthorized: false
+    }
+  } else if (host?.includes('yahoo')) {
+    config.service = 'yahoo'
+    config.tls = {
+      rejectUnauthorized: false
+    }
   }
 
   // Log configuration for debugging (without sensitive data)
-  console.log('SMTP Configuration:', {
+  console.log('Enhanced SMTP Configuration:', {
     host: config.host,
     port: config.port,
     secure: config.secure,
     service: config.service || 'custom',
     user: config.auth.user ? config.auth.user.substring(0, 3) + '***' : 'Not set',
     hasPassword: !!config.auth.pass,
-    tlsConfig: config.tls ? 'configured' : 'default'
+    tlsConfig: config.tls ? 'configured' : 'default',
+    pooling: config.pool,
+    retries: config.maxRetries
   })
 
   return nodemailer.createTransport(config)
+}
+
+// Enhanced email sending with retry logic
+async function sendEmailWithRetry(transporter: any, mailOptions: any, maxRetries = 3): Promise<any> {
+  let lastError: any
+  
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      console.log(`Email sending attempt ${attempt}/${maxRetries}`)
+      
+      // Test connection before sending (only on first attempt)
+      if (attempt === 1) {
+        console.log('Testing SMTP connection...')
+        await transporter.verify()
+        console.log('✅ SMTP connection verified successfully')
+      }
+      
+      // Send email
+      const info = await transporter.sendMail(mailOptions)
+      console.log(`✅ Email sent successfully on attempt ${attempt}`)
+      return info
+      
+    } catch (error: any) {
+      lastError = error
+      console.error(`❌ Email sending failed on attempt ${attempt}:`, error.message)
+      
+      // Don't retry on authentication errors
+      if (error.code === 'EAUTH') {
+        throw error
+      }
+      
+      // Wait before retry (except on last attempt)
+      if (attempt < maxRetries) {
+        const delay = attempt * 2000 // Exponential backoff: 2s, 4s, 6s
+        console.log(`⏳ Waiting ${delay}ms before retry...`)
+        await new Promise(resolve => setTimeout(resolve, delay))
+      }
+    }
+  }
+  
+  throw lastError
 }
 
 export async function POST(request: NextRequest) {
@@ -119,13 +182,37 @@ export async function POST(request: NextRequest) {
           success: false, 
           error: 'Email service not configured properly',
           details: `Missing environment variables: ${missingConfig.join(', ')}`,
-          required: {
-            SMTP_HOST: 'SMTP server hostname (e.g., smtp.gmail.com)',
-            SMTP_PORT: 'SMTP port (587 for TLS, 465 for SSL, 25 for non-secure)',
-            SMTP_SECURE: 'true for SSL (port 465), false for TLS (port 587)',
-            SMTP_USER: 'SMTP username (usually your email)',
-            SMTP_PASS: 'SMTP password or app password',
-            SMTP_FROM: 'Default sender email address'
+          setup: {
+            provider: 'Enhanced SMTP Service',
+            gmail: {
+              SMTP_HOST: 'smtp.gmail.com',
+              SMTP_PORT: '587',
+              SMTP_SECURE: 'false',
+              SMTP_USER: 'your-email@gmail.com',
+              SMTP_PASS: 'your-app-password',
+              note: 'Use App Password from Google Account settings'
+            },
+            outlook: {
+              SMTP_HOST: 'smtp-mail.outlook.com',
+              SMTP_PORT: '587',
+              SMTP_SECURE: 'false',
+              SMTP_USER: 'your-email@outlook.com',
+              SMTP_PASS: 'your-password'
+            },
+            yahoo: {
+              SMTP_HOST: 'smtp.mail.yahoo.com',
+              SMTP_PORT: '587',
+              SMTP_SECURE: 'false',
+              SMTP_USER: 'your-email@yahoo.com',
+              SMTP_PASS: 'your-app-password'
+            },
+            hostinger: {
+              SMTP_HOST: 'smtp.hostinger.com',
+              SMTP_PORT: '465',
+              SMTP_SECURE: 'true',
+              SMTP_USER: 'your-email@yourdomain.com',
+              SMTP_PASS: 'your-email-password'
+            }
           }
         },
         { status: 500 }
@@ -136,7 +223,7 @@ export async function POST(request: NextRequest) {
 
     // Prepare sender information
     const senderEmail = from || process.env.SMTP_FROM || process.env.EMAIL_FROM || process.env.SMTP_USER
-    const senderName = process.env.EMAIL_FROM_NAME || process.env.SMTP_FROM_NAME || 'AKY Communication'
+    const senderName = process.env.EMAIL_FROM_NAME || process.env.SMTP_FROM_NAME || 'AKY Communication System'
     const fromAddress = senderName ? `"${senderName}" <${senderEmail}>` : senderEmail
 
     // Prepare email options
@@ -145,11 +232,14 @@ export async function POST(request: NextRequest) {
       to: Array.isArray(to) ? to.join(', ') : to,
       subject: subject,
       text: message,
-      // Add headers for better deliverability
+      // Enhanced headers for better deliverability
       headers: {
-        'X-Mailer': 'AKY Communication System',
+        'X-Mailer': 'AKY Communication System v3.0',
         'X-Priority': '3',
-        'X-MSMail-Priority': 'Normal'
+        'X-MSMail-Priority': 'Normal',
+        'Importance': 'Normal',
+        'Message-ID': `<${Date.now()}.${Math.random().toString(36).substr(2, 9)}@${senderEmail?.split('@')[1] || 'akymedia.com'}>`,
+        'Date': new Date().toUTCString()
       }
     }
 
@@ -173,29 +263,8 @@ export async function POST(request: NextRequest) {
       mailOptions.attachments = attachments
     }
 
-    // Test connection before sending
-    try {
-      await transporter.verify()
-    } catch (verifyError: any) {
-      console.error('SMTP verification failed:', verifyError)
-      return NextResponse.json(
-        {
-          success: false,
-          error: 'SMTP connection failed',
-          details: verifyError.message,
-          troubleshooting: {
-            'EAUTH': 'Check username and password',
-            'ECONNECTION': 'Check host and port settings',
-            'ETIMEDOUT': 'Check firewall and network connectivity',
-            'ENOTFOUND': 'Check SMTP host address'
-          }
-        },
-        { status: 503 }
-      )
-    }
-
-    // Send email
-    const info = await transporter.sendMail(mailOptions)
+    // Send email with retry logic
+    const info = await sendEmailWithRetry(transporter, mailOptions)
 
     console.log('Email sent successfully:', {
       messageId: info.messageId,
@@ -203,7 +272,8 @@ export async function POST(request: NextRequest) {
       subject: subject,
       from: fromAddress,
       accepted: info.accepted,
-      rejected: info.rejected
+      rejected: info.rejected,
+      response: info.response
     })
 
     return NextResponse.json({
@@ -217,7 +287,8 @@ export async function POST(request: NextRequest) {
         accepted: info.accepted,
         rejected: info.rejected,
         response: info.response,
-        envelope: info.envelope
+        envelope: info.envelope,
+        provider: 'Enhanced SMTP Service'
       },
       message: `Email sent successfully to ${Array.isArray(to) ? to.length : 1} recipient(s)`
     })
@@ -226,31 +297,61 @@ export async function POST(request: NextRequest) {
     console.error('Email sending error:', error)
 
     // Handle specific nodemailer errors with detailed troubleshooting
-    const errorHandling: { [key: string]: { message: string, details: string, status: number } } = {
+    const errorHandling: { [key: string]: { message: string, details: string, status: number, solutions: string[] } } = {
       'EAUTH': {
         message: 'Email authentication failed',
         details: 'Invalid username or password. For Gmail, use App Password instead of regular password.',
-        status: 401
+        status: 401,
+        solutions: [
+          'For Gmail: Generate App Password at https://support.google.com/accounts/answer/185833',
+          'For Outlook: Enable SMTP in account settings',
+          'For Yahoo: Generate App Password in security settings',
+          'Verify username and password are correct'
+        ]
       },
       'ECONNECTION': {
         message: 'Email server connection failed',
         details: 'Cannot connect to SMTP server. Check host, port, and firewall settings.',
-        status: 503
+        status: 503,
+        solutions: [
+          'Verify SMTP_HOST is correct',
+          'Check SMTP_PORT (587 for TLS, 465 for SSL)',
+          'Ensure firewall allows SMTP traffic',
+          'Try different port if current one fails'
+        ]
       },
       'ETIMEDOUT': {
         message: 'Connection timeout',
         details: 'SMTP server took too long to respond. Check network connectivity.',
-        status: 504
+        status: 504,
+        solutions: [
+          'Check internet connection',
+          'Try again in a few minutes',
+          'Contact your email provider',
+          'Check if SMTP server is overloaded'
+        ]
       },
       'ENOTFOUND': {
         message: 'SMTP server not found',
         details: 'Cannot resolve SMTP hostname. Check SMTP_HOST setting.',
-        status: 502
+        status: 502,
+        solutions: [
+          'Verify SMTP_HOST spelling',
+          'Check DNS resolution',
+          'Try using IP address instead of hostname',
+          'Contact your email provider for correct SMTP settings'
+        ]
       },
       'EENVELOPE': {
         message: 'Invalid email address',
         details: 'One or more email addresses are invalid.',
-        status: 400
+        status: 400,
+        solutions: [
+          'Check email address format',
+          'Remove invalid characters',
+          'Verify all recipients exist',
+          'Check for typos in email addresses'
+        ]
       }
     }
 
@@ -262,10 +363,13 @@ export async function POST(request: NextRequest) {
           error: errorInfo.message,
           details: errorInfo.details,
           code: error.code,
+          solutions: errorInfo.solutions,
+          provider: 'Enhanced SMTP Service',
           troubleshooting: {
             gmail: 'Use App Password: https://support.google.com/accounts/answer/185833',
             outlook: 'Enable SMTP: https://support.microsoft.com/en-us/office/pop-imap-and-smtp-settings-8361e398-8af4-4e97-b147-6c6c4ac95353',
-            yahoo: 'Generate App Password: https://help.yahoo.com/kb/generate-third-party-passwords-sln15241.html'
+            yahoo: 'Generate App Password: https://help.yahoo.com/kb/generate-third-party-passwords-sln15241.html',
+            hostinger: 'Use domain email credentials from hosting panel'
           }
         },
         { status: errorInfo.status }
@@ -276,7 +380,9 @@ export async function POST(request: NextRequest) {
       {
         success: false,
         error: 'Failed to send email',
-        details: error.message
+        details: error.message,
+        code: error.code,
+        provider: 'Enhanced SMTP Service'
       },
       { status: 500 }
     )
@@ -306,7 +412,7 @@ export async function GET() {
       return NextResponse.json(
         {
           success: false,
-          service: 'Email (SMTP)',
+          service: 'Email (Enhanced SMTP)',
           status: 'misconfigured',
           error: 'Missing required configuration',
           missing: missingConfig,
@@ -318,20 +424,30 @@ export async function GET() {
             hasPassword: config.hasPassword,
             from: config.from || 'Not set'
           },
-          examples: {
+          providers: {
             gmail: {
               SMTP_HOST: 'smtp.gmail.com',
               SMTP_PORT: '587',
               SMTP_SECURE: 'false',
-              SMTP_USER: 'your-email@gmail.com',
-              SMTP_PASS: 'your-app-password'
+              note: 'Use App Password, not regular password'
             },
             outlook: {
               SMTP_HOST: 'smtp-mail.outlook.com',
               SMTP_PORT: '587',
               SMTP_SECURE: 'false',
-              SMTP_USER: 'your-email@outlook.com',
-              SMTP_PASS: 'your-password'
+              note: 'Regular password usually works'
+            },
+            yahoo: {
+              SMTP_HOST: 'smtp.mail.yahoo.com',
+              SMTP_PORT: '587',
+              SMTP_SECURE: 'false',
+              note: 'Generate App Password in security settings'
+            },
+            hostinger: {
+              SMTP_HOST: 'smtp.hostinger.com',
+              SMTP_PORT: '465',
+              SMTP_SECURE: 'true',
+              note: 'Use domain email credentials'
             }
           }
         },
@@ -341,28 +457,53 @@ export async function GET() {
 
     const transporter = createTransporter()
 
-    // Verify SMTP connection
+    // Verify SMTP connection with enhanced testing
     const startTime = Date.now()
     await transporter.verify()
     const connectionTime = Date.now() - startTime
 
+    // Determine provider type
+    const host = config.host?.toLowerCase()
+    let providerType = 'Custom SMTP'
+    if (host?.includes('gmail')) providerType = 'Gmail'
+    else if (host?.includes('outlook') || host?.includes('hotmail')) providerType = 'Outlook'
+    else if (host?.includes('yahoo')) providerType = 'Yahoo'
+    else if (host?.includes('hostinger')) providerType = 'Hostinger'
+
     return NextResponse.json({
       success: true,
-      service: 'Email (SMTP)',
+      service: 'Email (Enhanced SMTP)',
       status: 'active',
+      provider: providerType,
       configuration: {
         host: config.host,
         port: config.port,
         secure: config.secure,
         user: config.user ? config.user.substring(0, 3) + '***' : 'Not set',
         from: config.from || config.user,
-        fromName: config.fromName || 'AKY Communication'
+        fromName: config.fromName || 'AKY Communication System'
       },
       performance: {
         connectionTime: `${connectionTime}ms`,
-        status: connectionTime < 5000 ? 'fast' : connectionTime < 10000 ? 'normal' : 'slow'
+        status: connectionTime < 3000 ? 'excellent' : connectionTime < 5000 ? 'good' : connectionTime < 10000 ? 'fair' : 'slow'
       },
-      message: 'Email service is ready and verified'
+      features: {
+        htmlEmails: true,
+        attachments: true,
+        multipleRecipients: true,
+        ccBccSupport: true,
+        retryMechanism: true,
+        connectionPooling: true,
+        enhancedSecurity: true,
+        deliverabilityHeaders: true
+      },
+      limits: {
+        gmail: '500 emails/day (free), 2000/day (paid)',
+        outlook: '300 emails/day (free), 10000/day (paid)',
+        yahoo: '500 emails/day',
+        hostinger: 'Varies by hosting plan'
+      },
+      message: `Enhanced email service is ready and verified (${connectionTime}ms response)`
     })
 
   } catch (error: any) {
@@ -371,7 +512,7 @@ export async function GET() {
     return NextResponse.json(
       {
         success: false,
-        service: 'Email (SMTP)',
+        service: 'Email (Enhanced SMTP)',
         status: 'error',
         error: error.message,
         code: error.code,
@@ -385,8 +526,15 @@ export async function GET() {
           'EAUTH': 'Check username and password. For Gmail, use App Password.',
           'ECONNECTION': 'Check host and port. Ensure firewall allows SMTP.',
           'ETIMEDOUT': 'Network connectivity issue or server overload.',
-          'ENOTFOUND': 'Invalid SMTP hostname.'
-        }
+          'ENOTFOUND': 'Invalid SMTP hostname.',
+          'general': 'Verify all SMTP settings and try again'
+        },
+        solutions: [
+          'Verify SMTP credentials are correct',
+          'Check firewall and network settings',
+          'Try different SMTP port (587 or 465)',
+          'Contact your email provider for support'
+        ]
       },
       { status: 500 }
     )
