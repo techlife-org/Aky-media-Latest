@@ -1139,7 +1139,7 @@ export default function NewsPage() {
                               disabled={isSending === article.id}
                             >
                               <Send className="mr-2 h-4 w-4" />
-                              {isSending === article.id ? "Sending..." : "Send Newsletter"}
+                              {isSending === article.id ? "Sending..." : "Send Notification"}
                             </DropdownMenuItem>
                             <DropdownMenuItem 
                               className="text-red-600 focus:text-red-600" 

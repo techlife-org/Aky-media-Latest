@@ -15,20 +15,19 @@ interface Subscriber {
 interface Notification {
   _id: ObjectId;
   title: string;
-  content: string;
-  doc_type: string;
+  description: string;
+  category: string;
+  progress: number;
+  location: string;
+  date: string;
   sentTo: number;
   sentAt: Date;
-  type: "news_notification";
+  type: "achievement_notification";
   status: "sent" | "partial";
   emailSubject: string;
-  articleId?: ObjectId | null;
+  achievementId?: ObjectId | null;
   subscribers: { email: string; name: string; mobile?: string }[];
-  attachment?: {
-    url: string;
-    type: "image" | "document" | "video" | "link";
-    name?: string;
-  }
+  images?: string[];
   failedRecipients?: { email: string; error: string }[];
   emailsSent: number;
   smsSent: number;
@@ -38,11 +37,11 @@ interface Notification {
 
 export async function POST(request: Request) {
   try {
-    const { newsId } = await request.json();
+    const { achievementId } = await request.json();
 
-    if (!newsId) {
+    if (!achievementId) {
       return new NextResponse(
-        JSON.stringify({ success: false, message: 'News ID is required' }),
+        JSON.stringify({ success: false, message: 'Achievement ID is required' }),
         { status: 400, headers: corsHeaders() }
       );
     }
@@ -50,12 +49,12 @@ export async function POST(request: Request) {
     // Connect to MongoDB
     const { db } = await connectToDatabase();
 
-    // Get news article
-    const news = await db.collection('news').findOne({ _id: new ObjectId(newsId) });
+    // Get achievement
+    const achievement = await db.collection('achievements').findOne({ _id: new ObjectId(achievementId) });
 
-    if (!news) {
+    if (!achievement) {
       return new NextResponse(
-        JSON.stringify({ success: false, message: 'News article not found' }),
+        JSON.stringify({ success: false, message: 'Achievement not found' }),
         { status: 404, headers: corsHeaders() }
       );
     }
@@ -77,7 +76,7 @@ export async function POST(request: Request) {
       );
     }
 
-    console.log(`📢 Sending news notifications to ${subscribers.length} subscribers for: ${news.title}`);
+    console.log(`🏆 Sending achievement notifications to ${subscribers.length} subscribers for: ${achievement.title}`);
     
     // Initialize notification service
     const notificationService = new EnhancedNotificationService();
@@ -99,16 +98,19 @@ export async function POST(request: Request) {
       
       const batchPromises = batch.map(async (subscriber) => {
         try {
-          // Send news notifications using the enhanced service
-          const notificationResults = await notificationService.sendNewsNotifications({
+          // Send achievement notifications using the enhanced service
+          const notificationResults = await notificationService.sendAchievementNotifications({
             email: subscriber.email,
             phone: subscriber.mobile,
             name: subscriber.name || 'Subscriber',
-            newsTitle: news.title,
-            newsContent: news.content,
-            newsCategory: news.doc_type,
-            newsUrl: `${process.env.NEXT_PUBLIC_BASE_URL}/news/${newsId}`,
-            newsImage: news.attachment?.url
+            achievementTitle: achievement.title,
+            achievementDescription: achievement.description,
+            achievementCategory: achievement.category,
+            achievementProgress: achievement.progress || 0,
+            achievementLocation: achievement.location,
+            achievementDate: new Date(achievement.date).toLocaleDateString(),
+            achievementUrl: `${process.env.NEXT_PUBLIC_BASE_URL}/achievements/${achievementId}`,
+            achievementImage: achievement.images?.[0]
           });
 
           // Track successful notifications
@@ -167,23 +169,26 @@ export async function POST(request: Request) {
     // Create notification record
     const notification: Notification = {
       _id: new ObjectId(),
-      title: news.title,
-      content: typeof news.content === "string"
-        ? news.content.substring(0, 200) + (news.content.length > 200 ? "..." : "")
+      title: achievement.title,
+      description: typeof achievement.description === "string"
+        ? achievement.description.substring(0, 200) + (achievement.description.length > 200 ? "..." : "")
         : "",
-      doc_type: news.doc_type,
+      category: achievement.category,
+      progress: achievement.progress || 0,
+      location: achievement.location,
+      date: achievement.date,
       sentTo: results.successful.length,
       sentAt: new Date(),
-      type: "news_notification",
+      type: "achievement_notification",
       status: results.failed.length === 0 ? "sent" : "partial",
-      emailSubject: `📰 ${news.title} - The AKY Digital Team`,
-      articleId: new ObjectId(newsId),
+      emailSubject: `🏆 ${achievement.title} - The AKY Digital Team`,
+      achievementId: new ObjectId(achievementId),
       subscribers: results.successful.map(result => ({
         email: result.subscriber.email,
         name: result.subscriber.name || "Subscriber",
         ...(result.subscriber.mobile && { mobile: result.subscriber.mobile }),
       })),
-      ...(news.attachment ? { attachment: news.attachment } : {}),
+      ...(achievement.images && achievement.images.length > 0 ? { images: achievement.images } : {}),
       ...(results.failed.length > 0 && { 
         failedRecipients: results.failed.map(result => ({ 
           email: result.subscriber.email, 
@@ -197,10 +202,10 @@ export async function POST(request: Request) {
     };
 
     // Save notification to database
-    await db.collection("email_notifications").insertOne({
+    await db.collection("achievement_notifications").insertOne({
       ...notification,
       _id: notification._id,
-      articleId: notification.articleId,
+      achievementId: notification.achievementId,
     });
 
     // Update subscriber engagement for successful notifications
@@ -218,7 +223,7 @@ export async function POST(request: Request) {
     // Insert notification into notifications collection
     await db.collection("notifications").insertOne(notification);
 
-    console.log(`✅ News notification completed:`, {
+    console.log(`✅ Achievement notification completed:`, {
       total: subscribers.length,
       successful: results.successful.length,
       failed: results.failed.length,
@@ -231,7 +236,7 @@ export async function POST(request: Request) {
     return new NextResponse(
       JSON.stringify({
         success: true,
-        message: `News notification sent successfully! Reached ${results.successful.length} subscribers via email: ${results.emailsSent}, SMS: ${results.smsSent}, WhatsApp: ${results.whatsappSent}`,
+        message: `Achievement notification sent successfully! Reached ${results.successful.length} subscribers via email: ${results.emailsSent}, SMS: ${results.smsSent}, WhatsApp: ${results.whatsappSent}`,
         data: {
           total: subscribers.length,
           successful: results.successful.length,
@@ -247,11 +252,11 @@ export async function POST(request: Request) {
     );
 
   } catch (error) {
-    console.error('📢 News notification error:', error);
+    console.error('🏆 Achievement notification error:', error);
     return new NextResponse(
       JSON.stringify({
         success: false,
-        message: 'Failed to send news notifications',
+        message: 'Failed to send achievement notifications',
         error: error instanceof Error ? error.message : 'Unknown error'
       }),
       { status: 500, headers: corsHeaders() }
