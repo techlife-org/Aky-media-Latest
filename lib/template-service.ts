@@ -25,7 +25,7 @@ export class TemplateService {
   private cacheExpiry: number = 5 * 60 * 1000; // 5 minutes
   private lastCacheUpdate: number = 0;
 
-  private constructor() {}
+  private constructor() { }
 
   public static getInstance(): TemplateService {
     if (!TemplateService.instance) {
@@ -39,7 +39,7 @@ export class TemplateService {
    */
   async getTemplate(category: string, type: string): Promise<Template | null> {
     const cacheKey = `${category}-${type}`;
-    
+
     // Check cache first
     if (this.isCacheValid() && this.templateCache.has(cacheKey)) {
       return this.templateCache.get(cacheKey) || null;
@@ -47,7 +47,7 @@ export class TemplateService {
 
     try {
       const { db } = await connectToDatabase();
-      
+
       const template = await db.collection('communication_templates').findOne({
         category,
         type,
@@ -61,11 +61,11 @@ export class TemplateService {
           ...template,
           id: template._id.toString()
         };
-        
+
         // Cache the template
         this.templateCache.set(cacheKey, templateObj);
         this.lastCacheUpdate = Date.now();
-        
+
         return templateObj;
       }
     } catch (error) {
@@ -80,7 +80,7 @@ export class TemplateService {
    */
   applyVariables(content: string, variables: TemplateVariables): string {
     let processedContent = content;
-    
+
     // Replace variables in the format {{variable_name}}
     Object.entries(variables).forEach(([key, value]) => {
       const regex = new RegExp(`{{\\s*${key}\\s*}}`, 'g');
@@ -89,7 +89,7 @@ export class TemplateService {
 
     // Clean up any remaining unreplaced variables
     processedContent = processedContent.replace(/{{[^}]*}}/g, '');
-    
+
     return processedContent;
   }
 
@@ -97,12 +97,12 @@ export class TemplateService {
    * Get processed template with variables applied
    */
   async getProcessedTemplate(
-    category: string, 
-    type: string, 
+    category: string,
+    type: string,
     variables: TemplateVariables
   ): Promise<{ subject?: string; content: string; template?: Template } | null> {
     const template = await this.getTemplate(category, type);
-    
+
     if (!template) {
       return null;
     }
@@ -123,7 +123,7 @@ export class TemplateService {
   getDefaultTemplate(category: string, type: string, variables: TemplateVariables): { subject?: string; content: string } {
     const defaults = this.getDefaultTemplates();
     const key = `${category}-${type}`;
-    
+
     if (defaults[key]) {
       const template = defaults[key];
       return {
@@ -140,13 +140,13 @@ export class TemplateService {
    * Get template with fallback to defaults
    */
   async getTemplateWithFallback(
-    category: string, 
-    type: string, 
+    category: string,
+    type: string,
     variables: TemplateVariables
   ): Promise<{ subject?: string; content: string; isCustomTemplate: boolean }> {
     // Try to get custom template first
     const customTemplate = await this.getProcessedTemplate(category, type, variables);
-    
+
     if (customTemplate) {
       return {
         subject: customTemplate.subject,
@@ -198,6 +198,9 @@ export class TemplateService {
 <body style="margin: 0; padding: 0; background-color: #f8fafc; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">
   <div style="max-width: 600px; margin: 0 auto; background: #ffffff; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
     <div style="background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%); padding: 40px 30px; text-align: center; color: white;">
+     <img src="https://res.cloudinary.com/dxsc0fqrt/image/upload/v1756715780/aky_logo_R_oaofzg.png" 
+        alt="AKY Digital Logo" 
+        style="width:110px; height:auto; display:block; margin:0 auto 15px;">
       <h1 style="margin: 0; font-size: 32px; font-weight: 700;">Subscription Successful ✅</h1>
       <p style="margin: 15px 0 0 0; font-size: 18px; opacity: 0.95;">Welcome to AKY Digital</p>
     </div>
@@ -283,17 +286,20 @@ Best regards,
   <title>Thank You for Contacting Us - AKY Digital</title>
 </head>
 <body style="margin: 0; padding: 0; background-color: #f8fafc; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">
-  <div style="max-width: 600px; margin: 0 auto; background: #ffffff; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
-    <div style="background: linear-gradient(135deg, #059669 0%, #047857 100%); padding: 40px 30px; text-align: center; color: white;">
+  <div style="max-width: 600px; margin: 0 auto; background: #ffffff; box-shadow: 0 4px 6px #de1736);">
+    <div style="background: linear-gradient(135deg, #de1736 0%, #de1736 100%); padding: 40px 30px; text-align: center; color: white;">
+    <img src="https://res.cloudinary.com/dxsc0fqrt/image/upload/v1756715780/aky_logo_R_oaofzg.png" 
+        alt="AKY Digital Logo" 
+        style="width:110px; height:auto; display:block; margin:0 auto 15px;">
       <h1 style="margin: 0; font-size: 32px; font-weight: 700;">Thank You for Contacting Us</h1>
       <p style="margin: 15px 0 0 0; font-size: 18px; opacity: 0.95;">AKY Digital</p>
     </div>
-    
+   
     <div style="padding: 50px 40px; background: white;">
       <div style="margin-bottom: 40px;">
         <h2 style="color: #1f2937; margin: 0 0 20px 0; font-size: 24px;">Dear {{first_name}},</h2>
         
-        <p style="color: #374151; line-height: 1.7; margin: 0 0 20px 0; font-size: 16px;">
+        <p style="color:rgb(81, 55, 55); line-height: 1.7; margin: 0 0 20px 0; font-size: 16px;">
           Thank you for reaching out to AKY Digital. Your message has been received, and our team will review it carefully.
         </p>
         
@@ -319,7 +325,7 @@ Best regards,
       </div>
       
       <div style="text-align: center; margin: 40px 0;">
-        <a href="{{website_url}}" style="display: inline-block; padding: 16px 32px; background: linear-gradient(135deg, #059669 0%, #047857 100%); color: white; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px;">
+        <a href="{{website_url}}" style="display: inline-block; padding: 16px 32px; background: #de1736; color: white; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px;">
           🌐 Visit Our Website
         </a>
       </div>
@@ -364,9 +370,9 @@ Best regards,
 *The AKY Digital Team* 🙏`
       },
 
-      // News templates
+      // Updated News Templates
       'news-email': {
-        subject: '🚨 {{news_title}} - The AKY Digital Team',
+        subject: '{{news_title}} - The AKY Digital Team',
         content: `
 <!DOCTYPE html>
 <html lang="en">
@@ -376,71 +382,64 @@ Best regards,
   <title>{{news_title}} - AKY Digital</title>
   <style>
     @media only screen and (max-width: 600px) {
-      .container { width: 100% !important; padding: 10px !important; }
-      .header { padding: 30px 20px !important; }
-      .content { padding: 30px 20px !important; }
-      .title { font-size: 28px !important; }
-      .subtitle { font-size: 16px !important; }
-      .news-title { font-size: 22px !important; }
+      .container { width: 100% !important; padding: 15px !important; }
+      .header { padding: 25px 15px !important; }
+      .content { padding: 25px 15px !important; }
+      .title { font-size: 24px !important; }
+      .subtitle { font-size: 14px !important; }
+      .news-title { font-size: 20px !important; }
     }
+    a.btn:hover { opacity: 0.9; }
   </style>
 </head>
-<body style="margin: 0; padding: 0; background: linear-gradient(135deg, #fee2e2 0%, #fecaca 50%, #f87171 100%); font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; min-height: 100vh;">
-  <div class="container" style="max-width: 650px; margin: 0 auto; background: #ffffff; box-shadow: 0 20px 40px rgba(220, 38, 38, 0.15); border-radius: 16px; overflow: hidden;">
-    <!-- Header with Background Image -->
-    <div class="header" style="background: linear-gradient(135deg, rgba(220, 38, 38, 0.95) 0%, rgba(185, 28, 28, 0.95) 100%), url('{{website_url}}/email-header.png'); background-size: cover; background-position: center; background-repeat: no-repeat; padding: 50px 40px; text-align: center; position: relative;">
-      <div style="position: relative; z-index: 2;">
-        <h1 class="title" style="margin: 0; font-size: 36px; font-weight: 800; color: white; text-shadow: 2px 2px 4px rgba(0,0,0,0.3); letter-spacing: -0.5px;">🚨 Breaking News</h1>
-        <p class="subtitle" style="margin: 15px 0 0 0; font-size: 20px; color: white; opacity: 0.95; font-weight: 500; text-shadow: 1px 1px 2px rgba(0,0,0,0.2);">The AKY Digital Team</p>
-      </div>
-      <!-- Decorative Elements -->
-      <div style="position: absolute; top: 20px; right: 20px; width: 60px; height: 60px; background: rgba(255,255,255,0.1); border-radius: 50%; opacity: 0.6;"></div>
-      <div style="position: absolute; bottom: 20px; left: 20px; width: 40px; height: 40px; background: rgba(255,255,255,0.1); border-radius: 50%; opacity: 0.4;"></div>
+<body style="margin: 0; padding: 0; background: #f3f4f6; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">
+  <div class="container" style="max-width: 650px; margin: 25px auto; background: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 8px 24px rgba(0,0,0,0.08);">
+
+    <!-- Header -->
+    <div class="header" style="background: linear-gradient(135deg, #de1736 0%, #a20f25 100%); padding: 35px 25px; text-align: center;">
+      <img src="https://res.cloudinary.com/dxsc0fqrt/image/upload/v1756715780/aky_logo_R_oaofzg.png" 
+        alt="AKY Digital Logo" 
+        style="width:110px; height:auto; display:block; margin:0 auto 15px;">
+      <h1 class="title" style="margin: 0; font-size: 30px; font-weight: 800; color: #fff; line-height: 1.3;">{{news_title}}</h1>
+      <p class="subtitle" style="margin: 8px 0 0; font-size: 15px; color: #f3f4f6;">From the AKY Digital Team</p>
     </div>
-    
-    <!-- Content Section -->
-    <div class="content" style="padding: 60px 50px; background: linear-gradient(180deg, #ffffff 0%, #fef7f7 100%);">
-      <div style="margin-bottom: 50px;">
-        <h2 style="color: #dc2626; margin: 0 0 25px 0; font-size: 28px; font-weight: 700; text-align: center;">Dear {{name}},</h2>
-        
-        <p style="color: #374151; line-height: 1.8; margin: 0 0 30px 0; font-size: 18px; text-align: center; font-weight: 500;">
-          🎉 We have exciting news to share with you!
-        </p>
-        
-        <!-- News Card -->
-        <div style="background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%); padding: 35px; border-radius: 20px; margin: 40px 0; box-shadow: 0 15px 35px rgba(220, 38, 38, 0.2); position: relative; overflow: hidden;">
-          <!-- Background Pattern -->
-          <div style="position: absolute; top: -50px; right: -50px; width: 150px; height: 150px; background: rgba(255,255,255,0.05); border-radius: 50%; opacity: 0.7;"></div>
-          <div style="position: absolute; bottom: -30px; left: -30px; width: 100px; height: 100px; background: rgba(255,255,255,0.05); border-radius: 50%; opacity: 0.5;"></div>
-          
-          <div style="position: relative; z-index: 2;">
-            <h3 class="news-title" style="color: white; margin: 0 0 20px 0; font-size: 26px; font-weight: 800; text-shadow: 1px 1px 2px rgba(0,0,0,0.2); line-height: 1.3;">{{news_title}}</h3>
-            <p style="color: rgba(255,255,255,0.95); margin: 0 0 25px 0; line-height: 1.7; font-size: 16px; font-weight: 400;">{{news_content}}</p>
-            
-            <div style="margin-top: 20px;">
-              <span style="background: rgba(255,255,255,0.2); color: white; padding: 8px 16px; border-radius: 25px; font-size: 14px; text-transform: uppercase; font-weight: 600; letter-spacing: 0.5px; backdrop-filter: blur(10px);">{{news_category}}</span>
-            </div>
-          </div>
-        </div>
-        
-        <p style="color: #374151; line-height: 1.7; margin: 30px 0 0 0; font-size: 16px; text-align: center;">
-          Best regards,<br>
-          <strong style="color: #dc2626; font-size: 18px;">The AKY Digital Team</strong>
-        </p>
+
+    <!-- Content -->
+    <div class="content" style="padding: 40px 30px;">
+      <h2 style="color: #111827; margin: 0 0 20px; font-size: 20px; font-weight: 700; text-align: center;">Dear {{name}},</h2>
+
+      <p style="color: #374151; line-height: 1.7; font-size: 16px; text-align: center; margin-bottom: 25px;">
+        We’re excited to share the latest update with you!
+      </p>
+
+      <!-- News Image -->
+      <div style="text-align: center; margin: 20px 0;">
+        <span style=" background: #de1736; color: #fff; padding: 6px 14px; border-radius: 20px; font-size: 13px; font-weight: 600; letter-spacing: 0.3px;">{{news_category}}</span>
+       <a href="{{news_url}}"> <img src="{{news_image}}" alt="News Image" style="max-width: 100%; border-radius: 12px; box-shadow: 0 6px 15px rgba(0,0,0,0.12);"></a>
+             
       </div>
-      
+
+      <!-- News Content -->
+      <div style="margin: 20px 0; text-align: center;">
+        <p style="color: #374151; font-size: 16px; line-height: 1.8; margin: 0 0 18px;">{{news_content}}</p>
+      </div>
+
       <!-- Call to Action -->
-      <div style="text-align: center; margin: 50px 0;">
-        <a href="{{news_url}}" style="display: inline-block; padding: 18px 40px; background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%); color: white; text-decoration: none; border-radius: 50px; font-weight: 700; font-size: 18px; box-shadow: 0 10px 25px rgba(220, 38, 38, 0.3); transition: all 0.3s ease; text-transform: uppercase; letter-spacing: 0.5px;">
-          🔥 Read Full Story
+      <div style="text-align: center; margin-top: 35px;">
+        <a href="{{news_url}}" class="btn" style="display: inline-block; padding: 14px 32px; background: linear-gradient(135deg, #de1736 0%, #a20f25 100%); color: #fff; text-decoration: none; border-radius: 40px; font-weight: 700; font-size: 16px; box-shadow: 0 6px 15px rgba(222, 23, 54, 0.35); transition: all 0.3s ease;">
+          🔗 Read Full Story
         </a>
       </div>
+
+      <p style="color: #6b7280; margin: 40px 0 0; font-size: 15px; text-align: center; line-height: 1.6;">
+        Best regards,<br><strong style="color: #de1736;">The AKY Digital Team</strong>
+      </p>
     </div>
-    
+
     <!-- Footer -->
-    <div style="background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%); padding: 40px; text-align: center; color: white;">
-      <p style="color: rgba(255,255,255,0.9); font-size: 14px; margin: 0 0 15px 0; font-weight: 500;">© {{current_year}} AKY Digital. All rights reserved.</p>
-      <a href="{{unsubscribe_url}}" style="color: rgba(255,255,255,0.8); text-decoration: underline; font-size: 13px; font-weight: 500;">Unsubscribe</a>
+    <div style="background: #a20f25; padding: 25px; text-align: center; color: #f3f4f6;">
+      <p style="margin: 0 0 8px; font-size: 13px; line-height: 1.6;">© {{current_year}} AKY Digital. All rights reserved.</p>
+      <a href="{{unsubscribe_url}}" style="color: #fca5a5; text-decoration: underline; font-size: 12px;">Unsubscribe</a>
     </div>
   </div>
 </body>
@@ -448,40 +447,35 @@ Best regards,
         `
       },
       'news-sms': {
-        content: `📰 {{news_title}} - The AKY Digital Team
+        content: `📰 {{news_title}} - AKY Digital
 
-Dear {{name}},
+Hi {{name}},  
+{{news_content}}  
 
-We have exciting news to share! {{news_content}}
+📂 Category: {{news_category}}  
+🔗 Read more: {{news_url}}  
 
-Category: {{news_category}}
-
-Read more: {{news_url}}
-
-Best regards,
-The AKY Digital Team`
+- The AKY Digital Team`
       },
       'news-whatsapp': {
-        content: `📰 *{{news_title}}*
+        content: `📰 *{{news_title}}*  
 
-Dear *{{name}}*,
+Hello *{{name}}* 🎉,  
 
-We have exciting news to share with you! 🎉
+{{news_content}}  
 
-{{news_content}}
+📂 *Category:* {{news_category}}  
+🔗 Read more: {{news_url}}  
 
-📂 *Category:* {{news_category}}
-
-🔗 Read the full article: {{news_url}}
-
-Best regards,
+Best regards,  
 *The AKY Digital Team*`
       },
 
-      // Achievement templates
-      'achievements-email': {
-        subject: '🏆 {{achievement_title}} - The AKY Digital Team',
-        content: `
+
+     // Achievement templates
+'achievements-email': {
+  subject: '🏆 {{achievement_title}} - The AKY Digital Team',
+  content: `
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -499,91 +493,77 @@ Best regards,
     }
   </style>
 </head>
-<body style="margin: 0; padding: 0; background: linear-gradient(135deg, #fee2e2 0%, #fecaca 50%, #f87171 100%); font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; min-height: 100vh;">
-  <div class="container" style="max-width: 650px; margin: 0 auto; background: #ffffff; box-shadow: 0 20px 40px rgba(220, 38, 38, 0.15); border-radius: 16px; overflow: hidden;">
-    <!-- Header with Background Image -->
-    <div class="header" style="background: linear-gradient(135deg, rgba(220, 38, 38, 0.95) 0%, rgba(185, 28, 28, 0.95) 100%), url('{{website_url}}/email-header.png'); background-size: cover; background-position: center; background-repeat: no-repeat; padding: 50px 40px; text-align: center; position: relative;">
-      <div style="position: relative; z-index: 2;">
-        <h1 class="title" style="margin: 0; font-size: 36px; font-weight: 800; color: white; text-shadow: 2px 2px 4px rgba(0,0,0,0.3); letter-spacing: -0.5px;">🏆 Major Achievement</h1>
+<body style="margin: 0; padding: 0; background: linear-gradient(135deg, #fde2e4 0%, #fecdd3 50%, #fda4af 100%); font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; min-height: 100vh;">
+  <div class="container" style="max-width: 650px; margin: 0 auto; background: #ffffff; box-shadow: 0 20px 40px rgba(190, 24, 38, 0.15); border-radius: 16px; overflow: hidden;">
+    
+    <!-- Header -->
+    <div class="header" style="background: linear-gradient(135deg, rgba(222,23,54,0.95) 0%, rgba(162,15,37,0.95) 100%), url('{{website_url}}/email-header.png'); background-size: cover; background-position: center; background-repeat: no-repeat; padding: 50px 40px; text-align: center; position: relative;">
+      <a href="{{website_url}}" target="_blank" style="display:inline-block; margin-bottom:20px;"> </a>
+        <img src="https://res.cloudinary.com/dxsc0fqrt/image/upload/v1756715780/aky_logo_R_oaofzg.png" alt="AKY Digital Logo" style="width:120px; height:auto; display:block; margin:0 auto;">
+         <h1 class="title" style="margin: 0; font-size: 36px; font-weight: 800; color: white; text-shadow: 2px 2px 4px rgba(0,0,0,0.3); letter-spacing: -0.5px;">🏆 Major Achievement</h1>
         <p class="subtitle" style="margin: 15px 0 0 0; font-size: 20px; color: white; opacity: 0.95; font-weight: 500; text-shadow: 1px 1px 2px rgba(0,0,0,0.2);">The AKY Digital Team</p>
-      </div>
-      <!-- Decorative Elements -->
-      <div style="position: absolute; top: 20px; right: 20px; width: 60px; height: 60px; background: rgba(255,255,255,0.1); border-radius: 50%; opacity: 0.6;"></div>
-      <div style="position: absolute; bottom: 20px; left: 20px; width: 40px; height: 40px; background: rgba(255,255,255,0.1); border-radius: 50%; opacity: 0.4;"></div>
+     
+    
     </div>
     
     <!-- Content Section -->
-    <div class="content" style="padding: 60px 50px; background: linear-gradient(180deg, #ffffff 0%, #fef7f7 100%);">
-      <div style="margin-bottom: 50px;">
-        <h2 style="color: #dc2626; margin: 0 0 25px 0; font-size: 28px; font-weight: 700; text-align: center;">Dear {{name}},</h2>
-        
-        <p style="color: #374151; line-height: 1.8; margin: 0 0 30px 0; font-size: 18px; text-align: center; font-weight: 500;">
-          🎉 We're excited to share a significant achievement with you!
-        </p>
-        
-        <!-- Achievement Card -->
-        <div style="background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%); padding: 35px; border-radius: 20px; margin: 40px 0; box-shadow: 0 15px 35px rgba(220, 38, 38, 0.2); position: relative; overflow: hidden;">
-          <!-- Background Pattern -->
-          <div style="position: absolute; top: -50px; right: -50px; width: 150px; height: 150px; background: rgba(255,255,255,0.05); border-radius: 50%; opacity: 0.7;"></div>
-          <div style="position: absolute; bottom: -30px; left: -30px; width: 100px; height: 100px; background: rgba(255,255,255,0.05); border-radius: 50%; opacity: 0.5;"></div>
+    <div class="content" style="padding: 60px 50px; background: linear-gradient(180deg, #ffffff 0%, #fff5f5 100%);">
+      <h2 style="color: #de1736; margin: 0 0 25px 0; font-size: 28px; font-weight: 700; text-align: center;">Dear {{name}},</h2>
+      <p style="color: #374151; line-height: 1.8; margin: 0 0 30px 0; font-size: 18px; text-align: center; font-weight: 500;">
+        We're excited to share a significant achievement with you!
+      </p>
+      
+      <!-- Achievement Card -->
+      <div style="background: linear-gradient(135deg, #de1736 0%, #a20f25 100%); padding: 35px; border-radius: 20px; margin: 40px 0; box-shadow: 0 15px 35px rgba(190, 24, 38, 0.25); position: relative; overflow: hidden;">
+        <div style="position: relative; z-index: 2;">
+          <h3 class="achievement-title" style="color: white; margin: 0 0 20px 0; font-size: 26px; font-weight: 800; text-shadow: 1px 1px 2px rgba(0,0,0,0.2); line-height: 1.3;">{{achievement_title}}</h3>
+          <p style="color: rgba(255,255,255,0.95); margin: 0 0 25px 0; line-height: 1.7; font-size: 16px;">{{achievement_description}}</p>
           
-          <div style="position: relative; z-index: 2;">
-            <h3 class="achievement-title" style="color: white; margin: 0 0 20px 0; font-size: 26px; font-weight: 800; text-shadow: 1px 1px 2px rgba(0,0,0,0.2); line-height: 1.3;">{{achievement_title}}</h3>
-            <p style="color: rgba(255,255,255,0.95); margin: 0 0 25px 0; line-height: 1.7; font-size: 16px; font-weight: 400;">{{achievement_description}}</p>
+          <!-- Achievement Details -->
+           <a href="{{achievement_url}}" target="_blank">
+    <img src="{{achievement_image}}" alt="Achievement Image" style="max-width: 100%; border-radius: 10px; box-shadow: 0 6px 15px rgba(0,0,0,0.1);">
+  </a>
+
+
+          <div style="background: rgba(255,255,255,0.1); padding: 20px; border-radius: 15px; margin: 25px 0;">
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px; color: rgba(255,255,255,0.9); font-size: 14px;">
+              <div><strong style="color: white;">📂 Category:</strong> {{achievement_category}}</div>
+              <div><strong style="color: white;">📍 Location:</strong> {{achievement_location}}</div>
+              <div><strong style="color: white;">📊 Progress:</strong> {{achievement_progress}}%</div>
+            </div>
             
-            <!-- Achievement Details -->
-            <div style="background: rgba(255,255,255,0.1); padding: 20px; border-radius: 15px; margin: 25px 0; backdrop-filter: blur(10px);">
-              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px;">
-                <div style="color: rgba(255,255,255,0.9); font-size: 14px;">
-                  <strong style="color: white; display: block; margin-bottom: 5px;">📂 Category:</strong>
-                  {{achievement_category}}
-                </div>
-                <div style="color: rgba(255,255,255,0.9); font-size: 14px;">
-                  <strong style="color: white; display: block; margin-bottom: 5px;">📍 Location:</strong>
-                  {{achievement_location}}
-                </div>
-                <div style="color: rgba(255,255,255,0.9); font-size: 14px;">
-                  <strong style="color: white; display: block; margin-bottom: 5px;">📅 Date:</strong>
-                  {{achievement_date}}
-                </div>
-                <div style="color: rgba(255,255,255,0.9); font-size: 14px;">
-                  <strong style="color: white; display: block; margin-bottom: 5px;">📊 Progress:</strong>
-                  {{achievement_progress}}%
-                </div>
-              </div>
-              
-              <!-- Progress Bar -->
-              <div style="background: rgba(255,255,255,0.2); height: 12px; border-radius: 10px; overflow: hidden; margin-top: 15px;">
-                <div style="background: linear-gradient(90deg, #fbbf24 0%, #f59e0b 100%); height: 100%; width: {{achievement_progress}}%; border-radius: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); transition: width 0.3s ease;"></div>
-              </div>
+            <!-- Progress Bar -->
+            <div style="background: rgba(255,255,255,0.2); height: 12px; border-radius: 10px; overflow: hidden;">
+              <div style="background: linear-gradient(90deg, #fbbf24 0%, #f59e0b 100%); height: 100%; width: {{achievement_progress}}%; border-radius: 10px;"></div>
             </div>
           </div>
         </div>
-        
-        <p style="color: #374151; line-height: 1.7; margin: 30px 0 0 0; font-size: 16px; text-align: center;">
-          Best regards,<br>
-          <strong style="color: #dc2626; font-size: 18px;">The AKY Digital Team</strong>
-        </p>
       </div>
+      
+      <p style="color: #374151; line-height: 1.7; margin: 30px 0 0 0; font-size: 16px; text-align: center;">
+        Best regards,<br>
+        <strong style="color: #de1736; font-size: 18px;">The AKY Digital Team</strong>
+      </p>
       
       <!-- Call to Action -->
       <div style="text-align: center; margin: 50px 0;">
-        <a href="{{achievement_url}}" style="display: inline-block; padding: 18px 40px; background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%); color: white; text-decoration: none; border-radius: 50px; font-weight: 700; font-size: 18px; box-shadow: 0 10px 25px rgba(220, 38, 38, 0.3); transition: all 0.3s ease; text-transform: uppercase; letter-spacing: 0.5px;">
+        <a href="{{achievement_url}}" style="display: inline-block; padding: 18px 40px; background: linear-gradient(135deg, #de1736 0%, #a20f25 100%); color: white; text-decoration: none; border-radius: 50px; font-weight: 700; font-size: 18px; box-shadow: 0 10px 25px rgba(190, 24, 38, 0.3); letter-spacing: 0.5px;">
           🔍 View Details
         </a>
       </div>
     </div>
     
     <!-- Footer -->
-    <div style="background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%); padding: 40px; text-align: center; color: white;">
-      <p style="color: rgba(255,255,255,0.9); font-size: 14px; margin: 0 0 15px 0; font-weight: 500;">© {{current_year}} AKY Digital. All rights reserved.</p>
-      <a href="{{unsubscribe_url}}" style="color: rgba(255,255,255,0.8); text-decoration: underline; font-size: 13px; font-weight: 500;">Unsubscribe</a>
+    <div style="background: linear-gradient(135deg, #de1736 0%, #a20f25 100%); padding: 40px; text-align: center; color: white;">
+      <p style="color: rgba(255,255,255,0.9); font-size: 14px; margin: 0 0 15px 0;">© {{current_year}} AKY Digital. All rights reserved.</p>
+      <a href="{{unsubscribe_url}}" style="color: rgba(255,255,255,0.8); text-decoration: underline; font-size: 13px;">Unsubscribe</a>
     </div>
   </div>
 </body>
 </html>
-        `
-      },
+  `
+},
+
       'achievements-sms': {
         content: `🏆 {{achievement_title}} - The AKY Digital Team
 
@@ -676,12 +656,12 @@ Best regards,
       const collection = db.collection('communication_templates');
 
       const defaultTemplates = this.getDefaultTemplates();
-      
+
       for (const [key, template] of Object.entries(defaultTemplates)) {
         const [category, type] = key.split('-');
-        
+
         const existing = await collection.findOne({ category, type, name: `Default ${category} ${type}` });
-        
+
         if (!existing) {
           await collection.insertOne({
             name: `Default ${category} ${type}`,
@@ -694,7 +674,7 @@ Best regards,
             createdAt: new Date(),
             updatedAt: new Date()
           });
-          
+
           console.log(`Created default template: ${category}-${type}`);
         }
       }
