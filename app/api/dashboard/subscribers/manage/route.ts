@@ -160,34 +160,29 @@ async function sendMessageToSubscriber(request: NextRequest) {
         );
       }
 
-      // Send message through selected channels
-      const results = {
-        email: null as any,
-        sms: null as any,
-        whatsapp: null as any,
-        errors: [] as string[]
-      };
-
+      // Send message through selected channels using NotificationService
+      let results;
+      
       try {
         const notificationService = new NotificationService();
-
-        if (channels.includes('email')) {
-          // TODO: Implement custom message email sending
-          console.log('Sending email message to:', subscriber.email);
-        }
-
-        if (channels.includes('sms') && subscriber.phone) {
-          // TODO: Implement custom SMS sending
-          console.log('Sending SMS message to:', subscriber.phone);
-        }
-
-        if (channels.includes('whatsapp') && subscriber.phone) {
-          // TODO: Implement custom WhatsApp sending
-          console.log('Sending WhatsApp message to:', subscriber.phone);
-        }
+        
+        results = await notificationService.sendCustomMessage(
+          subscriber.email,
+          message,
+          channels,
+          subscriber.phone,
+          subscriber.name
+        );
+        
+        console.log('Message sending results:', results);
       } catch (error) {
         console.error('Failed to send message:', error);
-        results.errors.push('Failed to send message');
+        results = {
+          email: null,
+          sms: null,
+          whatsapp: null,
+          errors: [`Failed to send message: ${error instanceof Error ? error.message : 'Unknown error'}`]
+        };
       }
 
       // Log the action
@@ -199,10 +194,31 @@ async function sendMessageToSubscriber(request: NextRequest) {
         performedAt: new Date()
       });
 
+      // Determine success based on results
+      const hasSuccessfulSends = results.email || results.sms || results.whatsapp;
+      const hasErrors = results.errors && results.errors.length > 0;
+      
+      let responseMessage = 'Message sent successfully';
+      if (hasErrors && !hasSuccessfulSends) {
+        responseMessage = 'Failed to send message through any channel';
+      } else if (hasErrors && hasSuccessfulSends) {
+        responseMessage = 'Message sent with some errors';
+      }
+      
       return NextResponse.json({
-        success: true,
-        message: 'Message sent successfully',
-        data: { subscriberId, channels, results }
+        success: hasSuccessfulSends,
+        message: responseMessage,
+        data: { 
+          subscriberId, 
+          channels, 
+          results,
+          details: {
+            emailSent: !!results.email,
+            smsSent: !!results.sms,
+            whatsappSent: !!results.whatsapp,
+            errors: results.errors
+          }
+        }
       });
 
     } finally {

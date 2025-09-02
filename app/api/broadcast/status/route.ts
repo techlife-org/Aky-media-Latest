@@ -1,16 +1,18 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { connectToDatabase } from "@/lib/mongodb"
+import { connectToDatabaseWithFallback } from "@/lib/mongodb-fallback"
 
 export async function GET(request: NextRequest) {
   console.log("[Broadcast Status API] Received request")
   try {
     let db
     try {
-      const dbConnection = await connectToDatabase()
-      db = dbConnection.db
+      // Use aggressive fallback for faster response
+      const fallbackConnection = await connectToDatabaseWithFallback()
+      db = fallbackConnection.db
       console.log("[Broadcast Status API] Database connected successfully")
     } catch (error) {
-      console.error("Database connection error:", error)
+      console.error("Database connection failed:", error)
       return NextResponse.json(
         {
           isActive: false,

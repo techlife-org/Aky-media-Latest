@@ -3,21 +3,32 @@ import { MongoClient, type Db, type MongoClientOptions } from "mongodb"
 const MONGODB_URI = process.env.MONGODB_URI
 
 if (!MONGODB_URI) {
-  throw new Error("Please define the MONGODB_URI environment variable inside .env.local")
+  throw new Error("Please define the MONGODB_URI environment variable inside .env")
 }
 
-// Recommended options for production
+// Enhanced options for better connectivity and reliability
+// Note: Many options are already in the URI, so we keep this minimal
 const options: MongoClientOptions = {
-  serverSelectionTimeoutMS: 10000, // Keep trying to send operations for 10 seconds
-  socketTimeoutMS: 30000, // Close sockets after 30 seconds of inactivity
-  connectTimeoutMS: 10000, // Give up initial connection after 10 seconds
-  retryWrites: true, // Retry operations that fail due to transient network errors
-  retryReads: true, // Retry read operations
-  maxPoolSize: 10, // Maintain up to 10 socket connections
-  minPoolSize: 1, // Minimum 1 connection in the pool
-  ssl: true, // Use SSL/TLS for connection
-  appName: "techlife-web-app", // Application name for monitoring
-  // Removed directConnection as it's incompatible with mongodb+srv URIs
+  // Only essential options not in URI
+  retryWrites: true,
+  retryReads: true,
+  
+  // SSL/TLS settings
+  ssl: true,
+  tls: true,
+  tlsAllowInvalidCertificates: false,
+  tlsAllowInvalidHostnames: false,
+  
+  // Additional reliability settings
+  bufferMaxEntries: 0, // Disable mongoose buffering
+  
+  // Read/Write concerns
+  readPreference: "primaryPreferred", // Prefer primary but allow secondary reads
+  writeConcern: {
+    w: "majority",
+    j: true, // Wait for journal acknowledgment
+    wtimeout: 10000
+  }
 }
 
 declare global {
@@ -28,25 +39,45 @@ declare global {
 let client: MongoClient
 let clientPromise: Promise<MongoClient>
 
+// Connection retry logic with faster fallback
+async function createConnection(): Promise<MongoClient> {
+  const maxRetries = 2 // Reduced retries for faster fallback
+  let lastError: Error | null = null
+  
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      console.log(`MongoDB connection attempt ${attempt}/${maxRetries}...`)
+      
+      const client = new MongoClient(MONGODB_URI, options)
+      
+      // Connect and test - let MongoDB driver handle timeouts from URI
+      await client.connect()
+      await client.db().admin().ping()
+      
+      console.log("✅ MongoDB connected successfully")
+      return client
+    } catch (error: any) {
+      lastError = error
+      console.error(`❌ MongoDB connection attempt ${attempt} failed:`, error.message)
+      
+      if (attempt < maxRetries) {
+        const delay = 500 // Reduced delay for faster fallback
+        console.log(`⏳ Retrying in ${delay}ms...`)
+        await new Promise(resolve => setTimeout(resolve, delay))
+      }
+    }
+  }
+  
+  throw new Error(`Failed to connect to MongoDB after ${maxRetries} attempts. Last error: ${lastError?.message}`)
+}
+
 if (process.env.NODE_ENV === "production") {
-  // In production mode, it's best to not use a global variable.
-  // This avoids issues with hot-reloading and ensures a fresh connection
-  // for each deployment.
-  client = new MongoClient(MONGODB_URI, options)
-  clientPromise = client.connect().catch((err) => {
-    console.error("MongoDB connection error in production:", err)
-    // In production, you might want to crash the app or use a more robust error handling
-    throw err // Re-throw to indicate a critical error
-  }) as Promise<MongoClient>
+  // In production mode, create a fresh connection
+  clientPromise = createConnection()
 } else {
-  // In development mode, use a global variable so that the client is preserved
-  // across module reloads caused by HMR (Hot Module Replacement).
+  // In development mode, use a global variable to preserve connection across HMR
   if (!global._mongoClientPromise) {
-    client = new MongoClient(MONGODB_URI, options)
-    global._mongoClientPromise = client.connect().catch((err) => {
-      console.error("MongoDB connection error in development:", err)
-      throw err
-    })
+    global._mongoClientPromise = createConnection()
   }
   clientPromise = global._mongoClientPromise
 }
@@ -55,12 +86,54 @@ export async function connectToDatabase(): Promise<{ client: MongoClient; db: Db
   try {
     const client = await clientPromise
     const db = client.db()
-    // Test the connection by sending a ping command
-    await db.command({ ping: 1 })
+    
+    // Verify connection is still alive
+    try {
+      await db.admin().ping()
+    } catch (pingError) {
+      console.warn("MongoDB ping failed, attempting to reconnect...")
+      // If ping fails, try to reconnect
+      const newClient = await createConnection()
+      return { client: newClient, db: newClient.db() }
+    }
+    
     return { client, db }
   } catch (error: any) {
-    console.error("Failed to connect to MongoDB:", error)
-    throw new Error(`Database connection failed: ${error.message}`)
+    console.error("❌ Database connection failed:", error.message)
+    
+    // Provide more specific error messages
+    if (error.message.includes("timeout")) {
+      throw new Error("Database connection timeout. Please check your internet connection and try again.")
+    } else if (error.message.includes("authentication")) {
+      throw new Error("Database authentication failed. Please check your credentials.")
+    } else if (error.message.includes("network")) {
+      throw new Error("Network error connecting to database. Please check your internet connection.")
+    } else {
+      throw new Error(`Database connection failed: ${error.message}`)
+    }
+  }
+}
+
+// Health check function
+export async function checkDatabaseHealth(): Promise<boolean> {
+  try {
+    const { db } = await connectToDatabase()
+    await db.admin().ping()
+    return true
+  } catch (error) {
+    console.error("Database health check failed:", error)
+    return false
+  }
+}
+
+// Graceful shutdown
+export async function closeDatabaseConnection(): Promise<void> {
+  try {
+    const client = await clientPromise
+    await client.close()
+    console.log("MongoDB connection closed")
+  } catch (error) {
+    console.error("Error closing MongoDB connection:", error)
   }
 }
 

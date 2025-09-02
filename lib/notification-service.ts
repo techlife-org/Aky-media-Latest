@@ -59,6 +59,21 @@ export class EmailService {
     return await this.transporter.sendMail(mailOptions);
   }
 
+  async sendCustomEmail(email: string, message: string, name?: string) {
+    const mailOptions = {
+      from: `"${process.env.EMAIL_FROM_NAME || 'AKY Media'}" <${process.env.EMAIL_FROM || 'notify@abbakabiryusuf.info'}>`,
+      to: email,
+      subject: 'Message from AKY Media',
+      html: this.getCustomEmailTemplate(email, message, name),
+      text: this.getCustomEmailText(email, message, name)
+    };
+
+    console.log('Sending custom email to:', email);
+    const result = await this.transporter.sendMail(mailOptions);
+    console.log('Custom email sent successfully:', result.messageId);
+    return result;
+  }
+
   private getWelcomeEmailTemplate(email: string, name?: string) {
     return `
       <!DOCTYPE html>
@@ -336,6 +351,87 @@ Visit our website: ${process.env.NEXT_PUBLIC_BASE_URL}
 Unsubscribe: ${process.env.NEXT_PUBLIC_BASE_URL}/unsubscribe?email=${encodeURIComponent(email)}
     `;
   }
+
+  private getCustomEmailTemplate(email: string, message: string, name?: string) {
+    return `
+      <!DOCTYPE html>
+      <html lang="en">
+      <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Message from AKY Media</title>
+      </head>
+      <body style="margin: 0; padding: 0; background-color: #f8fafc; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">
+        <div style="max-width: 600px; margin: 0 auto; background: #ffffff; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
+          <!-- Header -->
+          <div style="background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%); padding: 40px 30px; text-align: center; color: white;">
+            <h1 style="margin: 0; font-size: 28px; font-weight: 700;">📧 Message from AKY Media</h1>
+            <p style="margin: 15px 0 0 0; font-size: 16px; opacity: 0.95;">Personal message for you</p>
+          </div>
+          
+          <!-- Main Content -->
+          <div style="padding: 40px 30px; background: white;">
+            <div style="margin-bottom: 30px;">
+              <h2 style="color: #1f2937; margin: 0 0 15px 0; font-size: 24px;">Hello ${name || 'there'}!</h2>
+              <p style="color: #6b7280; font-size: 16px; margin: 0;">We have a message for you:</p>
+            </div>
+            
+            <div style="background: #f8fafc; padding: 25px; border-radius: 10px; margin: 25px 0; border-left: 4px solid #dc2626;">
+              <div style="color: #374151; line-height: 1.7; font-size: 16px; white-space: pre-wrap;">${message}</div>
+            </div>
+            
+            <div style="text-align: center; margin: 30px 0;">
+              <a href="${process.env.NEXT_PUBLIC_BASE_URL}" style="
+                display: inline-block; 
+                padding: 15px 30px; 
+                background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+                color: white; 
+                text-decoration: none; 
+                border-radius: 8px;
+                font-weight: 600;
+                font-size: 16px;
+                box-shadow: 0 4px 14px rgba(220, 38, 38, 0.3);
+              ">
+                🌐 Visit Our Website
+              </a>
+            </div>
+          </div>
+          
+          <!-- Footer -->
+          <div style="background: #f8fafc; padding: 30px; text-align: center; border-top: 1px solid #e5e7eb;">
+            <p style="color: #6b7280; font-size: 14px; margin: 0 0 15px 0;">
+              © ${new Date().getFullYear()} AKY Media. All rights reserved.
+            </p>
+            <p style="margin: 0;">
+              <a href="${process.env.NEXT_PUBLIC_BASE_URL}/unsubscribe?email=${encodeURIComponent(email)}" 
+                 style="color: #6b7280; text-decoration: underline; font-size: 14px;">
+                Unsubscribe
+              </a>
+            </p>
+          </div>
+        </div>
+      </body>
+      </html>
+    `;
+  }
+
+  private getCustomEmailText(email: string, message: string, name?: string) {
+    return `
+Message from AKY Media
+
+Hello ${name || 'there'},
+
+We have a message for you:
+
+${message}
+
+Visit our website: ${process.env.NEXT_PUBLIC_BASE_URL}
+
+© ${new Date().getFullYear()} AKY Media. All rights reserved.
+
+Unsubscribe: ${process.env.NEXT_PUBLIC_BASE_URL}/unsubscribe?email=${encodeURIComponent(email)}
+    `;
+  }
 }
 
 // SMS and WhatsApp service
@@ -452,6 +548,44 @@ export class TwilioService {
       from: process.env.TWILIO_PHONE_NUMBER,
       to: phone
     });
+  }
+
+  async sendCustomSMS(phone: string, message: string, name?: string) {
+    if (!process.env.TWILIO_PHONE_NUMBER) {
+      throw new Error('Twilio phone number not configured');
+    }
+
+    const customMessage = `Hello ${name || 'there'},\n\n${message}\n\nFrom: AKY Media\nReply STOP to unsubscribe.`;
+
+    console.log('Sending custom SMS to:', phone, 'from:', process.env.TWILIO_PHONE_NUMBER);
+    
+    const result = await this.client.messages.create({
+      body: customMessage,
+      from: process.env.TWILIO_PHONE_NUMBER,
+      to: phone
+    });
+    
+    console.log('Custom SMS sent successfully:', result.sid, 'Status:', result.status);
+    return result;
+  }
+
+  async sendCustomWhatsApp(phone: string, message: string, name?: string) {
+    if (!process.env.TWILIO_WHATSAPP_NUMBER) {
+      throw new Error('Twilio WhatsApp number not configured');
+    }
+
+    const customMessage = `Hello *${name || 'there'}*,\n\n${message}\n\n_From: AKY Media_\n🌐 ${process.env.NEXT_PUBLIC_BASE_URL}`;
+
+    console.log('Sending custom WhatsApp message to:', phone);
+    
+    const result = await this.client.messages.create({
+      body: customMessage,
+      from: `whatsapp:${process.env.TWILIO_WHATSAPP_NUMBER}`,
+      to: `whatsapp:${phone}`
+    });
+    
+    console.log('Custom WhatsApp sent successfully:', result.sid, 'Status:', result.status);
+    return result;
   }
 }
 
@@ -585,6 +719,67 @@ export class NotificationService {
         results.errors.push('Failed to send resubscribe SMS');
       }
     }
+
+    return results;
+  }
+
+  async sendCustomMessage(email: string, message: string, channels: string[], phone?: string, name?: string) {
+    console.log('\n=== SENDING CUSTOM MESSAGE ===');
+    console.log('Email:', email);
+    console.log('Phone:', phone);
+    console.log('Name:', name);
+    console.log('Channels:', channels);
+    console.log('Message:', message);
+    
+    const results = {
+      email: null as any,
+      sms: null as any,
+      whatsapp: null as any,
+      errors: [] as string[]
+    };
+
+    // Send custom email if email channel is selected
+    if (channels.includes('email')) {
+      try {
+        console.log('\n--- Sending Custom Email ---');
+        results.email = await this.emailService.sendCustomEmail(email, message, name);
+        console.log('Custom email result:', !!results.email);
+      } catch (error) {
+        console.error('Failed to send custom email:', error);
+        results.errors.push(`Failed to send custom email: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      }
+    }
+
+    // Send custom SMS if SMS channel is selected and phone is provided
+    if (channels.includes('sms') && phone && this.twilioService) {
+      try {
+        console.log('\n--- Sending Custom SMS ---');
+        results.sms = await this.twilioService.sendCustomSMS(phone, message, name);
+        console.log('Custom SMS result:', !!results.sms);
+      } catch (error) {
+        console.error('Failed to send custom SMS:', error);
+        results.errors.push(`Failed to send custom SMS: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      }
+    }
+
+    // Send custom WhatsApp if WhatsApp channel is selected and phone is provided
+    if (channels.includes('whatsapp') && phone && this.twilioService) {
+      try {
+        console.log('\n--- Sending Custom WhatsApp ---');
+        results.whatsapp = await this.twilioService.sendCustomWhatsApp(phone, message, name);
+        console.log('Custom WhatsApp result:', !!results.whatsapp);
+      } catch (error) {
+        console.error('Failed to send custom WhatsApp:', error);
+        results.errors.push(`Failed to send custom WhatsApp: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      }
+    }
+
+    console.log('\n=== CUSTOM MESSAGE RESULTS ===');
+    console.log('Email sent:', !!results.email);
+    console.log('SMS sent:', !!results.sms);
+    console.log('WhatsApp sent:', !!results.whatsapp);
+    console.log('Errors:', results.errors);
+    console.log('===================================\n');
 
     return results;
   }

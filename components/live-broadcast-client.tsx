@@ -348,11 +348,12 @@ export default function LiveBroadcastClient() {
 
   if (broadcastStatus === "loading") {
     return (
-      <section className="py-20">
+      <section className="py-20 bg-gradient-to-br from-red-50 to-red-100 min-h-screen flex items-center justify-center">
         <div className="container mx-auto px-4">
           <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-red-600 mx-auto mb-4"></div>
-            <p className="text-gray-600">Checking broadcast status...</p>
+            <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-red-600 mx-auto mb-6"></div>
+            <h2 className="text-2xl font-bold text-red-800 mb-2">Checking Broadcast Status</h2>
+            <p className="text-red-600">Please wait while we connect you to the live broadcast...</p>
           </div>
         </div>
       </section>
@@ -361,22 +362,29 @@ export default function LiveBroadcastClient() {
 
   if (broadcastStatus === "inactive") {
     return (
-      <section className="py-20">
+      <section className="py-20 bg-gradient-to-br from-red-50 to-red-100 min-h-screen flex items-center justify-center">
         <div className="container mx-auto px-4">
           <div className="max-w-2xl mx-auto text-center">
-            <div className="bg-gray-100 rounded-full w-24 h-24 flex items-center justify-center mx-auto mb-6">
-              <VideoOff className="h-12 w-12 text-gray-400" />
+            <div className="bg-gradient-to-br from-red-100 to-red-200 rounded-full w-32 h-32 flex items-center justify-center mx-auto mb-8 shadow-lg">
+              <VideoOff className="h-16 w-16 text-red-600" />
             </div>
-            <h2 className="text-3xl font-bold text-gray-900 mb-4">No Active Broadcast</h2>
-            <p className="text-gray-600 mb-8">
-              There is currently no live broadcast. Please check back later or follow our social media for updates.
+            <h2 className="text-4xl font-bold text-red-800 mb-6">No Active Broadcast</h2>
+            <p className="text-red-600 text-lg mb-8">
+              There is currently no live broadcast from Governor Abba Kabir Yusuf. Please check back later or follow our social media for updates.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Button onClick={() => window.location.reload()} variant="outline">
+              <Button 
+                onClick={() => window.location.reload()} 
+                className="bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white shadow-lg"
+              >
                 <Settings className="h-4 w-4 mr-2" />
                 Refresh Status
               </Button>
-              <Button onClick={shareBroadcast} variant="outline">
+              <Button 
+                onClick={shareBroadcast} 
+                variant="outline"
+                className="border-red-600 text-red-600 hover:bg-red-50"
+              >
                 <Share2 className="h-4 w-4 mr-2" />
                 Share Page
               </Button>
@@ -388,26 +396,26 @@ export default function LiveBroadcastClient() {
   }
 
   return (
-    <section className="py-8">
+    <section className="py-8 bg-gradient-to-br from-red-50 to-red-100 min-h-screen">
       <div className="container mx-auto px-4">
         {!isConnected ? (
           // Join Form - Viewer Only
           <div className="max-w-md mx-auto">
-            <Card>
-              <CardHeader className="text-center">
-                <CardTitle className="flex items-center justify-center gap-2">
-                  <Video className="h-6 w-6 text-red-600" />
+            <Card className="shadow-xl border-0 bg-white/95 backdrop-blur-sm">
+              <CardHeader className="text-center bg-gradient-to-r from-red-600 to-red-700 text-white rounded-t-lg">
+                <CardTitle className="flex items-center justify-center gap-2 text-xl">
+                  <Video className="h-6 w-6" />
                   Join Live Broadcast
                 </CardTitle>
-                <p className="text-sm text-gray-600">
+                <p className="text-red-100">
                   {broadcastInfo?.title || "Live Broadcast"}
-                  {meetingId && <span className="block">Meeting ID: {meetingId}</span>}
+                  {meetingId && <span className="block text-red-200 text-xs">Meeting ID: {meetingId}</span>}
                 </p>
-                <Badge variant="secondary" className="mx-auto">
+                <Badge className="mx-auto bg-red-800 text-red-100">
                   Viewer Mode - Listen Only
                 </Badge>
               </CardHeader>
-              <CardContent className="space-y-4">
+              <CardContent className="space-y-6 p-6">
                 <div>
                   <label className="block text-sm font-medium mb-2">Your Name</label>
                   <Input
@@ -418,30 +426,40 @@ export default function LiveBroadcastClient() {
                   />
                 </div>
 
-                <div className="bg-blue-50 p-3 rounded-lg text-sm text-blue-800">
-                  <p className="font-medium">Viewer Mode:</p>
-                  <p>• You can watch and listen to the broadcast</p>
-                  <p>• You can participate in the chat</p>
-                  <p>• Your camera and microphone will not be used</p>
+                <div className="bg-red-50 p-4 rounded-lg text-sm text-red-800 border border-red-200">
+                  <p className="font-medium mb-2">🎥 Viewer Mode Features:</p>
+                  <ul className="space-y-1">
+                    <li>• Watch and listen to the live broadcast</li>
+                    <li>• Participate in live chat with other viewers</li>
+                    <li>• Send reactions and emojis</li>
+                    <li>• Your camera and microphone will not be used</li>
+                  </ul>
                 </div>
 
                 {broadcastInfo && (
-                  <div className="bg-green-50 p-3 rounded-lg text-sm text-green-800">
-                    <p className="font-medium">🔴 Live Now:</p>
-                    <p>• {broadcastInfo.title}</p>
-                    <p>• {broadcastInfo.viewerCount} viewers watching</p>
+                  <div className="bg-gradient-to-r from-green-50 to-emerald-50 p-4 rounded-lg text-sm text-green-800 border border-green-200">
+                    <p className="font-medium mb-2">🔴 Live Now:</p>
+                    <ul className="space-y-1">
+                      <li>• {broadcastInfo.title}</li>
+                      <li>• {broadcastInfo.viewerCount} viewers watching</li>
+                      <li>• Started {broadcastInfo.startedAt ? new Date(broadcastInfo.startedAt).toLocaleTimeString() : 'recently'}</li>
+                    </ul>
                   </div>
                 )}
 
-                <Button onClick={joinBroadcast} disabled={isConnecting} className="w-full">
+                <Button 
+                  onClick={joinBroadcast} 
+                  disabled={isConnecting || !userName.trim()} 
+                  className="w-full h-12 bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white shadow-lg text-lg font-semibold"
+                >
                   {isConnecting ? (
                     <>
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                      Joining...
+                      <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
+                      Joining Broadcast...
                     </>
                   ) : (
                     <>
-                      <Video className="h-4 w-4 mr-2" />
+                      <Video className="h-5 w-5 mr-2" />
                       Join as Viewer
                     </>
                   )}
@@ -451,35 +469,40 @@ export default function LiveBroadcastClient() {
           </div>
         ) : (
           // Live Broadcast Viewer Interface
-          <div className="grid lg:grid-cols-4 gap-6">
+          <div className="grid lg:grid-cols-4 gap-6 bg-white/80 backdrop-blur-sm rounded-xl p-6 shadow-xl">
             {/* Main Video Area */}
             <div className="lg:col-span-3 space-y-4">
               {/* Broadcast Status */}
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between bg-gradient-to-r from-red-600 to-red-700 text-white p-4 rounded-lg shadow-lg mb-4">
                 <div className="flex items-center gap-4">
-                  <Badge variant="destructive" className="animate-pulse">
+                  <Badge className="bg-red-800 text-red-100 animate-pulse border-red-700">
                     🔴 LIVE
                   </Badge>
-                  <div className="flex items-center gap-2 text-sm text-gray-600">
+                  <div className="flex items-center gap-2 text-sm text-red-100">
                     <Users className="h-4 w-4" />
                     <span>{broadcastInfo?.viewerCount || 0} viewers</span>
                   </div>
-                  <div className="text-sm text-gray-600">{broadcastInfo?.title || "Live Broadcast"}</div>
+                  <div className="text-sm text-red-100 font-medium">{broadcastInfo?.title || "Live Broadcast"}</div>
                 </div>
-                <Button onClick={shareBroadcast} variant="outline" size="sm">
+                <Button 
+                  onClick={shareBroadcast} 
+                  variant="outline" 
+                  size="sm"
+                  className="border-red-300 text-red-100 hover:bg-red-800 hover:border-red-200"
+                >
                   <Share2 className="h-4 w-4 mr-2" />
                   Share
                 </Button>
               </div>
 
               {/* Video Container */}
-              <div className="relative bg-black rounded-lg overflow-hidden aspect-video">
+              <div className="relative bg-black rounded-xl overflow-hidden aspect-video shadow-2xl">
                 <video
                   ref={broadcastVideoRef}
                   autoPlay
                   playsInline
                   className="w-full h-full object-cover"
-                  poster="/placeholder.svg?height=720&width=1280"
+                  poster="/pictures/assets/img/he/6.png"
                 />
 
                 {/* Viewer Controls Overlay */}
@@ -507,9 +530,15 @@ export default function LiveBroadcastClient() {
 
                 {/* Live Indicator */}
                 <div className="absolute top-4 left-4">
-                  <Badge variant="destructive" className="animate-pulse">
+                  <Badge className="bg-red-600 text-white animate-pulse shadow-lg">
                     🔴 LIVE
                   </Badge>
+                </div>
+                
+                {/* Viewer Count Overlay */}
+                <div className="absolute top-4 right-4 bg-black/70 text-white px-3 py-1 rounded-full flex items-center gap-2">
+                  <Users className="w-4 h-4" />
+                  <span className="font-medium">{broadcastInfo?.viewerCount || 0}</span>
                 </div>
               </div>
             </div>
@@ -517,8 +546,8 @@ export default function LiveBroadcastClient() {
             {/* Sidebar */}
             <div className="space-y-4">
               {/* Viewers */}
-              <Card>
-                <CardHeader>
+              <Card className="shadow-lg border-0 bg-white/95">
+                <CardHeader className="bg-gradient-to-r from-red-600 to-red-700 text-white">
                   <CardTitle className="flex items-center gap-2 text-sm">
                     <Users className="h-4 w-4" />
                     Viewers ({participants.length})
@@ -548,8 +577,8 @@ export default function LiveBroadcastClient() {
               </Card>
 
               {/* Live Chat */}
-              <Card className="flex-1">
-                <CardHeader>
+              <Card className="flex-1 shadow-lg border-0 bg-white/95">
+                <CardHeader className="bg-gradient-to-r from-red-600 to-red-700 text-white">
                   <CardTitle className="flex items-center gap-2 text-sm">
                     <MessageCircle className="h-4 w-4" />
                     Live Chat

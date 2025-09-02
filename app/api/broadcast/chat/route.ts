@@ -1,117 +1,180 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { connectToDatabase } from "@/lib/mongodb"
-import { corsHeaders } from "@/lib/cors"
+import { connectToDatabaseWithFallback } from "@/lib/mongodb-fallback"
+import { withCors } from "@/lib/cors"
 
-export async function POST(request: NextRequest) {
+async function handler(request: NextRequest) {
+  const method = request.method
+
+  let db
   try {
-    const { meetingId, userName, message, type = "message" } = await request.json()
-    let db
-    try {
-      const dbConnection = await connectToDatabase()
-      db = dbConnection.db
-    } catch (error) {
-      console.error("Database connection error:", error)
-      return NextResponse.json(
-        {
-          message: "Service temporarily unavailable. Please try again later.",
-          success: false,
-        },
-        { status: 503 },
-      )
-    }
-
-    // Find active broadcast
-    const broadcast = await db.collection("broadcasts").findOne({
-      $or: [{ id: meetingId }, { isActive: true }],
-      isActive: true,
-    })
-
-    if (!broadcast) {
-      return NextResponse.json({ message: "No active broadcast found" }, { status: 404 })
-    }
-
-    // Create chat message
-    const chatMessage = {
-      id: Math.random().toString(36).substring(2, 15),
-      broadcastId: broadcast.id,
-      userName,
-      message,
-      type, // 'message', 'reaction', 'join', 'leave'
-      timestamp: new Date(),
-      createdAt: new Date(),
-    }
-
-    // Save chat message
-    await db.collection("chat_messages").insertOne(chatMessage)
-
-    // Update broadcast activity
-    await db.collection("broadcasts").updateOne(
-      { _id: broadcast._id },
+    // Use aggressive fallback for faster response
+    const fallbackConnection = await connectToDatabaseWithFallback()
+    db = fallbackConnection.db
+  } catch (error) {
+    console.error("Database connection failed:", error)
+    return NextResponse.json(
       {
-        $set: { lastActivity: new Date() },
-        $inc: { messageCount: 1 },
+        message: "Service temporarily unavailable. Please try again later.",
+        success: false,
+        health: {
+          server: false,
+          database: false,
+          streaming: false
+        }
       },
+      { status: 503 }
     )
-
-    return NextResponse.json({
-      message: "Message sent successfully",
-      chatMessage,
-    })
-  } catch (error) {
-    console.error("Chat message error:", error)
-    return NextResponse.json({ message: "Internal server error" }, { status: 500 })
   }
-}
 
-export async function GET(request: NextRequest) {
-  try {
-    const { searchParams } = new URL(request.url)
-    const meetingId = searchParams.get("meetingId")
-    let db
+  if (method === "GET") {
+    // Get chat history
     try {
-      const dbConnection = await connectToDatabase()
-      db = dbConnection.db
+      const { searchParams } = new URL(request.url)
+      const meetingId = searchParams.get("meetingId")
+
+      const broadcast = await db.collection("broadcasts").findOne({
+        isActive: true,
+        ...(meetingId && meetingId !== "default" ? { id: meetingId } : {})
+      })
+
+      if (!broadcast) {
+        return NextResponse.json({
+          messages: [],
+          success: true
+        })
+      }
+
+      const messages = broadcast.chatMessages || []
+
+      return NextResponse.json({
+        messages: messages.map((msg: any) => ({
+          id: msg.id,
+          userName: msg.userName,
+          message: msg.message,
+          timestamp: msg.timestamp,
+          type: msg.type || "message"
+        })),
+        success: true,
+        health: {
+          server: true,
+          database: true,
+          streaming: true
+        }
+      })
+
     } catch (error) {
-      console.error("Database connection error:", error)
+      console.error("Get chat history error:", error)
       return NextResponse.json(
-        {
-          message: "Service temporarily unavailable. Please try again later.",
-          success: false,
+        { 
+          message: "Failed to load chat history",
+          messages: [],
+          success: false
         },
-        { status: 503 },
+        { status: 500 }
       )
     }
-
-    // Find active broadcast
-    const broadcast = await db.collection("broadcasts").findOne({
-      $or: [{ id: meetingId }, { isActive: true }],
-      isActive: true,
-    })
-
-    if (!broadcast) {
-      return NextResponse.json({ messages: [] })
-    }
-
-    // Get recent chat messages
-    const messages = await db
-      .collection("chat_messages")
-      .find({ broadcastId: broadcast.id })
-      .sort({ timestamp: -1 })
-      .limit(50)
-      .toArray()
-
-    return NextResponse.json({
-      messages: messages.reverse(), // Show oldest first
-    })
-  } catch (error) {
-    console.error("Get chat messages error:", error)
-    return NextResponse.json({ message: "Internal server error" }, { status: 500 })
   }
+
+  if (method === "POST") {
+    // Send chat message or reaction
+    try {
+      const { meetingId, userName, message, type = "message" } = await request.json()
+
+      if (!userName || !message) {
+        return NextResponse.json(
+          { message: "Username and message are required", success: false },
+          { status: 400 }
+        )
+      }
+
+      const broadcast = await db.collection("broadcasts").findOne({
+        isActive: true,
+        ...(meetingId && meetingId !== "default" ? { id: meetingId } : {})
+      })
+
+      if (!broadcast) {
+        return NextResponse.json(
+          { 
+            message: "No active broadcast found",
+            success: false
+          },
+          { status: 404 }
+        )
+      }
+
+      // Create chat message
+      const chatMessage = {
+        id: Math.random().toString(36).substring(2, 15),
+        userName: userName.trim(),
+        message: message.trim(),
+        timestamp: new Date(),
+        type: type
+      }
+
+      // Add message to broadcast
+      const updateResult = await db.collection("broadcasts").updateOne(
+        { _id: broadcast._id },
+        {
+          $push: {
+            chatMessages: chatMessage
+          },
+          $set: {
+            lastActivity: new Date(),
+            updatedAt: new Date()
+          },
+          $inc: {
+            "stats.chatMessages": 1
+          }
+        }
+      )
+
+      if (updateResult.modifiedCount === 0) {
+        return NextResponse.json(
+          { 
+            message: "Failed to send message",
+            success: false
+          },
+          { status: 500 }
+        )
+      }
+
+      return NextResponse.json({
+        message: "Message sent successfully",
+        success: true,
+        chatMessage: {
+          id: chatMessage.id,
+          userName: chatMessage.userName,
+          message: chatMessage.message,
+          timestamp: chatMessage.timestamp,
+          type: chatMessage.type
+        },
+        health: {
+          server: true,
+          database: true,
+          streaming: true
+        }
+      })
+
+    } catch (error) {
+      console.error("Send chat message error:", error)
+      return NextResponse.json(
+        { 
+          message: "Internal server error",
+          success: false,
+          error: error instanceof Error ? error.message : "Unknown error"
+        },
+        { status: 500 }
+      )
+    }
+  }
+
+  return NextResponse.json(
+    { message: "Method not allowed", success: false },
+    { status: 405 }
+  )
 }
 
-export async function OPTIONS(request: NextRequest) {
-  return new Response(null, {
-    status: 200,
-    headers: corsHeaders(),
-  })
-}
+export const GET = withCors(handler)
+export const POST = withCors(handler)
+export const OPTIONS = withCors(async () => new NextResponse(null, { status: 200 }))

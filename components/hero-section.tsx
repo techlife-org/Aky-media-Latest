@@ -11,6 +11,7 @@ export default function HeroSection() {
   const [broadcastInfo, setBroadcastInfo] = useState<{
     title?: string
     viewerCount?: number
+    participants?: number
     duration?: string
   }>({})
 
@@ -39,7 +40,8 @@ export default function HeroSection() {
           setBroadcastInfo({
             title: data.broadcast?.title || "Live Broadcast",
             viewerCount: data.viewerCount || 0,
-            duration: data.duration || "00:00",
+            participants: data.participants || data.broadcast?.participants?.length || 0,
+            duration: data.uptime ? `${Math.floor(data.uptime / 60)}:${String(data.uptime % 60).padStart(2, '0')}` : "00:00",
           })
         }
       } catch (error) {
@@ -161,7 +163,7 @@ export default function HeroSection() {
                     </Link>
                   </Button>
                   <div className="text-sm text-green-600 font-medium">
-                    🔴 {broadcastInfo.title} • {broadcastInfo.viewerCount} viewers • {broadcastInfo.duration}
+                    🔴 {broadcastInfo.title} • {broadcastInfo.participants || broadcastInfo.viewerCount || 0} participants • {broadcastInfo.duration}
                   </div>
                 </div>
               ) : (
