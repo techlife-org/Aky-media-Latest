@@ -98,6 +98,7 @@
     "sonner": "latest",
     "tailwind-merge": "^2.5.5",
     "tailwindcss-animate": "^1.0.7",
+    "twilio": "^5.8.2",
     "vaul": "latest",
     "zod": "^3.24.1"
   },
