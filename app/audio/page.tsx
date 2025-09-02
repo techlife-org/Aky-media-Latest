@@ -55,9 +55,9 @@ interface Track {
 const tracks: Track[] = [
   {
     track: 1,
-    name: "Ko Hasidin",
-    duration: "06:21",
-    file: "koHasidin",
+    name: "Ko Hasidin Iza Hasada",
+    duration: "04:08",
+    file: "sakoNa",
     artist: "AKY Media",
     genre: "Tijjani Gandu",
     color: "from-red-500 to-red-800",
@@ -372,7 +372,7 @@ export default function AudioPage() {
   const audioRef = useRef<Howl | null>(null)
   const playerRef = useRef<HTMLDivElement>(null)
   const timeUpdateInterval = useRef<NodeJS.Timeout>()
-  const mediaPath = "https://archive.org/download/aky_20250624/"
+  const mediaPath = "https://akysongs.netlify.app/assets/"
 
   // Load favorites from localStorage
   useEffect(() => {
