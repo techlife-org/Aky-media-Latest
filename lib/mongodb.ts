@@ -9,18 +9,22 @@ if (!MONGODB_URI) {
 // Enhanced options for better connectivity and reliability
 // Note: Many options are already in the URI, so we keep this minimal
 const options: MongoClientOptions = {
-  // Only essential options not in URI
+  // Connection timeout settings
+  connectTimeoutMS: 10000, // 10 seconds
+  socketTimeoutMS: 45000,  // 45 seconds
+  serverSelectionTimeoutMS: 10000, // 10 seconds
+  
+  // Retry settings
   retryWrites: true,
   retryReads: true,
+  maxPoolSize: 10,
+  minPoolSize: 2,
   
   // SSL/TLS settings
   ssl: true,
   tls: true,
   tlsAllowInvalidCertificates: false,
   tlsAllowInvalidHostnames: false,
-  
-  // Additional reliability settings
-  bufferMaxEntries: 0, // Disable mongoose buffering
   
   // Read/Write concerns
   readPreference: "primaryPreferred", // Prefer primary but allow secondary reads
