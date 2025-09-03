@@ -56,8 +56,8 @@ const tracks: Track[] = [
   {
     track: 1,
     name: "Ko Hasidin Iza Hasada",
-    duration: "04:08",
-    file: "sakoNa",
+    duration: "06:21",
+    file: "koHasidin",
     artist: "AKY Media",
     genre: "Tijjani Gandu",
     color: "from-red-500 to-red-800",
@@ -117,7 +117,7 @@ const tracks: Track[] = [
     color: "from-red-500 to-red-800",
   },
   {
-    track: 20,
+    track: 8,
     name: "Oyoyo Abba Kanawa",
     duration: "03:35",
     file: "oyoyoAbbanKanawa",
@@ -126,7 +126,7 @@ const tracks: Track[] = [
     color: "from-red-500 to-red-800",
   },
   {
-    track: 8,
+    track: 9,
     name: "Sakona",
     duration: "4:08",
     file: "sakoNa",
@@ -135,7 +135,7 @@ const tracks: Track[] = [
     color: "from-red-500 to-red-800",
   },
   {
-    track: 9,
+    track: 10,
     name: "Sunaji suna gani",
     duration: "5:59",
     file: "sunaJiSunaGani",
@@ -144,7 +144,7 @@ const tracks: Track[] = [
     color: "from-red-500 to-red-800",
   },
   {
-    track: 10,
+    track: 11,
     name: "Ga Comrade ga Abba",
     duration: "6:26",
     file: "gaAbbaGaComrd",
@@ -153,34 +153,34 @@ const tracks: Track[] = [
     color: "from-red-500 to-rose-600",
   },
   {
-    track: 11,
+    track: 12,
     name: "Ramadanan Gwamna",
     duration: "9:21",
-    file: "ramadanan",
-    artist: "AKY Media",
-    genre: "Tijjani Gandu",
-    color: "from-red-500 to-red-800",
-  },
-  {
-    track: 12,
-    name: "Zama daram dakam abba",
-    duration: "6:19",
-    file: "abbaZamaDaram",
+    file: "ramadan",
     artist: "AKY Media",
     genre: "Tijjani Gandu",
     color: "from-red-500 to-red-800",
   },
   {
     track: 13,
+    name: "Abba Zama daram",
+    duration: "6:19",
+    file: "abbaZamaDaram",
+    artist: "AKY Media",
+    genre: "",
+    color: "from-red-500 to-red-800",
+  },
+  {
+    track: 14,
     name: "Abba ka cika gwarzo",
     duration: "23:27",
-    file: "Abba Kacika Gwarzo",
+    file: "abbaKacikaGwarzo",
     artist: "AKY Media",
     genre: "Kosan Waka",
     color: "from-red-500 to-red-800",
   },
   {
-    track: 14,
+    track: 15,
     name: "Gwamna Jikan Dabo",
     duration: "5:33",
     file: "gwamnaJikanDabo",
@@ -189,7 +189,7 @@ const tracks: Track[] = [
     color: "from-red-500 to-red-800",
   },
   {
-    track: 15,
+    track: 16,
     name: "Kanawa ga Abba nan",
     duration: "6:29",
     file: "kanawaGaAbbaNan",
@@ -198,7 +198,7 @@ const tracks: Track[] = [
     color: "from-red-500 to-red-800",
   },
   {
-    track: 16,
+    track: 17,
     name: "Gyara Kintse Abba",
     duration: "8:52",
     file: "gyaraKintsiAbba",
@@ -207,7 +207,7 @@ const tracks: Track[] = [
     color: "from-red-500 to-red-800",
   },
   {
-    track: 17,
+    track: 18,
     name: "Allah KaRikawa Abba Gwamnan na Kanawa",
     duration: "07:03",
     file: "allahKaRikawaAbbaGwamnanKanawa",
@@ -216,7 +216,7 @@ const tracks: Track[] = [
     color: "from-red-500 to-red-800",
   },
   {
-    track: 18,
+    track: 19,
     name: "Abban Kanawa",
     duration: "19:54",
     file: "abbanKanawa",
@@ -225,7 +225,7 @@ const tracks: Track[] = [
     color: "from-red-500 to-red-800",
   },
   {
-    track: 19,
+    track: 20,
     name: "Haske Maganin Duhu",
     duration: "07:32",
     file: "haskeMaganinDuhu",
@@ -235,7 +235,7 @@ const tracks: Track[] = [
   },
 
   {
-    track: 22,
+    track: 21,
     name: "Shigar Ranar Rantsuwa",
     duration: "01:42",
     file: "shigarRanarRantsuwa",
@@ -244,7 +244,7 @@ const tracks: Track[] = [
     color: "from-red-500 to-red-800",
   },
   {
-    track: 20,
+    track: 22,
     name: "Abba Gida Gida Abba",
     duration: "10:47",
     file: "abbaGidaGidaAbba",
@@ -253,7 +253,7 @@ const tracks: Track[] = [
     color: "from-red-500 to-red-800",
   },
   {
-    track: 20,
+    track: 23,
     name: "Abban Dai Abban Dai",
     duration: "13:34",
     file: "abbanDaiAbbanDai",
@@ -262,7 +262,7 @@ const tracks: Track[] = [
     color: "from-red-500 to-red-800",
   },
   {
-    track: 20,
+    track: 24,
     name: "Abba Na Kowa",
     duration: "10:19",
     file: "abbaNaKowa",
@@ -271,7 +271,7 @@ const tracks: Track[] = [
     color: "from-red-500 to-red-800",
   },
   {
-    track: 20,
+    track: 25,
     name: "Ko Gezau Abba",
     duration: "07:01",
     file: "koGezauAbba",
@@ -280,7 +280,7 @@ const tracks: Track[] = [
     color: "from-red-500 to-red-800",
   },
   {
-    track: 20,
+    track: 26,
     name: "Sabon Gwamna Barka Da Sallah",
     duration: "06:15",
     file: "sabonGwamnaBarkaDaSallah",
@@ -289,7 +289,7 @@ const tracks: Track[] = [
     color: "from-red-500 to-red-800",
   },
   {
-    track: 20,
+    track: 27,
     name: "Kwana Dari",
     duration: "05:45",
     file: "kwanaDari",
@@ -298,7 +298,7 @@ const tracks: Track[] = [
     color: "from-red-500 to-red-800",
   },
   {
-    track: 20,
+    track: 28,
     name: "Yanzu Abba Ne Gwamna",
     duration: "05:48",
     file: "yanzuAbbaNeGwamna",
@@ -307,7 +307,7 @@ const tracks: Track[] = [
     color: "from-red-500 to-red-800",
   },
   {
-    track: 20,
+    track: 29,
     name: "Zama Daram",
     duration: "06:18",
     file: "zamaDaram",
@@ -316,7 +316,7 @@ const tracks: Track[] = [
     color: "from-red-500 to-red-800",
   },
   {
-    track: 20,
+    track: 30,
     name: "Tijjani Gandu Abba K Yusuf",
     duration: "08:44",
     file: "tijjaniGanduAbbaKYusuf",
