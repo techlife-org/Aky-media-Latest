@@ -81,7 +81,25 @@ class MemoryDatabase {
               data[index][key] = (data[index][key] || 0) + update.$inc[key]
             })
           }
-          console.log(`📝 Fallback DB: Updated document in ${name}`)
+          if (update.$push) {
+            Object.keys(update.$push).forEach(key => {
+              if (!data[index][key]) {
+                data[index][key] = []
+              }
+              data[index][key].push(update.$push[key])
+            })
+          }
+          if (update.$pull) {
+            Object.keys(update.$pull).forEach(key => {
+              if (data[index][key] && Array.isArray(data[index][key])) {
+                const pullQuery = update.$pull[key]
+                data[index][key] = data[index][key].filter((item: any) => {
+                  return !Object.keys(pullQuery).every(pullKey => item[pullKey] === pullQuery[pullKey])
+                })
+              }
+            })
+          }
+          console.log(`📝 Fallback DB: Updated document in ${name}`, { operation: Object.keys(update).join(', ') })
           return { matchedCount: 1, modifiedCount: 1 }
         }
         return { matchedCount: 0, modifiedCount: 0 }
@@ -101,11 +119,45 @@ class MemoryDatabase {
         return { deletedCount: 0 }
       },
       
+      async updateMany(query: any, update: any) {
+        let modifiedCount = 0
+        data.forEach((item, index) => {
+          const matches = Object.keys(query).every(key => item[key] === query[key])
+          if (matches) {
+            if (update.$set) {
+              Object.assign(data[index], update.$set)
+            }
+            if (update.$inc) {
+              Object.keys(update.$inc).forEach(key => {
+                data[index][key] = (data[index][key] || 0) + update.$inc[key]
+              })
+            }
+            if (update.$push) {
+              Object.keys(update.$push).forEach(key => {
+                if (!data[index][key]) {
+                  data[index][key] = []
+                }
+                data[index][key].push(update.$push[key])
+              })
+            }
+            modifiedCount++
+          }
+        })
+        console.log(`📝 Fallback DB: Updated ${modifiedCount} documents in ${name}`)
+        return { matchedCount: modifiedCount, modifiedCount }
+      },
+      
       async countDocuments(query: any = {}) {
         const items = data.filter(item => {
           return Object.keys(query).every(key => item[key] === query[key])
         })
         return items.length
+      },
+      
+      async listCollections() {
+        return {
+          toArray: async () => Array.from(globalCollections.keys()).map(name => ({ name }))
+        }
       }
     }
   }
@@ -159,41 +211,61 @@ export async function connectToDatabaseFallback(): Promise<{ client: any; db: an
 
 // Enhanced MongoDB connection with aggressive fallback
 export async function connectToDatabaseWithFallback(): Promise<{ client: any; db: any }> {
-  const MONGODB_URI = process.env.MONGODB_URI
+  let MONGODB_URI = process.env.MONGODB_URI
   
   if (!MONGODB_URI) {
     console.warn("⚠️  No MONGODB_URI found, using fallback database")
     return connectToDatabaseFallback()
   }
   
-  // Very quick connection test for immediate fallback
+  // Clean the URI to remove overly restrictive timeout parameters that cause connection failures
+  // The connection takes about 12 seconds, so we need more generous timeouts
+  const cleanUri = MONGODB_URI.replace(/&serverSelectionTimeoutMS=\d+/, '')
+                              .replace(/&connectTimeoutMS=\d+/, '')
+                              .replace(/&socketTimeoutMS=\d+/, '')
+                              .replace(/\?serverSelectionTimeoutMS=\d+&/, '?')
+                              .replace(/\?connectTimeoutMS=\d+&/, '?')
+                              .replace(/\?socketTimeoutMS=\d+&/, '?')
+                              .replace(/&serverSelectionTimeoutMS=\d+$/, '')
+                              .replace(/&connectTimeoutMS=\d+$/, '')
+                              .replace(/&socketTimeoutMS=\d+$/, '');
+  
+  // Reasonable connection timeouts for proper MongoDB connection
   const options: MongoClientOptions = {
-    serverSelectionTimeoutMS: 2000, // Very quick timeout
-    connectTimeoutMS: 2000,
-    socketTimeoutMS: 2000,
+    serverSelectionTimeoutMS: 15000, // 15 seconds for server selection (connection takes ~12 seconds)
+    connectTimeoutMS: 15000, // 15 seconds for connection
+    socketTimeoutMS: 30000, // 30 seconds for socket operations
     retryWrites: true,
+    retryReads: true,
     ssl: true,
-    appName: "aky-media-center-fallback-test"
+    tls: true,
+    appName: "techlife" // Match the appName in your connection string
   }
   
   try {
-    console.log("🔄 Quick MongoDB Atlas connection test...")
-    const client = new MongoClient(MONGODB_URI, options)
+    console.log("🔄 Attempting MongoDB Atlas connection with clean URI...")
+    console.log("Original URI:", MONGODB_URI.replace(/\/\/([^:]+):([^@]+)@/, '//***:***@'))
+    console.log("Clean URI:", cleanUri.replace(/\/\/([^:]+):([^@]+)@/, '//***:***@'))
     
-    // Race condition: either connect quickly or fallback
+    const client = new MongoClient(cleanUri, options)
+    
+    // Give reasonable time for connection (increased to 20 seconds)
     const connectionPromise = Promise.race([
       client.connect().then(() => client.db().admin().ping()).then(() => client),
       new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Quick connection timeout')), 1500)
+        setTimeout(() => reject(new Error('Connection timeout after 20 seconds')), 20000)
       )
     ])
     
     const connectedClient = await connectionPromise as MongoClient
-    console.log("✅ MongoDB Atlas quick connection successful")
+    console.log("✅ MongoDB Atlas connection successful")
     return { client: connectedClient, db: connectedClient.db() }
   } catch (error: any) {
-    console.warn("⚠️  MongoDB Atlas quick connection failed:", error.message)
-    console.log("🔄 Using fallback database immediately")
+    console.warn("⚠️  MongoDB Atlas connection failed:", error.message)
+    if (error.message.includes('timeout')) {
+      console.log("💡 Connection timeout may be due to network latency. The connection takes about 12 seconds.")
+    }
+    console.log("🔄 Using fallback database")
     
     return connectToDatabaseFallback()
   }

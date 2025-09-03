@@ -25,6 +25,7 @@ import {
   ThumbsUp,
 } from "lucide-react"
 import { toast } from "@/hooks/use-toast"
+import VideoStream from "@/components/video-stream"
 
 interface Participant {
   id: string
@@ -64,8 +65,8 @@ export default function LiveBroadcastClient() {
   const [isFullscreen, setIsFullscreen] = useState(false)
   const [broadcastStatus, setBroadcastStatus] = useState<"active" | "inactive" | "loading">("loading")
   const [broadcastInfo, setBroadcastInfo] = useState<BroadcastInfo | null>(null)
+  const [streamUrl, setStreamUrl] = useState<string | null>(null)
 
-  const broadcastVideoRef = useRef<HTMLVideoElement>(null)
   const chatScrollRef = useRef<HTMLDivElement>(null)
 
   // Check broadcast status
@@ -84,9 +85,12 @@ export default function LiveBroadcastClient() {
             viewerCount: data.viewerCount || 0,
             participants: data.broadcast.participants || [],
           })
+          // Set stream URL (in production, this would be the actual stream URL)
+          setStreamUrl(`/api/broadcast/stream/${data.broadcast.id}`)
         } else {
           setBroadcastStatus("inactive")
           setBroadcastInfo(null)
+          setStreamUrl(null)
         }
       } catch (error) {
         console.error("Error checking broadcast status:", error)
@@ -192,25 +196,31 @@ export default function LiveBroadcastClient() {
     })
   }
 
-  // Toggle audio (viewer's audio output)
-  const toggleAudio = () => {
-    if (broadcastVideoRef.current) {
-      broadcastVideoRef.current.muted = isAudioEnabled
-      setIsAudioEnabled(!isAudioEnabled)
+  // Handle video stream errors
+  const handleStreamError = (error: string) => {
+    console.error("Video stream error:", error)
+    
+    // Provide more specific error messages
+    let errorMessage = "There was an issue with the video stream."
+    let actionMessage = "Trying to reconnect..."
+    
+    if (error.includes('Failed to load')) {
+      errorMessage = "Unable to load the video stream."
+      actionMessage = "Please check your internet connection and try again."
+    } else if (error.includes('network')) {
+      errorMessage = "Network connection issue detected."
+      actionMessage = "Please check your internet connection."
+    } else if (error.includes('timeout')) {
+      errorMessage = "Connection timeout occurred."
+      actionMessage = "The stream may be temporarily unavailable."
     }
-  }
-
-  // Toggle fullscreen
-  const toggleFullscreen = () => {
-    if (!isFullscreen && broadcastVideoRef.current) {
-      if (broadcastVideoRef.current.requestFullscreen) {
-        broadcastVideoRef.current.requestFullscreen()
-        setIsFullscreen(true)
-      }
-    } else if (document.exitFullscreen) {
-      document.exitFullscreen()
-      setIsFullscreen(false)
-    }
+    
+    toast({
+      title: "Stream Error",
+      description: `${errorMessage} ${actionMessage}`,
+      variant: "destructive",
+      duration: 5000,
+    })
   }
 
   // Send chat message
@@ -434,6 +444,12 @@ export default function LiveBroadcastClient() {
                     <li>• Send reactions and emojis</li>
                     <li>• Your camera and microphone will not be used</li>
                   </ul>
+                  <div className="mt-3 p-2 bg-blue-50 border border-blue-200 rounded">
+                    <p className="text-blue-800 text-xs">
+                      📶 <strong>Connection Tips:</strong> For best experience, use a stable internet connection. 
+                      If you experience issues, try refreshing the page.
+                    </p>
+                  </div>
                 </div>
 
                 {broadcastInfo && (
@@ -496,25 +512,32 @@ export default function LiveBroadcastClient() {
               </div>
 
               {/* Video Container */}
-              <div className="relative bg-black rounded-xl overflow-hidden aspect-video shadow-2xl">
-                <video
-                  ref={broadcastVideoRef}
-                  autoPlay
-                  playsInline
-                  className="w-full h-full object-cover"
-                  poster="/pictures/assets/img/he/6.png"
+              <div className="relative">
+                <VideoStream 
+                  streamUrl={streamUrl || undefined}
+                  isLive={broadcastStatus === "active"}
+                  title={broadcastInfo?.title}
+                  onError={handleStreamError}
                 />
 
-                {/* Viewer Controls Overlay */}
+                {/* Additional Controls Overlay */}
                 <div className="absolute bottom-4 left-4 flex gap-2">
-                  <Button size="sm" variant={isAudioEnabled ? "default" : "secondary"} onClick={toggleAudio}>
-                    {isAudioEnabled ? <Volume2 className="h-4 w-4" /> : <VolumeX className="h-4 w-4" />}
-                  </Button>
-                  <Button size="sm" variant="outline" onClick={toggleFullscreen}>
-                    <Maximize className="h-4 w-4" />
-                  </Button>
-                  <Button size="sm" variant="destructive" onClick={leaveBroadcast}>
+                  <Button 
+                    size="sm" 
+                    variant="destructive" 
+                    onClick={leaveBroadcast}
+                    title="Leave broadcast"
+                  >
                     <PhoneOff className="h-4 w-4" />
+                  </Button>
+                  <Button 
+                    size="sm" 
+                    variant="outline" 
+                    onClick={() => window.location.reload()}
+                    title="Refresh stream"
+                    className="bg-black/50 border-white/30 text-white hover:bg-white hover:text-black"
+                  >
+                    <Settings className="h-4 w-4" />
                   </Button>
                 </div>
 
@@ -526,13 +549,6 @@ export default function LiveBroadcastClient() {
                   <Button size="sm" variant="outline" onClick={() => sendReaction("❤️")}>
                     <Heart className="h-4 w-4" />
                   </Button>
-                </div>
-
-                {/* Live Indicator */}
-                <div className="absolute top-4 left-4">
-                  <Badge className="bg-red-600 text-white animate-pulse shadow-lg">
-                    🔴 LIVE
-                  </Badge>
                 </div>
                 
                 {/* Viewer Count Overlay */}

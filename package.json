@@ -23,7 +23,8 @@
     "test-broadcast-routes": "node scripts/test-broadcast-routes.js",
     "test-live-broadcast": "node scripts/test-live-broadcast.js",
     "test-quick-connection": "node scripts/test-quick-connection.js",
-    "test-full-workflow": "node scripts/test-full-workflow.js"
+    "test-full-workflow": "node scripts/test-full-workflow.js",
+    "test-broadcast-persistence": "node scripts/test-broadcast-persistence.js"
   },
   "dependencies": {
     "@aws-sdk/credential-providers": "latest",
@@ -98,6 +99,7 @@
     "sonner": "latest",
     "tailwind-merge": "^2.5.5",
     "tailwindcss-animate": "^1.0.7",
+    "twilio": "^5.8.2",
     "vaul": "latest",
     "zod": "^3.24.1"
   },
