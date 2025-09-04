@@ -28,7 +28,14 @@ import {
   Activity,
   Users,
   Clock,
-  Star
+  Star,
+  Upload,
+  Link as LinkIcon,
+  Youtube,
+  CloudUpload,
+  FileVideo,
+  CheckCircle,
+  AlertCircle
 } from "lucide-react"
 import { toast } from "@/hooks/use-toast"
 import Image from "next/image"
@@ -36,6 +43,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { getYouTubeId, getYouTubeEmbedUrl } from "@/lib/video-utils"
 import DashboardLayout from "@/components/dashboard-layout" 
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Label } from "@/components/ui/label"
 
 interface Video {
   id: string
@@ -68,6 +77,8 @@ export default function VideosPage() {
   const [showAddForm, setShowAddForm] = useState(false)
   const [searchTerm, setSearchTerm] = useState("")
   const [categoryFilter, setCategoryFilter] = useState<string>("all")
+  const [uploadMethod, setUploadMethod] = useState<"youtube" | "cloudinary">("youtube")
+  const [uploading, setUploading] = useState(false)
   const [stats, setStats] = useState<VideoStats>({
     totalVideos: 0,
     thisMonth: 0,
@@ -170,21 +181,111 @@ export default function VideosPage() {
     }
   }
 
+  // Enhanced Cloudinary upload function
+  const uploadToCloudinary = async (file: File): Promise<string> => {
+    const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME
+    const uploadPreset = process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET
+
+    if (!cloudName || !uploadPreset) {
+      throw new Error("Cloudinary configuration missing")
+    }
+
+    const formData = new FormData()
+    formData.append("file", file)
+    formData.append("upload_preset", uploadPreset)
+    formData.append("resource_type", "video")
+
+    const response = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/video/upload`, {
+      method: "POST",
+      body: formData,
+    })
+
+    if (!response.ok) {
+      throw new Error("Failed to upload to Cloudinary")
+    }
+
+    const data = await response.json()
+    return data.secure_url
+  }
+
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (!file) return
+
+    // Validate file type
+    if (!file.type.startsWith("video/")) {
+      toast({
+        title: "Invalid File",
+        description: "Please select a video file",
+        variant: "destructive",
+      })
+      return
+    }
+
+    // Validate file size (100MB limit)
+    const maxSize = 100 * 1024 * 1024 // 100MB
+    if (file.size > maxSize) {
+      toast({
+        title: "File Too Large",
+        description: "Please select a video file smaller than 100MB",
+        variant: "destructive",
+      })
+      return
+    }
+
+    setUploading(true)
+    try {
+      const videoUrl = await uploadToCloudinary(file)
+      setFormData(prev => ({ ...prev, videoUrl }))
+      toast({
+        title: "Upload Successful",
+        description: "Video uploaded to Cloudinary successfully",
+        className: "bg-green-50 border-green-200 text-green-800",
+      })
+    } catch (error) {
+      console.error("Upload error:", error)
+      toast({
+        title: "Upload Failed",
+        description: error instanceof Error ? error.message : "Failed to upload video",
+        variant: "destructive",
+      })
+    } finally {
+      setUploading(false)
+    }
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    
+    if (!formData.videoUrl) {
+      toast({
+        title: "Missing Video",
+        description: "Please provide a video URL or upload a video file",
+        variant: "destructive",
+      })
+      return
+    }
+
     try {
-      const response = await fetch("/api/dashboard/videos", {
-        method: "POST",
+      const method = editingVideo ? "PUT" : "POST"
+      const url = editingVideo ? `/api/dashboard/videos/${editingVideo.id}` : "/api/dashboard/videos"
+      
+      const response = await fetch(url, {
+        method,
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify(formData),
       })
-      if (!response.ok) throw new Error("Failed to add video")
+      
+      if (!response.ok) throw new Error("Failed to save video")
+      
       toast({
         title: "Success",
-        description: "Video added successfully",
+        description: editingVideo ? "Video updated successfully" : "Video added successfully",
+        className: "bg-green-50 border-green-200 text-green-800",
       })
+      
       setFormData({
         title: "",
         description: "",
@@ -197,12 +298,11 @@ export default function VideosPage() {
       setEditingVideo(null)
       fetchVideos()
       fetchStats()
-      fetchStats()
     } catch (error) {
-      console.error("Error adding video:", error)
+      console.error("Error saving video:", error)
       toast({
         title: "Error",
-        description: "Failed to add video",
+        description: "Failed to save video",
         variant: "destructive",
       })
     }
@@ -218,6 +318,7 @@ export default function VideosPage() {
       toast({
         title: "Success",
         description: "Video deleted successfully",
+        className: "bg-green-50 border-green-200 text-green-800",
       })
       fetchVideos()
     } catch (error) {
@@ -555,6 +656,7 @@ export default function VideosPage() {
             </CardContent>
           </Card>
 
+          {/* Enhanced Add/Edit Form */}
           {showAddForm && (
             <Card className="bg-white/80 backdrop-blur-sm border-white/20 shadow-xl">
               <CardHeader>
@@ -575,149 +677,244 @@ export default function VideosPage() {
                   {editingVideo ? 'Update video information and settings' : 'Upload and configure a new video for your gallery'}
                 </CardDescription>
               </CardHeader>
-            <CardContent>
-              <form onSubmit={handleSubmit} className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="md:col-span-2">
-                    <label htmlFor="title" className="block text-sm font-medium mb-2 text-gray-700">
-                      Video Title *
-                    </label>
-                    <Input
-                      id="title"
-                      value={formData.title}
-                      onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                      placeholder="Enter a compelling video title"
-                      required
-                      className="border-gray-300 focus:border-purple-500 focus:ring-purple-500"
-                    />
-                  </div>
-                  
-                  <div className="md:col-span-2">
-                    <label htmlFor="description" className="block text-sm font-medium mb-2 text-gray-700">
-                      Description *
-                    </label>
-                    <Textarea
-                      id="description"
-                      value={formData.description}
-                      onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                      placeholder="Describe what this video is about..."
-                      rows={4}
-                      required
-                      className="border-gray-300 focus:border-purple-500 focus:ring-purple-500"
-                    />
-                  </div>
-                  
-                  <div className="md:col-span-2">
-                    <label htmlFor="videoUrl" className="block text-sm font-medium mb-2 text-gray-700">
-                      Video URL *
-                    </label>
-                    <Input
-                      id="videoUrl"
-                      type="url"
-                      value={formData.videoUrl}
-                      onChange={(e) => setFormData({ ...formData, videoUrl: e.target.value })}
-                      placeholder="https://www.youtube.com/watch?v=... or https://example.com/video.mp4"
-                      required
-                      className="border-gray-300 focus:border-purple-500 focus:ring-purple-500"
-                    />
-                    <p className="text-xs text-gray-500 mt-1">Supports YouTube links and direct MP4 URLs</p>
-                  </div>
-                  
-                  <div>
-                    <label htmlFor="thumbnail" className="block text-sm font-medium mb-2 text-gray-700">
-                      Custom Thumbnail URL
-                    </label>
-                    <Input
-                      id="thumbnail"
-                      type="url"
-                      value={formData.thumbnail}
-                      onChange={(e) => setFormData({ ...formData, thumbnail: e.target.value })}
-                      placeholder="https://example.com/thumbnail.jpg"
-                      className="border-gray-300 focus:border-purple-500 focus:ring-purple-500"
-                    />
-                    <p className="text-xs text-gray-500 mt-1">Auto-generated for YouTube if empty</p>
-                  </div>
-                  <div>
-                    <label htmlFor="category" className="block text-sm font-medium mb-2 text-gray-700">
-                      Category *
-                    </label>
-                    <Select value={formData.category} onValueChange={(value) => setFormData({ ...formData, category: value })}>
-                      <SelectTrigger className="border-gray-300 focus:border-purple-500 focus:ring-purple-500">
-                        <SelectValue placeholder="Select a category" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="Education">🎓 Education</SelectItem>
-                        <SelectItem value="Infrastructure">🏗️ Infrastructure</SelectItem>
-                        <SelectItem value="Healthcare">🏥 Healthcare</SelectItem>
-                        <SelectItem value="Agriculture">🌾 Agriculture</SelectItem>
-                        <SelectItem value="Economy">💰 Economy</SelectItem>
-                        <SelectItem value="Security">🛡️ Security</SelectItem>
-                        <SelectItem value="Environment">🌱 Environment</SelectItem>
-                        <SelectItem value="Sport">⚽ Sport</SelectItem>
-                        <SelectItem value="Other">📹 Other</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-                
-                <div className="bg-gradient-to-r from-purple-50 to-pink-50 rounded-lg p-4 border border-purple-200">
-                  <div className="flex items-center space-x-3">
-                    <input
-                      type="checkbox"
-                      id="featured"
-                      checked={formData.featured}
-                      onChange={(e) => setFormData({ ...formData, featured: e.target.checked })}
-                      className="rounded border-gray-300 text-purple-600 focus:ring-purple-500 w-4 h-4"
-                    />
+              <CardContent>
+                <form onSubmit={handleSubmit} className="space-y-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="md:col-span-2">
+                      <Label htmlFor="title" className="block text-sm font-medium mb-2 text-gray-700">
+                        Video Title *
+                      </Label>
+                      <Input
+                        id="title"
+                        value={formData.title}
+                        onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                        placeholder="Enter a compelling video title"
+                        required
+                        className="border-gray-300 focus:border-purple-500 focus:ring-purple-500"
+                      />
+                    </div>
+                    
+                    <div className="md:col-span-2">
+                      <Label htmlFor="description" className="block text-sm font-medium mb-2 text-gray-700">
+                        Description *
+                      </Label>
+                      <Textarea
+                        id="description"
+                        value={formData.description}
+                        onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                        placeholder="Describe what this video is about..."
+                        rows={4}
+                        required
+                        className="border-gray-300 focus:border-purple-500 focus:ring-purple-500"
+                      />
+                    </div>
+                    
+                    {/* Enhanced Video Upload Section */}
+                    <div className="md:col-span-2">
+                      <Label className="block text-sm font-medium mb-3 text-gray-700">
+                        Video Source *
+                      </Label>
+                      
+                      <Tabs value={uploadMethod} onValueChange={(value) => setUploadMethod(value as "youtube" | "cloudinary")}>
+                        <TabsList className="grid w-full grid-cols-2 mb-4">
+                          <TabsTrigger value="youtube" className="flex items-center gap-2">
+                            <Youtube className="w-4 h-4" />
+                            YouTube Link
+                          </TabsTrigger>
+                          <TabsTrigger value="cloudinary" className="flex items-center gap-2">
+                            <CloudUpload className="w-4 h-4" />
+                            Upload Video
+                          </TabsTrigger>
+                        </TabsList>
+                        
+                        <TabsContent value="youtube" className="space-y-3">
+                          <div className="relative">
+                            <LinkIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                            <Input
+                              type="url"
+                              value={formData.videoUrl}
+                              onChange={(e) => setFormData({ ...formData, videoUrl: e.target.value })}
+                              placeholder="https://www.youtube.com/watch?v=..."
+                              className="pl-10 border-gray-300 focus:border-red-500 focus:ring-red-500"
+                            />
+                          </div>
+                          <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+                            <div className="flex items-start gap-2">
+                              <Youtube className="w-5 h-5 text-red-600 mt-0.5" />
+                              <div>
+                                <p className="text-sm font-medium text-red-800">YouTube Integration</p>
+                                <p className="text-xs text-red-600 mt-1">
+                                  Paste any YouTube video URL. Thumbnails will be automatically generated.
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                        </TabsContent>
+                        
+                        <TabsContent value="cloudinary" className="space-y-3">
+                          <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-purple-400 transition-colors">
+                            <input
+                              type="file"
+                              accept="video/*"
+                              onChange={handleFileUpload}
+                              className="hidden"
+                              id="video-upload"
+                              disabled={uploading}
+                            />
+                            <label
+                              htmlFor="video-upload"
+                              className="cursor-pointer flex flex-col items-center gap-3"
+                            >
+                              {uploading ? (
+                                <>
+                                  <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center">
+                                    <RefreshCw className="w-6 h-6 text-purple-600 animate-spin" />
+                                  </div>
+                                  <div>
+                                    <p className="text-sm font-medium text-gray-700">Uploading...</p>
+                                    <p className="text-xs text-gray-500">Please wait while your video is being uploaded</p>
+                                  </div>
+                                </>
+                              ) : (
+                                <>
+                                  <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center">
+                                    <FileVideo className="w-6 h-6 text-purple-600" />
+                                  </div>
+                                  <div>
+                                    <p className="text-sm font-medium text-gray-700">Click to upload video</p>
+                                    <p className="text-xs text-gray-500">MP4, MOV, AVI up to 100MB</p>
+                                  </div>
+                                </>
+                              )}
+                            </label>
+                          </div>
+                          
+                          {formData.videoUrl && uploadMethod === "cloudinary" && (
+                            <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+                              <div className="flex items-start gap-2">
+                                <CheckCircle className="w-5 h-5 text-green-600 mt-0.5" />
+                                <div>
+                                  <p className="text-sm font-medium text-green-800">Video Uploaded Successfully</p>
+                                  <p className="text-xs text-green-600 mt-1 break-all">
+                                    {formData.videoUrl}
+                                  </p>
+                                </div>
+                              </div>
+                            </div>
+                          )}
+                          
+                          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                            <div className="flex items-start gap-2">
+                              <CloudUpload className="w-5 h-5 text-blue-600 mt-0.5" />
+                              <div>
+                                <p className="text-sm font-medium text-blue-800">Cloudinary Upload</p>
+                                <p className="text-xs text-blue-600 mt-1">
+                                  Videos are uploaded to Cloudinary for optimized streaming and automatic thumbnail generation.
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                        </TabsContent>
+                      </Tabs>
+                    </div>
+                    
                     <div>
-                      <label htmlFor="featured" className="text-sm font-medium text-gray-700 flex items-center gap-2">
-                        <Star className="w-4 h-4 text-yellow-500" />
-                        Mark as Featured Video
-                      </label>
-                      <p className="text-xs text-gray-500 mt-1">Featured videos appear prominently in the gallery</p>
+                      <Label htmlFor="thumbnail" className="block text-sm font-medium mb-2 text-gray-700">
+                        Custom Thumbnail URL
+                      </Label>
+                      <Input
+                        id="thumbnail"
+                        type="url"
+                        value={formData.thumbnail}
+                        onChange={(e) => setFormData({ ...formData, thumbnail: e.target.value })}
+                        placeholder="https://example.com/thumbnail.jpg"
+                        className="border-gray-300 focus:border-purple-500 focus:ring-purple-500"
+                      />
+                      <p className="text-xs text-gray-500 mt-1">Auto-generated for YouTube if empty</p>
+                    </div>
+                    
+                    <div>
+                      <Label htmlFor="category" className="block text-sm font-medium mb-2 text-gray-700">
+                        Category *
+                      </Label>
+                      <Select value={formData.category} onValueChange={(value) => setFormData({ ...formData, category: value })}>
+                        <SelectTrigger className="border-gray-300 focus:border-purple-500 focus:ring-purple-500">
+                          <SelectValue placeholder="Select a category" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="Education">🎓 Education</SelectItem>
+                          <SelectItem value="Infrastructure">🏗️ Infrastructure</SelectItem>
+                          <SelectItem value="Healthcare">🏥 Healthcare</SelectItem>
+                          <SelectItem value="Agriculture">🌾 Agriculture</SelectItem>
+                          <SelectItem value="Economy">💰 Economy</SelectItem>
+                          <SelectItem value="Security">🛡️ Security</SelectItem>
+                          <SelectItem value="Environment">🌱 Environment</SelectItem>
+                          <SelectItem value="Sport">⚽ Sport</SelectItem>
+                          <SelectItem value="Other">📹 Other</SelectItem>
+                        </SelectContent>
+                      </Select>
                     </div>
                   </div>
-                </div>
-                
-                <div className="flex gap-3 pt-4">
-                  <Button 
-                    type="button"
-                    variant="outline"
-                    onClick={() => {
-                      setShowAddForm(false)
-                      setEditingVideo(null)
-                      setFormData({
-                        title: "",
-                        description: "",
-                        videoUrl: "",
-                        thumbnail: "",
-                        category: "",
-                        featured: false
-                      })
-                    }}
-                    className="flex-1 bg-white/50 hover:bg-white border-gray-300"
-                  >
-                    Cancel
-                  </Button>
-                  <Button 
-                    type="submit" 
-                    className="flex-1 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 shadow-lg hover:shadow-xl transition-all duration-200"
-                  >
-                    {editingVideo ? (
-                      <>
-                        <Edit className="w-4 h-4 mr-2" />
-                        Update Video
-                      </>
-                    ) : (
-                      <>
-                        <PlusCircle className="w-4 h-4 mr-2" />
-                        Add Video
-                      </>
-                    )}
-                  </Button>
-                </div>
-              </form>
-            </CardContent>
+                  
+                  <div className="bg-gradient-to-r from-purple-50 to-pink-50 rounded-lg p-4 border border-purple-200">
+                    <div className="flex items-center space-x-3">
+                      <input
+                        type="checkbox"
+                        id="featured"
+                        checked={formData.featured}
+                        onChange={(e) => setFormData({ ...formData, featured: e.target.checked })}
+                        className="rounded border-gray-300 text-purple-600 focus:ring-purple-500 w-4 h-4"
+                      />
+                      <div>
+                        <label htmlFor="featured" className="text-sm font-medium text-gray-700 flex items-center gap-2">
+                          <Star className="w-4 h-4 text-yellow-500" />
+                          Mark as Featured Video
+                        </label>
+                        <p className="text-xs text-gray-500 mt-1">Featured videos appear prominently in the gallery</p>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="flex gap-3 pt-4">
+                    <Button 
+                      type="button"
+                      variant="outline"
+                      onClick={() => {
+                        setShowAddForm(false)
+                        setEditingVideo(null)
+                        setFormData({
+                          title: "",
+                          description: "",
+                          videoUrl: "",
+                          thumbnail: "",
+                          category: "",
+                          featured: false
+                        })
+                      }}
+                      className="flex-1 bg-white/50 hover:bg-white border-gray-300"
+                    >
+                      Cancel
+                    </Button>
+                    <Button 
+                      type="submit" 
+                      disabled={uploading || !formData.videoUrl}
+                      className="flex-1 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 shadow-lg hover:shadow-xl transition-all duration-200"
+                    >
+                      {editingVideo ? (
+                        <>
+                          <Edit className="w-4 h-4 mr-2" />
+                          Update Video
+                        </>
+                      ) : (
+                        <>
+                          <PlusCircle className="w-4 h-4 mr-2" />
+                          Add Video
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                </form>
+              </CardContent>
             </Card>
           )}
 

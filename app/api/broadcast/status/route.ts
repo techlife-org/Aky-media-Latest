@@ -7,12 +7,19 @@ export async function GET(request: NextRequest) {
   try {
     let db
     try {
-      // Use aggressive fallback for faster response
-      const fallbackConnection = await connectToDatabaseWithFallback()
-      db = fallbackConnection.db
-      console.log("[Broadcast Status API] Database connected successfully")
+      // Try primary connection first, then fallback
+      try {
+        const primaryConnection = await connectToDatabase()
+        db = primaryConnection.db
+        console.log("[Broadcast Status API] Primary database connected successfully")
+      } catch (primaryError) {
+        console.warn("[Broadcast Status API] Primary connection failed, trying fallback:", primaryError)
+        const fallbackConnection = await connectToDatabaseWithFallback()
+        db = fallbackConnection.db
+        console.log("[Broadcast Status API] Fallback database connected successfully")
+      }
     } catch (error) {
-      console.error("Database connection failed:", error)
+      console.error("[Broadcast Status API] All database connections failed:", error)
       return NextResponse.json(
         {
           isActive: false,
@@ -40,7 +47,7 @@ export async function GET(request: NextRequest) {
       // Get active broadcast with a timeout
       const broadcast = (await Promise.race([
         db.collection("broadcasts").findOne({ isActive: true }),
-        new Promise((_, reject) => setTimeout(() => reject(new Error("Database query timeout")), 5000)),
+        new Promise((_, reject) => setTimeout(() => reject(new Error("Database query timeout")), 10000)),
       ])) as any
 
       console.log("[Broadcast Status API] Broadcast query result:", broadcast)
@@ -69,28 +76,46 @@ export async function GET(request: NextRequest) {
       // Get the correct base URL
       const host = request.headers.get("host")
       const protocol = request.headers.get("x-forwarded-proto") || "http"
-      const baseUrl =
-        process.env.NEXT_PUBLIC_BASE_URL || process.env.VERCEL_URL
-          ? `https://${process.env.VERCEL_URL}`
-          : `${protocol}://${host}`
-      const meetingLink = `${baseUrl}/live?meeting=${broadcast.id}`
+      const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 
+        (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : `${protocol}://${host}`)
+      const meetingLink = `${baseUrl}/live/${broadcast.id}`
 
-      // Calculate uptime and simulate viewer count growth
+      // Calculate uptime and get REAL participant count (no more random numbers!)
       const uptime = broadcast.startedAt ? Math.floor((Date.now() - new Date(broadcast.startedAt).getTime()) / 1000) : 0
-      const simulatedViewers = Math.max(1, Math.floor(Math.random() * 50) + Math.floor(uptime / 60))
+      const realViewerCount = broadcast.participants?.length || 0
+      const totalViewers = broadcast.totalViewers || realViewerCount
+      const peakViewers = broadcast.peakViewers || realViewerCount
+      const chatMessageCount = broadcast.chatMessages?.length || 0
+
+      // Update broadcast with current stats
+      await db.collection("broadcasts").updateOne(
+        { id: broadcast.id },
+        {
+          $set: {
+            lastActivity: new Date(),
+            uptime: uptime,
+            currentViewers: realViewerCount
+          },
+          $max: {
+            peakViewers: realViewerCount
+          }
+        }
+      )
 
       return NextResponse.json({
         isActive: true,
         broadcast: {
           ...broadcast,
           meetingLink,
-          viewerCount: simulatedViewers,
+          viewerCount: realViewerCount,
+          uptime: uptime,
+          lastActivity: new Date()
         },
         meetingId: broadcast.id,
-        participants: broadcast.participants?.length || 0,
+        participants: realViewerCount,
         startTime: broadcast.startedAt,
         title: broadcast.title,
-        viewerCount: simulatedViewers,
+        viewerCount: realViewerCount, // Real count, not random!
         meetingLink,
         status: "live",
         health: {
@@ -101,14 +126,16 @@ export async function GET(request: NextRequest) {
         connectionQuality: "excellent",
         uptime: uptime,
         stats: {
-          totalViewTime: uptime * simulatedViewers,
-          peakViewers: Math.max(simulatedViewers, Math.floor(simulatedViewers * 1.5)),
-          averageViewTime: Math.floor(uptime * 0.7),
-          chatMessages: Math.floor(uptime / 30)
+          totalViewTime: uptime * realViewerCount,
+          peakViewers: Math.max(peakViewers, realViewerCount),
+          averageViewTime: uptime > 0 ? Math.floor(uptime * 0.7) : 0,
+          chatMessages: chatMessageCount,
+          currentViewers: realViewerCount,
+          totalViewers: totalViewers
         }
       })
     } catch (error) {
-      console.error("Database query error:", error)
+      console.error("[Broadcast Status API] Database query error:", error)
       return NextResponse.json(
         {
           isActive: false,
@@ -125,7 +152,7 @@ export async function GET(request: NextRequest) {
       )
     }
   } catch (error) {
-    console.error("Broadcast status error:", error)
+    console.error("[Broadcast Status API] Broadcast status error:", error)
     return NextResponse.json(
       {
         isActive: false,

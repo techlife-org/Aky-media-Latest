@@ -1,11 +1,18 @@
 import type { Metadata } from "next"
 import { Suspense } from "react"
-import SocialMediaLiveBroadcast from "@/components/social-media-live-broadcast"
+import SocialMediaLiveBroadcastWithId from "@/components/social-media-live-broadcast-with-id"
 
-export const metadata: Metadata = {
-  title: "Live Broadcast - AKY Media Center",
-  description:
-    "Watch live broadcasts from Governor Abba Kabir Yusuf and stay connected with real-time updates from Kano State.",
+interface LivePageProps {
+  params: {
+    id: string
+  }
+}
+
+export async function generateMetadata({ params }: LivePageProps): Promise<Metadata> {
+  return {
+    title: `Live Broadcast ${params.id} - AKY Media Center`,
+    description: `Watch live broadcast ${params.id} from Governor Abba Kabir Yusuf and stay connected with real-time updates from Kano State.`,
+  }
 }
 
 function LiveBroadcastFallback() {
@@ -21,10 +28,10 @@ function LiveBroadcastFallback() {
   )
 }
 
-export default function LivePage() {
+export default function LivePageWithId({ params }: LivePageProps) {
   return (
     <Suspense fallback={<LiveBroadcastFallback />}>
-      <SocialMediaLiveBroadcast />
+      <SocialMediaLiveBroadcastWithId broadcastId={params.id} />
     </Suspense>
   )
 }

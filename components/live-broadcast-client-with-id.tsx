@@ -1,6 +1,5 @@
 "use client"
 
-import { useSearchParams } from "next/navigation"
 import { useState, useEffect, useRef } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -51,10 +50,11 @@ interface BroadcastInfo {
   participants: Participant[]
 }
 
-export default function LiveBroadcastClient() {
-  const searchParams = useSearchParams()
-  const meetingId = searchParams.get("meeting")
+interface LiveBroadcastClientWithIdProps {
+  broadcastId: string
+}
 
+export default function LiveBroadcastClientWithId({ broadcastId }: LiveBroadcastClientWithIdProps) {
   const [isConnected, setIsConnected] = useState(false)
   const [isConnecting, setIsConnecting] = useState(false)
   const [participants, setParticipants] = useState<Participant[]>([])
@@ -76,7 +76,7 @@ export default function LiveBroadcastClient() {
         const response = await fetch("/api/broadcast/status")
         const data = await response.json()
 
-        if (data.isActive && data.broadcast) {
+        if (data.isActive && data.broadcast && data.broadcast.id === broadcastId) {
           setBroadcastStatus("active")
           setBroadcastInfo({
             id: data.broadcast.id,
@@ -87,6 +87,11 @@ export default function LiveBroadcastClient() {
           })
           // Set stream URL (in production, this would be the actual stream URL)
           setStreamUrl(`/api/broadcast/stream/${data.broadcast.id}`)
+        } else if (data.isActive && data.broadcast && data.broadcast.id !== broadcastId) {
+          // There's an active broadcast but it's not the one requested
+          setBroadcastStatus("inactive")
+          setBroadcastInfo(null)
+          setStreamUrl(null)
         } else {
           setBroadcastStatus("inactive")
           setBroadcastInfo(null)
@@ -101,7 +106,7 @@ export default function LiveBroadcastClient() {
     checkBroadcastStatus()
     const interval = setInterval(checkBroadcastStatus, 5000)
     return () => clearInterval(interval)
-  }, [])
+  }, [broadcastId])
 
   // Auto-scroll chat to bottom
   useEffect(() => {
@@ -129,7 +134,7 @@ export default function LiveBroadcastClient() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          meetingId: meetingId || "default",
+          meetingId: broadcastId,
           userName,
           userType: "viewer",
         }),
@@ -217,7 +222,7 @@ export default function LiveBroadcastClient() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          meetingId: meetingId || "default",
+          meetingId: broadcastId,
           userName,
           message: newMessage.trim(),
           type: "message",
@@ -262,7 +267,7 @@ export default function LiveBroadcastClient() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          meetingId: meetingId || "default",
+          meetingId: broadcastId,
           userName,
           message: reaction,
           type: "reaction",
@@ -300,7 +305,7 @@ export default function LiveBroadcastClient() {
   // Load chat history
   const loadChatHistory = async () => {
     try {
-      const response = await fetch(`/api/broadcast/chat?meetingId=${meetingId || "default"}`)
+      const response = await fetch(`/api/broadcast/chat?meetingId=${broadcastId}`)
       if (response.ok) {
         const data = await response.json()
         const messages = data.messages.map((msg: any) => ({
@@ -322,7 +327,7 @@ export default function LiveBroadcastClient() {
   const shareBroadcast = async () => {
     // Use the new URL format: /live/broadcast_id
     const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || window.location.origin
-    const shareUrl = meetingId ? `${baseUrl}/live/${meetingId}` : `${baseUrl}/live`
+    const shareUrl = `${baseUrl}/live/${broadcastId}`
 
     if (navigator.share) {
       try {
@@ -365,25 +370,28 @@ export default function LiveBroadcastClient() {
             <div className="bg-gradient-to-br from-red-100 to-red-200 rounded-full w-32 h-32 flex items-center justify-center mx-auto mb-8 shadow-lg">
               <VideoOff className="h-16 w-16 text-red-600" />
             </div>
-            <h2 className="text-4xl font-bold text-red-800 mb-6">No Active Broadcast</h2>
+            <h2 className="text-4xl font-bold text-red-800 mb-6">Broadcast Not Found</h2>
+            <p className="text-red-600 text-lg mb-4">
+              The broadcast with ID <code className="bg-red-100 px-2 py-1 rounded text-sm">{broadcastId}</code> is not currently active.
+            </p>
             <p className="text-red-600 text-lg mb-8">
-              There is currently no live broadcast from Governor Abba Kabir Yusuf. Please check back later or follow our social media for updates.
+              Please check the link or contact the broadcaster for the correct broadcast URL.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Button 
-                onClick={() => window.location.reload()} 
+                onClick={() => window.location.href = '/live'} 
                 className="bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white shadow-lg"
               >
-                <Settings className="h-4 w-4 mr-2" />
-                Refresh Status
+                <Video className="h-4 w-4 mr-2" />
+                Go to Live Page
               </Button>
               <Button 
-                onClick={shareBroadcast} 
+                onClick={() => window.location.reload()} 
                 variant="outline"
                 className="border-red-600 text-red-600 hover:bg-red-50"
               >
-                <Share2 className="h-4 w-4 mr-2" />
-                Share Page
+                <Settings className="h-4 w-4 mr-2" />
+                Refresh Status
               </Button>
             </div>
           </div>
@@ -406,7 +414,7 @@ export default function LiveBroadcastClient() {
                 </CardTitle>
                 <p className="text-red-100">
                   {broadcastInfo?.title || "Live Broadcast"}
-                  {meetingId && <span className="block text-red-200 text-xs">Meeting ID: {meetingId}</span>}
+                  <span className="block text-red-200 text-xs">Broadcast ID: {broadcastId}</span>
                 </p>
                 <Badge className="mx-auto bg-red-800 text-red-100">
                   Viewer Mode - Listen Only

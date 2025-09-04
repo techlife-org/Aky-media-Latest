@@ -122,7 +122,9 @@ export default function EnhancedLiveBroadcastClient() {
   }
 
   const shareBroadcast = async () => {
-    const shareUrl = `${window.location.origin}/live${meetingId ? `?meeting=${meetingId}` : ""}`
+    // Use the new URL format: /live/broadcast_id
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || window.location.origin
+    const shareUrl = meetingId ? `${baseUrl}/live/${meetingId}` : `${baseUrl}/live`
 
     if (navigator.share) {
       try {

@@ -6,33 +6,23 @@ if (!MONGODB_URI) {
   throw new Error("Please define the MONGODB_URI environment variable inside .env")
 }
 
-// Enhanced options for better connectivity and reliability
-// Note: Many options are already in the URI, so we keep this minimal
+// Simplified options for better compatibility with MongoDB Atlas
 const options: MongoClientOptions = {
-  // Connection timeout settings
-  connectTimeoutMS: 10000, // 10 seconds
-  socketTimeoutMS: 45000,  // 45 seconds
-  serverSelectionTimeoutMS: 10000, // 10 seconds
+  // Use longer timeouts for better reliability
+  serverSelectionTimeoutMS: 30000, // 30 seconds
+  connectTimeoutMS: 30000, // 30 seconds
+  socketTimeoutMS: 60000, // 60 seconds
   
-  // Retry settings
+  // Connection pool settings
+  maxPoolSize: 10,
+  minPoolSize: 1,
+  
+  // Retry settings (let MongoDB handle retries)
   retryWrites: true,
   retryReads: true,
-  maxPoolSize: 10,
-  minPoolSize: 2,
   
-  // SSL/TLS settings
-  ssl: true,
-  tls: true,
-  tlsAllowInvalidCertificates: false,
-  tlsAllowInvalidHostnames: false,
-  
-  // Read/Write concerns
-  readPreference: "primaryPreferred", // Prefer primary but allow secondary reads
-  writeConcern: {
-    w: "majority",
-    j: true, // Wait for journal acknowledgment
-    wtimeout: 10000
-  }
+  // Use default SSL settings for Atlas
+  // Don't override SSL settings as they're in the URI
 }
 
 declare global {
@@ -43,36 +33,48 @@ declare global {
 let client: MongoClient
 let clientPromise: Promise<MongoClient>
 
-// Connection retry logic with faster fallback
+// Improved connection logic with better error handling
 async function createConnection(): Promise<MongoClient> {
-  const maxRetries = 2 // Reduced retries for faster fallback
+  const maxRetries = 3
   let lastError: Error | null = null
   
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
-      console.log(`MongoDB connection attempt ${attempt}/${maxRetries}...`)
+      // Only log first attempt to reduce noise
+      if (attempt === 1) {
+        console.log('[MongoDB] Connecting to database...')
+      }
       
       const client = new MongoClient(MONGODB_URI, options)
       
-      // Connect and test - let MongoDB driver handle timeouts from URI
+      // Connect with timeout
       await client.connect()
+      
+      // Test the connection
       await client.db().admin().ping()
       
-      console.log("✅ MongoDB connected successfully")
+      console.log('✅ [MongoDB] Connected successfully')
       return client
     } catch (error: any) {
       lastError = error
-      console.error(`❌ MongoDB connection attempt ${attempt} failed:`, error.message)
+      
+      // Only log detailed errors on final attempt
+      if (attempt === maxRetries) {
+        console.error('❌ [MongoDB] Connection failed:', {
+          message: error.message,
+          code: error.code,
+          name: error.name
+        })
+      }
       
       if (attempt < maxRetries) {
-        const delay = 500 // Reduced delay for faster fallback
-        console.log(`⏳ Retrying in ${delay}ms...`)
+        const delay = attempt * 1000 // Progressive delay: 1s, 2s, 3s
         await new Promise(resolve => setTimeout(resolve, delay))
       }
     }
   }
   
-  throw new Error(`Failed to connect to MongoDB after ${maxRetries} attempts. Last error: ${lastError?.message}`)
+  throw new Error(`MongoDB connection failed: ${lastError?.message || 'Unknown error'}`)
 }
 
 if (process.env.NODE_ENV === "production") {
@@ -91,29 +93,33 @@ export async function connectToDatabase(): Promise<{ client: MongoClient; db: Db
     const client = await clientPromise
     const db = client.db()
     
-    // Verify connection is still alive
+    // Verify connection is still alive with timeout
     try {
-      await db.admin().ping()
+      const pingPromise = db.admin().ping()
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Ping timeout')), 5000)
+      )
+      
+      await Promise.race([pingPromise, timeoutPromise])
     } catch (pingError) {
-      console.warn("MongoDB ping failed, attempting to reconnect...")
-      // If ping fails, try to reconnect
+      // If ping fails, try to reconnect silently
       const newClient = await createConnection()
       return { client: newClient, db: newClient.db() }
     }
     
     return { client, db }
   } catch (error: any) {
-    console.error("❌ Database connection failed:", error.message)
-    
-    // Provide more specific error messages
-    if (error.message.includes("timeout")) {
-      throw new Error("Database connection timeout. Please check your internet connection and try again.")
-    } else if (error.message.includes("authentication")) {
-      throw new Error("Database authentication failed. Please check your credentials.")
-    } else if (error.message.includes("network")) {
-      throw new Error("Network error connecting to database. Please check your internet connection.")
+    // Provide user-friendly error messages
+    if (error.message.includes('timeout') || error.message.includes('Ping timeout')) {
+      throw new Error('Network connection timeout. Please check your internet connection.')
+    } else if (error.message.includes('authentication') || error.message.includes('auth')) {
+      throw new Error('Database authentication failed. Please verify your credentials.')
+    } else if (error.message.includes('network') || error.message.includes('ENOTFOUND')) {
+      throw new Error('Network error. Please check your internet connection.')
+    } else if (error.message.includes('MongoServerSelectionError')) {
+      throw new Error('Database server unavailable. Please try again later.')
     } else {
-      throw new Error(`Database connection failed: ${error.message}`)
+      throw new Error('Database connection failed. Please try again later.')
     }
   }
 }
