@@ -1,3 +1,4 @@
+// lib/template-service.ts
 import { connectToDatabase } from '@/lib/mongodb';
 import { ObjectId } from 'mongodb';
 
@@ -5,8 +6,8 @@ export interface Template {
   _id?: ObjectId;
   id?: string;
   name: string;
-  category: 'contact-us' | 'subscribers' | 'news' | 'achievements';
-  type: 'whatsapp' | 'sms' | 'email';
+  category: 'contact-us' | 'subscribers' | 'news' | 'achievements' | 'notifications' | 'broadcast' | 'messages';
+  type: 'email' | 'sms' | 'whatsapp';
   subject?: string;
   content: string;
   variables: string[];
@@ -184,10 +185,7 @@ export class TemplateService {
    */
   private getDefaultTemplates(): Record<string, { subject?: string; content: string }> {
     return {
-      // Subscriber templates
-      'subscribers-email': {
-        subject: '🎉 You\'re Now Subscribed to AKY Digital',
-        content: `
+      // Subscriber templates\n      'subscribers-email': {\n        subject: '🎉 You\\'re Now Subscribed to AKY Digital',\n        content: `
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -346,7 +344,7 @@ Dear {{first_name}},
 
 Thank you for reaching out to AKY Digital. Your message has been received, and our team will review it carefully.
 
-You can expect a response from us within 2 working days. If your matter is urgent, please indicate this in your subject line.
+You can expect a response from us within 2 working days. If your matter is urgent, please indicate this in your subject line or reach us through our official phone number.
 
 We appreciate your patience and look forward to assisting you.
 
@@ -368,6 +366,94 @@ We appreciate your patience and look forward to assisting you.
 
 Best regards,
 *The AKY Digital Team* 🙏`
+      },
+
+      // Messages templates (for replies)
+      'messages-email': {
+        subject: 'Re: {{original_subject}} - AKY Digital',
+        content: `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Re: {{original_subject}} - AKY Digital</title>
+</head>
+<body style="margin: 0; padding: 0; background-color: #f8fafc; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">
+  <div style="max-width: 600px; margin: 0 auto; background: #ffffff; box-shadow: 0 4px 6px #de1736);">
+    <div style="background: linear-gradient(135deg, #de1736 0%, #de1736 100%); padding: 40px 30px; text-align: center; color: white;">
+      <img src="https://res.cloudinary.com/dxsc0fqrt/image/upload/v1756715780/aky_logo_R_oaofzg.png" 
+        alt="AKY Digital Logo" 
+        style="width:110px; height:auto; display:block; margin:0 auto 15px;">
+      <h1 style="margin: 0; font-size: 32px; font-weight: 700;">AKY Digital Response</h1>
+      <p style="margin: 15px 0 0 0; font-size: 18px; opacity: 0.95;">Re: {{original_subject}}</p>
+    </div>
+   
+    <div style="padding: 50px 40px; background: white;">
+      <div style="margin-bottom: 40px;">
+        <h2 style="color: #1f2937; margin: 0 0 20px 0; font-size: 24px;">Dear {{name}},</h2>
+        
+        <div style="background: linear-gradient(135deg, #fef2f2 0%, #fdf4f4 100%); padding: 25px; border-left: 5px solid #dc2626; border-radius: 0 8px 8px 0; margin: 25px 0;">
+          <p style="color: #374151; line-height: 1.7; margin: 0 0 20px 0; font-size: 16px;">
+            {{message_content}}
+          </p>
+        </div>
+
+        <p style="color: #374151; line-height: 1.7; margin: 0 0 30px 0; font-size: 16px;">
+          We hope this response addresses your inquiry. If you have any further questions or need additional assistance, please don't hesitate to reach out.
+        </p>
+        
+        <p style="color: #374151; line-height: 1.7; margin: 0; font-size: 16px;">
+          Best regards,<br>
+          <strong>The AKY Digital Team</strong>
+        </p>
+      </div>
+
+      <div style="background: #f8fafc; padding: 25px; border-radius: 10px; margin: 35px 0; border: 1px solid #e5e7eb;">
+        <h3 style="color: #1f2937; margin: 0 0 15px 0; font-size: 18px;">📋 Message Details:</h3>
+        <p style="color: #4b5563; margin: 5px 0;"><strong>Date:</strong> {{current_date}}</p>
+        <p style="color: #4b5563; margin: 5px 0;"><strong>Reference:</strong> {{reference_number}}</p>
+      </div>
+      
+      <div style="text-align: center; margin: 40px 0;">
+        <a href="{{website_url}}" style="display: inline-block; padding: 16px 32px; background: #de1736; color: white; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px;">
+          🌐 Visit Our Website
+        </a>
+      </div>
+    </div>
+    
+    <div style="background: #f8fafc; padding: 30px; text-align: center; border-top: 1px solid #e5e7eb;">
+      <p style="color: #6b7280; font-size: 14px; margin: 0;">© {{current_year}} AKY Digital. All rights reserved.</p>
+    </div>
+  </div>
+</body>
+</html>
+        `
+      },
+      'messages-sms': {
+        content: `Re: {{original_subject}} - AKY Digital
+
+Dear {{name}},
+
+{{message_content}}
+
+Best regards,
+The AKY Digital Team
+
+Reference: {{reference_number}}`
+      },
+      'messages-whatsapp': {
+        content: `*Re: {{original_subject}} - AKY Digital*
+
+Dear *{{name}}*,
+
+{{message_content}}
+
+Best regards,
+*The AKY Digital Team*
+
+🔢 *Reference:* {{reference_number}}
+🌐 {{website_url}}`
       },
 
       // Updated News Templates
@@ -409,7 +495,7 @@ Best regards,
       <h2 style="color: #111827; margin: 0 0 20px; font-size: 20px; font-weight: 700; text-align: center;">Dear {{name}},</h2>
 
       <p style="color: #374151; line-height: 1.7; font-size: 16px; text-align: center; margin-bottom: 25px;">
-        We’re excited to share the latest update with you!
+        We're excited to share the latest update with you!
       </p>
 
       <!-- News Image -->
@@ -461,7 +547,6 @@ Hi {{name}},
         content: `📰 *{{news_title}}*  
 
 Hello *{{name}}* 🎉,  
-
 {{news_content}}  
 
 📂 *Category:* {{news_category}}  
@@ -503,7 +588,6 @@ Best regards,
          <h1 class="title" style="margin: 0; font-size: 36px; font-weight: 800; color: white; text-shadow: 2px 2px 4px rgba(0,0,0,0.3); letter-spacing: -0.5px;">🏆 Major Achievement</h1>
         <p class="subtitle" style="margin: 15px 0 0 0; font-size: 20px; color: white; opacity: 0.95; font-weight: 500; text-shadow: 1px 1px 2px rgba(0,0,0,0.2);">The AKY Digital Team</p>
      
-    
     </div>
     
     <!-- Content Section -->
@@ -568,7 +652,6 @@ Best regards,
         content: `🏆 {{achievement_title}} - The AKY Digital Team
 
 Dear {{name}},
-
 We're excited to share a significant achievement! {{achievement_description}}
 
 Category: {{achievement_category}}
@@ -612,7 +695,12 @@ Best regards,
       if (type === 'email') {
         return {
           subject: `🎉 You're Now Subscribed to AKY Digital`,
-          content: `Dear ${name},\n\nThank you for subscribing to AKY Digital.\n\nBest regards,\nThe AKY Digital Team`
+          content: `Dear ${name},
+
+Thank you for subscribing to AKY Digital.
+
+Best regards,
+The AKY Digital Team`
         };
       } else if (type === 'sms') {
         return {
@@ -627,7 +715,12 @@ Best regards,
       if (type === 'email') {
         return {
           subject: `📩 We've Received Your Message – AKY Digital`,
-          content: `Dear ${name},\n\nThank you for reaching out to AKY Digital. Your message has been received.\n\nBest regards,\nThe AKY Digital Team`
+          content: `Dear ${name},
+
+Thank you for reaching out to AKY Digital. Your message has been received.
+
+Best regards,
+The AKY Digital Team`
         };
       } else if (type === 'sms') {
         return {
@@ -638,12 +731,38 @@ Best regards,
           content: `📩 *We've Received Your Message – AKY Digital* Dear ${name}, thank you for reaching out. Best regards, *The AKY Digital Team*`
         };
       }
+    } else if (category === 'messages') {
+      // For replies
+      if (type === 'email') {
+        return {
+          subject: `Re: ${variables.original_subject || 'Your Message'} – AKY Digital`,
+          content: `Dear ${name},
+
+${variables.message_content || 'Thank you for your message.'}
+
+Best regards,
+The AKY Digital Team`
+        };
+      } else if (type === 'sms') {
+        return {
+          content: `Re: ${variables.original_subject || 'Your Message'} – AKY Digital. Dear ${name}, ${variables.message_content || 'Thank you for your message.'} Best regards, The AKY Digital Team`
+        };
+      } else if (type === 'whatsapp') {
+        return {
+          content: `*Re: ${variables.original_subject || 'Your Message'}* – AKY Digital. Dear *${name}*, ${variables.message_content || 'Thank you for your message.'} Best regards, *The AKY Digital Team*`
+        };
+      }
     }
 
     // Final fallback
     return {
       subject: `Message from AKY Digital`,
-      content: `Dear ${name},\n\nThank you for your interest in AKY Digital.\n\nBest regards,\nThe AKY Digital Team`
+      content: `Dear ${name},
+
+Thank you for your interest in AKY Digital.
+
+Best regards,
+The AKY Digital Team`
     };
   }
 

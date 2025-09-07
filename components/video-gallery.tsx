@@ -128,7 +128,9 @@ const MobileVideoPlayer = ({
         {/* Video info */}
         <div className="space-y-3">
           <h3 className="text-2xl font-bold mb-2 line-clamp-2">{video.title}</h3>
-          <p className="text-sm opacity-90 line-clamp-3 mb-4">{video.description}</p>
+          <div className="mb-4">
+            <p className="text-sm opacity-90 leading-relaxed">{video.description}</p>
+          </div>
           
           {/* Stats */}
           <div className="flex items-center gap-4 text-xs text-white/80 mb-4">
@@ -181,30 +183,23 @@ export default function VideoGallery() {
   const mobileGalleryRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    const fetchVideos = async () => {
-      try {
-        const response = await fetch("/api/dashboard/videos")
-        if (!response.ok) throw new Error("Failed to fetch videos")
-        const data = await response.json()
-        
-        // Add mock data for demo purposes
-        const enhancedData = data.map((video: Video, index: number) => ({
-          ...video,
-          views: Math.floor(Math.random() * 1000) + 50,
-          duration: `${Math.floor(Math.random() * 10) + 1}:${String(Math.floor(Math.random() * 60)).padStart(2, '0')}`,
-          featured: index < 2
-        }))
-        
-        setVideos(enhancedData)
-        // Initialize video states
-        setMobileVideoStates(enhancedData.map(() => ({ isPlaying: false, isMuted: true })))
-      } catch (error) {
-        console.error("Error fetching videos:", error)
-        setVideos([]) // Set empty array on error to show "Coming Soon"
-      } finally {
-        setLoading(false)
+      const fetchVideos = async () => {
+        try {
+          const response = await fetch("/api/dashboard/videos")
+          if (!response.ok) throw new Error("Failed to fetch videos")
+          const data = await response.json()
+          
+          // Use real data from API
+          setVideos(data)
+          // Initialize video states
+          setMobileVideoStates(data.map(() => ({ isPlaying: false, isMuted: true })))
+        } catch (error) {
+          console.error("Error fetching videos:", error)
+          setVideos([]) // Set empty array on error to show "Coming Soon"
+        } finally {
+          setLoading(false)
+        }
       }
-    }
     fetchVideos()
   }, [])
 
@@ -522,7 +517,14 @@ export default function VideoGallery() {
                 <h3 className="text-xl font-bold text-gray-900 mb-3 line-clamp-2 group-hover:text-red-600 transition-colors duration-300">
                   {video.title}
                 </h3>
-                <p className="text-gray-600 text-sm line-clamp-3 mb-4 leading-relaxed">{video.description}</p>
+                <div className="mb-4">
+                  <p className="text-gray-600 text-sm leading-relaxed">
+                    {video.description.length > 150 
+                      ? `${video.description.substring(0, 150)}...` 
+                      : video.description
+                    }
+                  </p>
+                </div>
                 
                 {/* Stats */}
                 <div className="flex items-center gap-4 text-xs text-gray-500">
@@ -597,7 +599,13 @@ export default function VideoGallery() {
                 <Video className="w-5 h-5 text-red-600" />
                 Description
               </h4>
-              <p className="text-gray-700 leading-relaxed">{selectedVideo?.description}</p>
+              <div className="text-gray-700 leading-relaxed space-y-2">
+                {selectedVideo?.description.split('\n').map((paragraph, index) => (
+                  <p key={index} className="text-sm md:text-base">
+                    {paragraph}
+                  </p>
+                ))}
+              </div>
             </div>
           </div>
         </DialogContent>

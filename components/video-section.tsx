@@ -161,9 +161,11 @@ export default function VideoSection() {
           <h3 className="text-xl md:text-2xl font-semibold text-white mb-2">
             {videoToDisplay.title}
           </h3>
-          <p className="text-gray-200 max-w-2xl mx-auto">
-            {videoToDisplay.description}
-          </p>
+          <div className="text-gray-200 max-w-4xl mx-auto">
+            <p className="leading-relaxed text-base md:text-lg">
+              {videoToDisplay.description}
+            </p>
+          </div>
         </div>
         <div className="flex justify-center">
           <div className="relative w-full max-w-4xl">

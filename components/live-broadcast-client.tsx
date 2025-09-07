@@ -25,7 +25,7 @@ import {
   ThumbsUp,
 } from "lucide-react"
 import { toast } from "@/hooks/use-toast"
-import VideoStream from "@/components/video-stream"
+import RealVideoStream from "@/components/real-video-stream"
 
 interface Participant {
   id: string
@@ -472,39 +472,40 @@ export default function LiveBroadcastClient() {
           </div>
         ) : (
           // Live Broadcast Viewer Interface
-          <div className="grid lg:grid-cols-4 gap-6 bg-white/80 backdrop-blur-sm rounded-xl p-6 shadow-xl">
+          <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 bg-white/80 backdrop-blur-sm rounded-xl p-4 md:p-6 shadow-xl">
             {/* Main Video Area */}
             <div className="lg:col-span-3 space-y-4">
               {/* Broadcast Status */}
-              <div className="flex items-center justify-between bg-gradient-to-r from-red-600 to-red-700 text-white p-4 rounded-lg shadow-lg mb-4">
-                <div className="flex items-center gap-4">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between bg-gradient-to-r from-red-600 to-red-700 text-white p-3 md:p-4 rounded-lg shadow-lg mb-4 gap-2">
+                <div className="flex flex-wrap items-center gap-2 md:gap-4">
                   <Badge className="bg-red-800 text-red-100 animate-pulse border-red-700">
                     🔴 LIVE
                   </Badge>
-                  <div className="flex items-center gap-2 text-sm text-red-100">
-                    <Users className="h-4 w-4" />
+                  <div className="flex items-center gap-1 md:gap-2 text-xs md:text-sm text-red-100">
+                    <Users className="h-3 w-3 md:h-4 md:w-4" />
                     <span>{broadcastInfo?.viewerCount || 0} viewers</span>
                   </div>
-                  <div className="text-sm text-red-100 font-medium">{broadcastInfo?.title || "Live Broadcast"}</div>
+                  <div className="text-xs md:text-sm text-red-100 font-medium truncate max-w-[200px] md:max-w-none">{broadcastInfo?.title || "Live Broadcast"}</div>
                 </div>
                 <Button 
                   onClick={shareBroadcast} 
                   variant="outline" 
                   size="sm"
-                  className="border-red-300 text-red-100 hover:bg-red-800 hover:border-red-200"
+                  className="border-red-300 text-red-100 hover:bg-red-800 hover:border-red-200 w-full sm:w-auto"
                 >
                   <Share2 className="h-4 w-4 mr-2" />
-                  Share
+                  <span className="hidden xs:inline">Share</span>
                 </Button>
               </div>
 
               {/* Video Container */}
               <div className="relative">
-                <VideoStream 
+                <RealVideoStream 
                   streamUrl={streamUrl || undefined}
                   isLive={broadcastStatus === "active"}
                   title={broadcastInfo?.title}
                   onError={handleStreamError}
+                  onRetry={() => window.location.reload()}
                 />
 
                 {/* Additional Controls Overlay */}
@@ -546,8 +547,8 @@ export default function LiveBroadcastClient() {
               </div>
             </div>
 
-            {/* Sidebar */}
-            <div className="space-y-4">
+            {/* Sidebar - Stacked on mobile, side-by-side on desktop */}
+            <div className="space-y-4 lg:space-y-0 lg:space-x-0 flex flex-col lg:flex-col">
               {/* Viewers */}
               <Card className="shadow-lg border-0 bg-white/95">
                 <CardHeader className="bg-gradient-to-r from-red-600 to-red-700 text-white">
@@ -587,8 +588,8 @@ export default function LiveBroadcastClient() {
                     Live Chat
                   </CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-4">
-                  <ScrollArea className="h-48" ref={chatScrollRef}>
+                <CardContent className="space-y-4 p-3 md:p-6">
+                  <ScrollArea className="h-40 md:h-48" ref={chatScrollRef}>
                     <div className="space-y-2">
                       {chatMessages.map((message) => (
                         <div key={message.id} className="text-sm">
@@ -622,7 +623,7 @@ export default function LiveBroadcastClient() {
                       onChange={(e) => setNewMessage(e.target.value)}
                       placeholder="Type a message..."
                       onKeyPress={(e) => e.key === "Enter" && sendMessage()}
-                      className="flex-1"
+                      className="flex-1 text-sm"
                     />
                     <Button size="sm" onClick={sendMessage}>
                       <Send className="h-4 w-4" />

@@ -57,22 +57,25 @@ export async function GET(
     const uptime = broadcast.startedAt ? Math.floor((Date.now() - new Date(broadcast.startedAt).getTime()) / 1000) : 0
     const streamHealth = uptime > 300 ? 'excellent' : uptime > 60 ? 'good' : 'initializing'
     
-    // For demo purposes, provide multiple streaming options
-    // In production, this would handle actual video streaming infrastructure
+    // For WebRTC streaming, provide signaling server information
     const streamOptions = {
-      primary: {
+      webrtc: {
+        signalingServer: `${baseUrl}/api/broadcast/stream/${broadcastId}/webrtc/signaling`,
+        iceServers: [
+          { urls: "stun:stun.l.google.com:19302" },
+          { urls: "stun:stun1.l.google.com:19302" }
+        ],
+        protocol: "WebRTC",
+        quality: "HD",
+        bitrate: "2000kbps",
+        resolution: "1280x720"
+      },
+      hls: {
         url: `${baseUrl}/api/broadcast/stream/${broadcastId}/hls`,
         protocol: "HLS",
         quality: "HD",
         bitrate: "2000kbps",
         resolution: "1280x720"
-      },
-      fallback: {
-        url: `${baseUrl}/api/broadcast/stream/${broadcastId}/webrtc`,
-        protocol: "WebRTC",
-        quality: "SD",
-        bitrate: "1000kbps",
-        resolution: "854x480"
       },
       demo: {
         url: `${baseUrl}/api/broadcast/stream/${broadcastId}/demo`,
@@ -97,9 +100,9 @@ export async function GET(
         isLive: true,
         health: streamHealth,
         options: streamOptions,
-        recommended: streamOptions.demo, // Use demo for now
-        streamUrl: streamOptions.demo.url, // Primary stream URL
-        fallbackUrl: streamOptions.fallback.url
+        recommended: streamOptions.webrtc, // Use WebRTC for real-time streaming
+        streamUrl: streamOptions.webrtc.signalingServer, // Primary stream URL
+        fallbackUrl: streamOptions.hls.url
       },
       metadata: {
         viewerCount: broadcast.participants?.length || 0,
@@ -124,14 +127,14 @@ export async function GET(
   }
 }
 
-// Handle demo stream endpoint
+// Handle WebRTC signaling
 export async function POST(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
   try {
     const broadcastId = params.id
-    const { action } = await request.json()
+    const { action, data } = await request.json()
 
     if (action === 'health_check') {
       return NextResponse.json({
@@ -139,6 +142,33 @@ export async function POST(
         broadcastId,
         health: 'excellent',
         timestamp: new Date().toISOString()
+      })
+    }
+
+    if (action === 'offer') {
+      // Handle WebRTC offer from broadcaster
+      return NextResponse.json({
+        success: true,
+        broadcastId,
+        action: 'answer',
+        // In a real implementation, this would be the actual WebRTC answer
+        answer: {
+          type: 'answer',
+          sdp: 'SIMULATED_ANSWER_SDP'
+        }
+      })
+    }
+
+    if (action === 'candidate') {
+      // Handle ICE candidate
+      return NextResponse.json({
+        success: true,
+        broadcastId,
+        action: 'candidate',
+        candidate: {
+          // In a real implementation, this would be the actual ICE candidate
+          candidate: 'SIMULATED_ICE_CANDIDATE'
+        }
       })
     }
 

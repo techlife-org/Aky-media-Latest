@@ -60,6 +60,7 @@ export default function SocialMediaLiveBroadcastWithId({ broadcastId }: SocialMe
   const [broadcastStatus, setBroadcastStatus] = useState<"active" | "inactive" | "loading">("loading")
   const [broadcastInfo, setBroadcastInfo] = useState<BroadcastInfo | null>(null)
   const [streamUrl, setStreamUrl] = useState<string | null>(null)
+  const [showMobileChat, setShowMobileChat] = useState(false)
   const [isTyping, setIsTyping] = useState(false)
 
   const chatScrollRef = useRef<HTMLDivElement>(null)
@@ -81,7 +82,8 @@ export default function SocialMediaLiveBroadcastWithId({ broadcastId }: SocialMe
             viewerCount: data.viewerCount || 0,
             participants: data.broadcast.participants || [],
           })
-          setStreamUrl(`/api/broadcast/stream/${data.broadcast.id}`)
+          // Use WebRTC signaling server URL
+          setStreamUrl(`/api/broadcast/stream/${data.broadcast.id}/webrtc/signaling`)
         } else if (data.isActive && data.broadcast && data.broadcast.id !== broadcastId) {
           setBroadcastStatus("inactive")
           setBroadcastInfo(null)
@@ -533,6 +535,7 @@ export default function SocialMediaLiveBroadcastWithId({ broadcastId }: SocialMe
                   onSendReaction={sendReaction}
                   viewerCount={broadcastInfo?.viewerCount || 0}
                   hostName={broadcastInfo?.participants?.find(p => p.isHost)?.name || "Broadcaster"}
+                  isHost={false}
                 />
               </div>
 
@@ -657,6 +660,69 @@ export default function SocialMediaLiveBroadcastWithId({ broadcastId }: SocialMe
                     </div>
                   </CardContent>
                 </Card>
+              </div>
+              
+              {/* Mobile Chat - Shown on small screens at the bottom */}
+              <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-gray-900 border-t border-red-500 z-50">
+                <div className="max-h-60 overflow-hidden">
+                  <div className="bg-red-600 text-white p-2 flex justify-between items-center">
+                    <h3 className="font-bold flex items-center gap-2">
+                      <MessageCircle className="h-4 w-4" />
+                      <span className="hidden sm:inline">Live Chat</span>
+                      <span className="sm:hidden">Chat</span>
+                    </h3>
+                    <Button 
+                      size="sm" 
+                      variant="ghost" 
+                      onClick={() => setShowMobileChat(!showMobileChat)}
+                      className="text-white hover:bg-red-700"
+                    >
+                      {showMobileChat ? 'Hide' : 'Show'}
+                    </Button>
+                  </div>
+                  
+                  {showMobileChat && (
+                    <div className="p-2 space-y-2">
+                      <ScrollArea className="h-32" ref={chatScrollRef}>
+                        <div className="space-y-2">
+                          {chatMessages.map((message) => (
+                            <div key={message.id} className="text-xs">
+                              {message.type === "reaction" ? (
+                                <div className="flex justify-center">
+                                  <span className="text-lg">{message.message}</span>
+                                </div>
+                              ) : (
+                                <div className="flex items-start gap-1 sm:gap-2">
+                                  <span className="font-bold text-red-400 truncate max-w-[80px] sm:max-w-[120px]">{message.userName}:</span>
+                                  <span className="text-white break-words">{message.message}</span>
+                                </div>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </ScrollArea>
+                      
+                      <div className="flex gap-2 flex-col sm:flex-row">
+                        <Input
+                          value={newMessage}
+                          onChange={(e) => setNewMessage(e.target.value)}
+                          placeholder="Type a message..."
+                          onKeyPress={(e) => e.key === "Enter" && sendMessage()}
+                          className="flex-1 bg-white/10 border-white/20 text-white placeholder:text-white/60 text-sm"
+                          disabled={isTyping}
+                        />
+                        <Button 
+                          size="sm" 
+                          onClick={sendMessage}
+                          disabled={isTyping || !newMessage.trim()}
+                          className="bg-red-600 hover:bg-red-700"
+                        >
+                          <Send className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           </div>

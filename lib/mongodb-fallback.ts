@@ -230,13 +230,17 @@ export async function connectToDatabaseWithFallback(): Promise<{ client: any; db
                               .replace(/&connectTimeoutMS=\d+$/, '')
                               .replace(/&socketTimeoutMS=\d+$/, '');
   
-  // Reasonable connection timeouts for proper MongoDB connection
+  // Enhanced connection options for better compatibility with MongoDB Atlas
   const options: MongoClientOptions = {
-    serverSelectionTimeoutMS: 15000, // 15 seconds for server selection (connection takes ~12 seconds)
-    connectTimeoutMS: 15000, // 15 seconds for connection
-    socketTimeoutMS: 30000, // 30 seconds for socket operations
+    serverSelectionTimeoutMS: 30000, // 30 seconds for server selection
+    connectTimeoutMS: 30000, // 30 seconds for connection
+    socketTimeoutMS: 60000, // 60 seconds for socket operations
+    maxPoolSize: 10,
+    minPoolSize: 1,
     retryWrites: true,
     retryReads: true,
+    srvMaxHosts: 0,
+    srvServiceName: "mongodb",
     ssl: true,
     tls: true,
     appName: "techlife" // Match the appName in your connection string
@@ -249,11 +253,11 @@ export async function connectToDatabaseWithFallback(): Promise<{ client: any; db
     
     const client = new MongoClient(cleanUri, options)
     
-    // Give reasonable time for connection (increased to 20 seconds)
+    // Give reasonable time for connection with timeout
     const connectionPromise = Promise.race([
       client.connect().then(() => client.db().admin().ping()).then(() => client),
       new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Connection timeout after 20 seconds')), 20000)
+        setTimeout(() => reject(new Error('Connection timeout after 30 seconds')), 30000)
       )
     ])
     
@@ -262,6 +266,28 @@ export async function connectToDatabaseWithFallback(): Promise<{ client: any; db
     return { client: connectedClient, db: connectedClient.db() }
   } catch (error: any) {
     console.warn("⚠️  MongoDB Atlas connection failed:", error.message)
+    
+    // Try direct connection as fallback if SRV lookup fails
+    if (error.message.includes('querySrv') || error.message.includes('ENOTFOUND')) {
+      console.log('[MongoDB] Retrying with direct connection...')
+      try {
+        // Try with standard connection string format
+        const directUri = cleanUri.replace('+srv://', '://').replace('.mongodb.net/', '.mongodb.net:27017/')
+        const directClient = new MongoClient(directUri, {
+          ...options,
+          directConnection: true
+        })
+        
+        await directClient.connect()
+        await directClient.db().admin().ping()
+        
+        console.log('✅ [MongoDB] Connected successfully with direct connection')
+        return { client: directClient, db: directClient.db() }
+      } catch (directError) {
+        console.error('[MongoDB] Direct connection also failed:', directError.message)
+      }
+    }
+    
     if (error.message.includes('timeout')) {
       console.log("💡 Connection timeout may be due to network latency. The connection takes about 12 seconds.")
     }

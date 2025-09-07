@@ -122,15 +122,8 @@ export default function VideosPage() {
       if (!response.ok) throw new Error("Failed to fetch videos")
       const data = await response.json()
       
-      // Add mock data for demo purposes
-      const enhancedData = data.map((video: Video, index: number) => ({
-        ...video,
-        views: Math.floor(Math.random() * 1000) + 50,
-        duration: `${Math.floor(Math.random() * 10) + 1}:${String(Math.floor(Math.random() * 60)).padStart(2, '0')}`,
-        featured: index < 2
-      }))
-      
-      setVideos(enhancedData)
+      // Use real data from API
+      setVideos(data)
     } catch (error) {
       console.error("Error fetching videos:", error)
       toast({
@@ -145,18 +138,58 @@ export default function VideosPage() {
 
   const fetchStats = async () => {
     try {
-      // Mock stats for demo - replace with actual API call
-      const mockStats = {
-        totalVideos: videos.length || 12,
-        thisMonth: 3,
-        totalViews: 8547,
-        totalDuration: "2:45:30",
-        categories: 5,
-        featured: 2
+      const response = await fetch("/api/dashboard/videos/stats")
+      if (response.ok) {
+        const data = await response.json()
+        setStats(data)
+      } else {
+        // Calculate stats from videos data if API not available
+        const currentDate = new Date()
+        const currentMonth = currentDate.getMonth()
+        const currentYear = currentDate.getFullYear()
+        
+        const thisMonthVideos = videos.filter(video => {
+          const videoDate = new Date(video.createdAt)
+          return videoDate.getMonth() === currentMonth && videoDate.getFullYear() === currentYear
+        })
+        
+        const totalViews = videos.reduce((sum, video) => sum + (video.views || 0), 0)
+        const featuredCount = videos.filter(video => video.featured).length
+        const categories = new Set(videos.map(video => video.category)).size
+        
+        // Calculate total duration
+        const totalMinutes = videos.reduce((sum, video) => {
+          if (video.duration) {
+            const [minutes, seconds] = video.duration.split(':').map(Number)
+            return sum + minutes + (seconds / 60)
+          }
+          return sum
+        }, 0)
+        
+        const hours = Math.floor(totalMinutes / 60)
+        const minutes = Math.floor(totalMinutes % 60)
+        const totalDuration = `${hours}:${minutes.toString().padStart(2, '0')}:00`
+        
+        setStats({
+          totalVideos: videos.length,
+          thisMonth: thisMonthVideos.length,
+          totalViews,
+          totalDuration,
+          categories,
+          featured: featuredCount
+        })
       }
-      setStats(mockStats)
     } catch (error) {
       console.error("Error fetching stats:", error)
+      // Fallback to calculated stats
+      setStats({
+        totalVideos: videos.length,
+        thisMonth: 0,
+        totalViews: 0,
+        totalDuration: "0:00:00",
+        categories: new Set(videos.map(video => video.category)).size,
+        featured: videos.filter(video => video.featured).length
+      })
     }
   }
 
@@ -356,16 +389,29 @@ export default function VideosPage() {
 
   const toggleFeatured = async (video: Video) => {
     try {
-      // Mock API call - replace with actual implementation
+      const response = await fetch(`/api/dashboard/videos/${video.id}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ featured: !video.featured }),
+      })
+      
+      if (!response.ok) throw new Error("Failed to update video")
+      
       const updatedVideos = videos.map(v => 
         v.id === video.id ? { ...v, featured: !v.featured } : v
       )
       setVideos(updatedVideos)
+      
       toast({
         title: "Success",
         description: `Video ${video.featured ? 'removed from' : 'added to'} featured`,
         className: "bg-green-50 border-green-200 text-green-800",
       })
+      
+      // Refresh stats
+      fetchStats()
     } catch (error) {
       toast({
         title: "Error",
@@ -1037,10 +1083,10 @@ export default function VideosPage() {
                           <Calendar className="w-3 h-3 mr-1" />
                           {new Date(video.createdAt).toLocaleDateString()}
                         </div>
-                        {video.views !== undefined && (
+                        {video.views !== undefined && video.views > 0 && (
                           <div className="flex items-center text-xs text-gray-500">
                             <Eye className="w-3 h-3 mr-1" />
-                            {video.views} views
+                            {video.views.toLocaleString()} views
                           </div>
                         )}
                         {video.duration && (

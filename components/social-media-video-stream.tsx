@@ -31,6 +31,7 @@ interface VideoStreamProps {
   onSendReaction?: (reaction: string) => void
   viewerCount?: number
   hostName?: string
+  isHost?: boolean
 }
 
 interface ChatMessage {
@@ -60,10 +61,10 @@ export default function SocialMediaVideoStream({
   chatMessages = [],
   onSendReaction,
   viewerCount = 0,
-  hostName = "Broadcaster"
+  hostName = "Broadcaster",
+  isHost = false
 }: VideoStreamProps) {
   const videoRef = useRef<HTMLVideoElement>(null)
-  const canvasRef = useRef<HTMLCanvasElement>(null)
   const chatContainerRef = useRef<HTMLDivElement>(null)
   
   const [isAudioEnabled, setIsAudioEnabled] = useState(true)
@@ -74,157 +75,69 @@ export default function SocialMediaVideoStream({
   const [isConnected, setIsConnected] = useState(false)
   const [floatingReactions, setFloatingReactions] = useState<FloatingReaction[]>([])
   const [showChatOverlay, setShowChatOverlay] = useState(true)
+  const [localStream, setLocalStream] = useState<MediaStream | null>(null)
+  const [remoteStream, setRemoteStream] = useState<MediaStream | null>(null)
   
-  const animationRef = useRef<number | null>(null)
   const reactionAnimationRef = useRef<number | null>(null)
 
-  // Create realistic camera feed simulation
-  const startCameraSimulation = useCallback(() => {
-    const canvas = canvasRef.current
-    const video = videoRef.current
+  // Initialize WebRTC connection
+  const initializeWebRTC = useCallback(async () => {
+    console.log('Initializing WebRTC connection...')
+    setIsLoading(true)
+    setError(null)
     
-    if (!canvas || !video) return
-    
-    const ctx = canvas.getContext('2d')
-    if (!ctx) return
-    
-    canvas.width = 1920
-    canvas.height = 1080
-    
-    let frame = 0
-    let time = 0
-    
-    const animate = () => {
-      time += 0.016 // 60fps
-      
-      // Create dynamic background with camera-like movement - RED THEME
-      const gradient = ctx.createRadialGradient(
-        canvas.width/2 + Math.sin(time * 0.5) * 100, 
-        canvas.height/2 + Math.cos(time * 0.3) * 80, 
-        0,
-        canvas.width/2, 
-        canvas.height/2, 
-        canvas.width * 0.8
-      )
-      gradient.addColorStop(0, '#dc2626')
-      gradient.addColorStop(0.3, '#ef4444')
-      gradient.addColorStop(0.7, '#991b1b')
-      gradient.addColorStop(1, '#7f1d1d')
-      
-      ctx.fillStyle = gradient
-      ctx.fillRect(0, 0, canvas.width, canvas.height)
-      
-      // Add moving particles for dynamic effect
-      ctx.fillStyle = 'rgba(255, 255, 255, 0.1)'
-      for (let i = 0; i < 50; i++) {
-        const x = (Math.sin(time * 0.1 + i) * canvas.width/2) + canvas.width/2
-        const y = (Math.cos(time * 0.15 + i * 0.5) * canvas.height/2) + canvas.height/2
-        const size = Math.sin(time + i) * 3 + 5
-        
-        ctx.beginPath()
-        ctx.arc(x, y, size, 0, Math.PI * 2)
-        ctx.fill()
-      }
-      
-      // Simulate camera focus effect
-      const focusIntensity = Math.sin(time * 0.2) * 0.1 + 0.9
-      ctx.globalAlpha = focusIntensity
-      
-      // Main content area
-      const contentY = canvas.height * 0.3
-      
-      // Host name and title
-      ctx.fillStyle = 'white'
-      ctx.font = 'bold 72px Arial'
-      ctx.textAlign = 'center'
-      ctx.shadowColor = 'rgba(0, 0, 0, 0.8)'
-      ctx.shadowBlur = 20
-      ctx.fillText('🎥 LIVE BROADCAST', canvas.width / 2, contentY)
-      
-      ctx.font = 'bold 48px Arial'
-      ctx.fillText(`Host: ${hostName}`, canvas.width / 2, contentY + 100)
-      
-      ctx.font = '36px Arial'
-      ctx.fillStyle = 'rgba(255, 255, 255, 0.9)'
-      ctx.fillText(title || 'Live Stream', canvas.width / 2, contentY + 160)
-      
-      // Live indicator with pulse
-      const pulseSize = Math.sin(time * 3) * 10 + 40
-      ctx.fillStyle = '#ef4444'
-      ctx.beginPath()
-      ctx.arc(canvas.width / 2 - 200, contentY + 250, pulseSize, 0, Math.PI * 2)
-      ctx.fill()
-      
-      ctx.fillStyle = 'white'
-      ctx.font = 'bold 32px Arial'
-      ctx.fillText('🔴 LIVE', canvas.width / 2 - 200, contentY + 260)
-      
-      // Viewer count
-      ctx.fillStyle = 'rgba(255, 255, 255, 0.9)'
-      ctx.font = '28px Arial'
-      ctx.fillText(`👥 ${viewerCount} watching`, canvas.width / 2 + 200, contentY + 260)
-      
-      // Timestamp
-      ctx.font = '24px Arial'
-      ctx.fillStyle = 'rgba(255, 255, 255, 0.7)'
-      ctx.fillText(new Date().toLocaleTimeString(), canvas.width / 2, contentY + 320)
-      
-      // Audio visualization bars - RED THEME
-      ctx.fillStyle = '#ef4444'
-      for (let i = 0; i < 20; i++) {
-        const barHeight = Math.sin(time * 5 + i * 0.5) * 30 + 40
-        const x = canvas.width / 2 - 200 + i * 20
-        const y = contentY + 380
-        
-        ctx.fillRect(x, y, 15, barHeight)
-      }
-      
-      // Connection quality indicator - RED THEME
-      ctx.fillStyle = connectionQuality === 'excellent' ? '#ef4444' : 
-                     connectionQuality === 'good' ? '#dc2626' : '#991b1b'
-      ctx.font = '20px Arial'
-      ctx.fillText(`📶 ${connectionQuality.toUpperCase()}`, canvas.width / 2, contentY + 450)
-      
-      ctx.globalAlpha = 1
-      ctx.shadowBlur = 0
-      
-      frame++
-      animationRef.current = requestAnimationFrame(animate)
-    }
-    
-    animate()
-    
-    // Create MediaStream from canvas
     try {
-      if ('captureStream' in canvas) {
-        const stream = (canvas as any).captureStream(30)
-        video.srcObject = stream
-        video.play().then(() => {
+      if (isHost && streamUrl) {
+        // Get user media for host
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: { 
+            width: { ideal: 1280 }, 
+            height: { ideal: 720 },
+            facingMode: 'user'
+          },
+          audio: true
+        })
+        
+        setLocalStream(stream)
+        
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream
+          await videoRef.current.play()
+        }
+        
+        // Create WebRTC peer connection for host
+        // In a real implementation, you would set up the full WebRTC connection here
+        // For now, we'll simulate the connection
+        console.log('Creating WebRTC offer for broadcast:', streamUrl)
+        
+        setIsLoading(false)
+        setIsConnected(true)
+        setConnectionQuality('excellent')
+      } else if (streamUrl && isLive) {
+        // For viewers, we would connect to the WebRTC stream
+        // This is a simplified version - in a real implementation, you would use a WebRTC library
+        console.log('Connecting to remote stream:', streamUrl)
+        
+        // Simulate connection for demo purposes
+        setTimeout(() => {
           setIsLoading(false)
-          setError(null)
-          setIsConnected(true)
-          setConnectionQuality('excellent')
-        }).catch((err) => {
-          console.warn('Video play failed:', err)
-          setIsLoading(false)
-          setError(null)
           setIsConnected(true)
           setConnectionQuality('good')
-        })
+        }, 1500)
       } else {
         setIsLoading(false)
-        setError(null)
-        setIsConnected(true)
-        setConnectionQuality('good')
+        setIsConnected(false)
       }
-    } catch (streamError) {
-      console.warn('MediaStream creation failed:', streamError)
+    } catch (err) {
+      console.error('Error accessing media devices:', err)
+      setError('Failed to access camera and microphone. Please check permissions.')
       setIsLoading(false)
-      setError(null)
-      setIsConnected(true)
-      setConnectionQuality('good')
+      setIsConnected(false)
+      
+      // Show error toast if onError handler is provided
+      onError?.('Failed to access camera and microphone. Please check permissions.')
     }
-  }, [hostName, title, viewerCount, connectionQuality])
+  }, [isHost, streamUrl, isLive, onError])
 
   // Initialize stream
   const initializeStream = useCallback(() => {
@@ -234,13 +147,13 @@ export default function SocialMediaVideoStream({
     
     if (isLive) {
       setTimeout(() => {
-        startCameraSimulation()
+        initializeWebRTC()
       }, 1000)
     } else {
       setIsLoading(false)
       setIsConnected(false)
     }
-  }, [isLive, startCameraSimulation])
+  }, [isLive, initializeWebRTC])
 
   // Handle floating reactions
   const addFloatingReaction = useCallback((emoji: string) => {
@@ -294,14 +207,16 @@ export default function SocialMediaVideoStream({
   // Cleanup
   useEffect(() => {
     return () => {
-      if (animationRef.current) {
-        cancelAnimationFrame(animationRef.current)
-      }
       if (reactionAnimationRef.current) {
         cancelAnimationFrame(reactionAnimationRef.current)
       }
+      
+      // Stop all media tracks when component unmounts
+      if (localStream) {
+        localStream.getTracks().forEach(track => track.stop())
+      }
     }
-  }, [])
+  }, [localStream])
 
   // Initialize on mount
   useEffect(() => {
@@ -357,15 +272,7 @@ export default function SocialMediaVideoStream({
   }
 
   return (
-    <div className="relative bg-black rounded-2xl overflow-hidden aspect-video shadow-2xl border-4 border-red-500">
-      {/* Hidden canvas for stream generation */}
-      <canvas
-        ref={canvasRef}
-        className="hidden"
-        width={1920}
-        height={1080}
-      />
-      
+    <div className="relative bg-black rounded-2xl overflow-hidden aspect-video shadow-2xl border-4 border-red-500 mobile-video-container">
       {/* Main video element */}
       <video
         ref={videoRef}

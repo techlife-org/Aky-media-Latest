@@ -23,6 +23,36 @@ body {
     backdrop-filter: blur(10px);
     border: 1px solid rgba(255, 255, 255, 0.1);
   }
+  
+  /* Responsive Utilities */
+  @media (max-width: 1023px) {
+    .mobile-full-height {
+      height: calc(100vh - 100px);
+    }
+    
+    .mobile-chat-expanded {
+      height: 60vh;
+    }
+    
+    .mobile-video-container {
+      aspect-ratio: 16/9;
+    }
+  }
+  
+  @media (max-width: 767px) {
+    .mobile-video-container {
+      aspect-ratio: 4/3;
+    }
+    
+    .mobile-controls-row {
+      flex-direction: column;
+      gap: 8px;
+    }
+    
+    .mobile-reactions-row {
+      justify-content: space-between;
+    }
+  }
 }
 
 @layer base {

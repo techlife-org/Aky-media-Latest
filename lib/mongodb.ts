@@ -6,7 +6,7 @@ if (!MONGODB_URI) {
   throw new Error("Please define the MONGODB_URI environment variable inside .env")
 }
 
-// Simplified options for better compatibility with MongoDB Atlas
+// Enhanced options for better compatibility with MongoDB Atlas
 const options: MongoClientOptions = {
   // Use longer timeouts for better reliability
   serverSelectionTimeoutMS: 30000, // 30 seconds
@@ -21,6 +21,10 @@ const options: MongoClientOptions = {
   retryWrites: true,
   retryReads: true,
   
+  // DNS resolution options for better compatibility
+  srvMaxHosts: 0,
+  srvServiceName: "mongodb",
+  
   // Use default SSL settings for Atlas
   // Don't override SSL settings as they're in the URI
 }
@@ -33,7 +37,7 @@ declare global {
 let client: MongoClient
 let clientPromise: Promise<MongoClient>
 
-// Improved connection logic with better error handling
+// Improved connection logic with better error handling and DNS fallback
 async function createConnection(): Promise<MongoClient> {
   const maxRetries = 3
   let lastError: Error | null = null
@@ -57,6 +61,28 @@ async function createConnection(): Promise<MongoClient> {
       return client
     } catch (error: any) {
       lastError = error
+      
+      // Try direct connection as fallback if SRV lookup fails
+      if (error.message.includes('querySrv') || error.message.includes('ENOTFOUND')) {
+        console.log('[MongoDB] Retrying with direct connection...')
+        try {
+          // Try with standard connection string format
+          const directUri = MONGODB_URI.replace('+srv://', '://').replace('.mongodb.net/', '.mongodb.net:27017/')
+          const directClient = new MongoClient(directUri, {
+            ...options,
+            directConnection: true
+          })
+          
+          await directClient.connect()
+          await directClient.db().admin().ping()
+          
+          console.log('✅ [MongoDB] Connected successfully with direct connection')
+          return directClient
+        } catch (directError) {
+          console.error('[MongoDB] Direct connection also failed:', directError.message)
+          lastError = directError
+        }
+      }
       
       // Only log detailed errors on final attempt
       if (attempt === maxRetries) {
