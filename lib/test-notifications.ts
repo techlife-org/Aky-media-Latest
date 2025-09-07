@@ -1,1 +1,166 @@
-/**\n * Test utility for Twilio notifications\n * This file helps test SMS and WhatsApp messaging functionality\n */\n\nimport { NotificationService } from './notification-service';\n\nexport async function testTwilioIntegration(testPhone: string, testEmail: string, testName?: string) {\n  console.log('🧪 Testing Twilio Integration...');\n  console.log('================================');\n  \n  try {\n    const notificationService = new NotificationService();\n    \n    console.log(`📧 Test Email: ${testEmail}`);\n    console.log(`📱 Test Phone: ${testPhone}`);\n    console.log(`👤 Test Name: ${testName || 'Test User'}`);\n    console.log('');\n    \n    // Test welcome notifications\n    console.log('🚀 Sending welcome notifications...');\n    const results = await notificationService.sendWelcomeNotifications(\n      testEmail, \n      testPhone, \n      testName\n    );\n    \n    console.log('📊 Results:');\n    console.log('----------');\n    \n    if (results.email) {\n      console.log('✅ Email sent successfully');\n      console.log(`   Message ID: ${results.email.messageId}`);\n    } else {\n      console.log('❌ Email failed');\n    }\n    \n    if (results.sms) {\n      console.log('✅ SMS sent successfully');\n      console.log(`   Message SID: ${results.sms.sid}`);\n      console.log(`   Status: ${results.sms.status}`);\n    } else {\n      console.log('❌ SMS failed');\n    }\n    \n    if (results.whatsapp) {\n      console.log('✅ WhatsApp sent successfully');\n      console.log(`   Message SID: ${results.whatsapp.sid}`);\n      console.log(`   Status: ${results.whatsapp.status}`);\n    } else {\n      console.log('❌ WhatsApp failed');\n    }\n    \n    if (results.errors.length > 0) {\n      console.log('⚠️  Errors encountered:');\n      results.errors.forEach((error, index) => {\n        console.log(`   ${index + 1}. ${error}`);\n      });\n    }\n    \n    console.log('');\n    console.log('🎉 Test completed!');\n    \n    return results;\n    \n  } catch (error) {\n    console.error('💥 Test failed with error:', error);\n    throw error;\n  }\n}\n\n/**\n * Test individual SMS sending\n */\nexport async function testSMS(phone: string, name?: string) {\n  console.log('📱 Testing SMS only...');\n  \n  try {\n    const notificationService = new NotificationService();\n    // Access the private twilioService through the public method\n    const results = await notificationService.sendWelcomeNotifications('test@example.com', phone, name);\n    \n    if (results.sms) {\n      console.log('✅ SMS test successful');\n      console.log(`   SID: ${results.sms.sid}`);\n      return results.sms;\n    } else {\n      console.log('❌ SMS test failed');\n      return null;\n    }\n  } catch (error) {\n    console.error('💥 SMS test error:', error);\n    throw error;\n  }\n}\n\n/**\n * Test individual WhatsApp sending\n */\nexport async function testWhatsApp(phone: string, name?: string) {\n  console.log('💬 Testing WhatsApp only...');\n  \n  try {\n    const notificationService = new NotificationService();\n    // Access the private twilioService through the public method\n    const results = await notificationService.sendWelcomeNotifications('test@example.com', phone, name);\n    \n    if (results.whatsapp) {\n      console.log('✅ WhatsApp test successful');\n      console.log(`   SID: ${results.whatsapp.sid}`);\n      return results.whatsapp;\n    } else {\n      console.log('❌ WhatsApp test failed');\n      return null;\n    }\n  } catch (error) {\n    console.error('💥 WhatsApp test error:', error);\n    throw error;\n  }\n}\n\n/**\n * Validate Twilio configuration\n */\nexport function validateTwilioConfig() {\n  console.log('🔍 Validating Twilio Configuration...');\n  console.log('====================================');\n  \n  const config = {\n    accountSid: process.env.TWILIO_ACCOUNT_SID,\n    authToken: process.env.TWILIO_AUTH_TOKEN ? '[HIDDEN]' : undefined,\n    phoneNumber: process.env.TWILIO_PHONE_NUMBER,\n    whatsappNumber: process.env.TWILIO_WHATSAPP_NUMBER,\n    contentSid: process.env.TWILIO_WHATSAPP_CONTENT_SID\n  };\n  \n  console.log('Configuration:');\n  Object.entries(config).forEach(([key, value]) => {\n    const status = value ? '✅' : '❌';\n    console.log(`  ${status} ${key}: ${value || 'NOT SET'}`);\n  });\n  \n  const isValid = config.accountSid && \n                  process.env.TWILIO_AUTH_TOKEN && \n                  config.phoneNumber && \n                  config.whatsappNumber;\n  \n  console.log('');\n  console.log(`Overall Status: ${isValid ? '✅ Valid' : '❌ Invalid - Missing required fields'}`);\n  \n  return isValid;\n}\n\n// Example usage (commented out):\n/*\n// Test with your phone number\ntestTwilioIntegration(\n  '+2348161781643',  // Your test phone number\n  'test@example.com', // Your test email\n  'Test User'         // Test name\n).then(() => {\n  console.log('All tests completed!');\n}).catch(error => {\n  console.error('Tests failed:', error);\n});\n*/
+/**
+ * Test utility for Twilio notifications
+ * This file helps test SMS and WhatsApp messaging functionality
+ */
+
+import { NotificationService } from './notification-service';
+
+export async function testTwilioIntegration(testPhone: string, testEmail: string, testName?: string) {
+  console.log('🧪 Testing Twilio Integration...');
+  console.log('================================');
+  
+  try {
+    const notificationService = new NotificationService();
+    
+    console.log(`📧 Test Email: ${testEmail}`);
+    console.log(`📱 Test Phone: ${testPhone}`);
+    console.log(`👤 Test Name: ${testName || 'Test User'}`);
+    console.log('');
+    
+    // Test welcome notifications
+    console.log('🚀 Sending welcome notifications...');
+    const results = await notificationService.sendWelcomeNotifications(
+      testEmail, 
+      testPhone, 
+      testName
+    );
+    
+    console.log('📊 Results:');
+    console.log('----------');
+    
+    if (results.email) {
+      console.log('✅ Email sent successfully');
+      console.log(`   Message ID: ${results.email.messageId}`);
+    } else {
+      console.log('❌ Email failed');
+    }
+    
+    if (results.sms) {
+      console.log('✅ SMS sent successfully');
+      console.log(`   Message SID: ${results.sms.sid}`);
+      console.log(`   Status: ${results.sms.status}`);
+    } else {
+      console.log('❌ SMS failed');
+    }
+    
+    if (results.whatsapp) {
+      console.log('✅ WhatsApp sent successfully');
+      console.log(`   Message SID: ${results.whatsapp.sid}`);
+      console.log(`   Status: ${results.whatsapp.status}`);
+    } else {
+      console.log('❌ WhatsApp failed');
+    }
+    
+    if (results.errors.length > 0) {
+      console.log('⚠️  Errors encountered:');
+      results.errors.forEach((error, index) => {
+        console.log(`   ${index + 1}. ${error}`);
+      });
+    }
+    
+    console.log('');
+    console.log('🎉 Test completed!');
+    
+    return results;
+    
+  } catch (error) {
+    console.error('💥 Test failed with error:', error);
+    throw error;
+  }
+}
+
+/**
+ * Test individual SMS sending
+ */
+export async function testSMS(phone: string, name?: string) {
+  console.log('📱 Testing SMS only...');
+  
+  try {
+    const notificationService = new NotificationService();
+    // Access the private twilioService through the public method
+    const results = await notificationService.sendWelcomeNotifications('test@example.com', phone, name);
+    
+    if (results.sms) {
+      console.log('✅ SMS test successful');
+      console.log(`   SID: ${results.sms.sid}`);
+      return results.sms;
+    } else {
+      console.log('❌ SMS test failed');
+      return null;
+    }
+  } catch (error) {
+    console.error('💥 SMS test error:', error);
+    throw error;
+  }
+}
+
+/**
+ * Test individual WhatsApp sending
+ */
+export async function testWhatsApp(phone: string, name?: string) {
+  console.log('💬 Testing WhatsApp only...');
+  
+  try {
+    const notificationService = new NotificationService();
+    // Access the private twilioService through the public method
+    const results = await notificationService.sendWelcomeNotifications('test@example.com', phone, name);
+    
+    if (results.whatsapp) {
+      console.log('✅ WhatsApp test successful');
+      console.log(`   SID: ${results.whatsapp.sid}`);
+      return results.whatsapp;
+    } else {
+      console.log('❌ WhatsApp test failed');
+      return null;
+    }
+  } catch (error) {
+    console.error('💥 WhatsApp test error:', error);
+    throw error;
+  }
+}
+
+/**
+ * Validate Twilio configuration
+ */
+export function validateTwilioConfig() {
+  console.log('🔍 Validating Twilio Configuration...');
+  console.log('====================================');
+  
+  const config = {
+    accountSid: process.env.TWILIO_ACCOUNT_SID,
+    authToken: process.env.TWILIO_AUTH_TOKEN ? '[HIDDEN]' : undefined,
+    phoneNumber: process.env.TWILIO_PHONE_NUMBER,
+    whatsappNumber: process.env.TWILIO_WHATSAPP_NUMBER,
+    contentSid: process.env.TWILIO_WHATSAPP_CONTENT_SID
+  };
+  
+  console.log('Configuration:');
+  Object.entries(config).forEach(([key, value]) => {
+    const status = value ? '✅' : '❌';
+    console.log(`  ${status} ${key}: ${value || 'NOT SET'}`);
+  });
+  
+  const isValid = config.accountSid && 
+                  process.env.TWILIO_AUTH_TOKEN && 
+                  config.phoneNumber && 
+                  config.whatsappNumber;
+  
+  console.log('');
+  console.log(`Overall Status: ${isValid ? '✅ Valid' : '❌ Invalid - Missing required fields'}`);
+  
+  return isValid;
+}
+
+// Example usage (commented out):
+/*
+// Test with your phone number
+testTwilioIntegration(
+  '+2348161781643',  // Your test phone number
+  'test@example.com', // Your test email
+  'Test User'         // Test name
+).then(() => {
+  console.log('All tests completed!');
+}).catch(error => {
+  console.error('Tests failed:', error);
+});
+*/

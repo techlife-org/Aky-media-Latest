@@ -1,9 +1,294 @@
-import { type NextRequest, NextResponse } from \"next/server\"\nimport { connectToDatabase } from \"@/lib/mongodb\"\nimport { validateAndFormatPhone } from '@/lib/phone-utils'\n\n// GET - Retrieve subscribers with filtering and pagination\nexport async function GET(request: NextRequest) {\n  try {\n    const { searchParams } = new URL(request.url)\n    \n    const page = parseInt(searchParams.get('page') || '1')\n    const limit = parseInt(searchParams.get('limit') || '20')\n    const status = searchParams.get('status')\n    const source = searchParams.get('source')\n    const search = searchParams.get('search')\n    const sortBy = searchParams.get('sortBy') || 'subscribedAt'\n    const sortOrder = (searchParams.get('sortOrder') || 'desc') as 'asc' | 'desc'\n    \n    const { db } = await connectToDatabase()\n    \n    // Build filter query\n    const filter: any = {}\n    \n    if (status) filter.status = status\n    if (source) filter.source = source\n    \n    if (search) {\n      filter.$or = [\n        { firstName: { $regex: search, $options: 'i' } },\n        { lastName: { $regex: search, $options: 'i' } },\n        { email: { $regex: search, $options: 'i' } },\n        { mobile: { $regex: search, $options: 'i' } }\n      ]\n    }\n    \n    // Get total count\n    const total = await db.collection('subscribers').countDocuments(filter)\n    \n    // Get subscribers with pagination\n    const subscribers = await db.collection('subscribers')\n      .find(filter)\n      .sort({ [sortBy]: sortOrder === 'desc' ? -1 : 1 })\n      .skip((page - 1) * limit)\n      .limit(limit)\n      .toArray()\n    \n    return NextResponse.json({\n      success: true,\n      data: {\n        subscribers,\n        pagination: {\n          page,\n          limit,\n          total,\n          totalPages: Math.ceil(total / limit)\n        }\n      }\n    })\n  } catch (error: any) {\n    console.error('Error fetching subscribers:', error)\n    return NextResponse.json(\n      { \n        success: false,\n        message: 'Failed to fetch subscribers',\n        error: error.message\n      },\n      { status: 500 }\n    )\n  }\n}\n\n// POST - Add new subscriber\nexport async function POST(request: NextRequest) {\n  try {\n    const body = await request.json()\n    const { firstName, lastName, email, mobile, source, preferences } = body\n    \n    // Validate required fields\n    if (!firstName || !lastName || !email) {\n      return NextResponse.json(\n        { message: \"First name, last name, and email are required\" },\n        { status: 400 }\n      )\n    }\n    \n    // Validate email format\n    const emailRegex = /^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/\n    if (!emailRegex.test(email)) {\n      return NextResponse.json(\n        { message: \"Please enter a valid email address\" },\n        { status: 400 }\n      )\n    }\n    \n    // Validate and format phone number if provided\n    let formattedPhone = \"\";\n    if (mobile && mobile.trim()) {\n      const phoneValidation = validateAndFormatPhone(mobile.trim());\n      if (!phoneValidation.isValid) {\n        return NextResponse.json(\n          { \n            success: false, \n            message: phoneValidation.error || 'Please enter a valid phone number'\n          },\n          { status: 400 }\n        );\n      }\n      formattedPhone = phoneValidation.formattedPhone || \"\";\n    }\n    \n    const { db } = await connectToDatabase()\n    \n    // Check if subscriber already exists\n    const existingSubscriber = await db.collection('subscribers').findOne({ email })\n    \n    if (existingSubscriber) {\n      return NextResponse.json(\n        { \n          success: false,\n          message: \"Email address is already subscribed\"\n        },\n        { status: 409 }\n      )\n    }\n    \n    // Create new subscriber\n    const subscriber = {\n      firstName: firstName.trim(),\n      lastName: lastName.trim(),\n      email: email.toLowerCase().trim(),\n      mobile: formattedPhone,\n      source: source || 'manual',\n      status: 'active',\n      subscribedAt: new Date(),\n      preferences: {\n        email: true,\n        sms: !!formattedPhone,\n        whatsapp: !!formattedPhone,\n        newsletter: true,\n        updates: true,\n        promotions: false,\n        ...preferences\n      },\n      tags: [source || 'manual'],\n      metadata: {\n        subscriptionMethod: source || 'manual',\n        ipAddress: request.headers.get('x-forwarded-for') || request.ip,\n        userAgent: request.headers.get('user-agent')\n      }\n    }\n    \n    const result = await db.collection('subscribers').insertOne(subscriber)\n    \n    if (result.insertedId) {\n      return NextResponse.json({\n        success: true,\n        message: \"Subscriber added successfully\",\n        subscriberId: result.insertedId.toString()\n      })\n    } else {\n      throw new Error(\"Failed to add subscriber\")\n    }\n  } catch (error: any) {\n    console.error('Error adding subscriber:', error)\n    return NextResponse.json(\n      { \n        success: false,\n        message: \"Failed to add subscriber\",\n        error: error.message\n      },\n      { status: 500 }\n    )\n  }\n}\n\n// PUT - Update subscriber\nexport async function PUT(request: NextRequest) {\n  try {\n    const body = await request.json()\n    const { id, firstName, lastName, email, mobile, status, preferences, tags } = body\n    \n    if (!id) {\n      return NextResponse.json(\n        { message: \"Subscriber ID is required\" },\n        { status: 400 }\n      )\n    }\n    \n    const { db } = await connectToDatabase()\n    \n    // Validate and format phone number if provided\n    let formattedPhone = mobile;\n    if (mobile && mobile.trim()) {\n      const phoneValidation = validateAndFormatPhone(mobile.trim());\n      if (!phoneValidation.isValid) {\n        return NextResponse.json(\n          { \n            success: false, \n            message: phoneValidation.error || 'Please enter a valid phone number'\n          },\n          { status: 400 }\n        );\n      }\n      formattedPhone = phoneValidation.formattedPhone;\n    }\n    \n    const updateData: any = {\n      lastUpdated: new Date()\n    }\n    \n    if (firstName) updateData.firstName = firstName.trim()\n    if (lastName) updateData.lastName = lastName.trim()\n    if (email) updateData.email = email.toLowerCase().trim()\n    if (formattedPhone !== undefined) updateData.mobile = formattedPhone\n    if (status) updateData.status = status\n    if (preferences) updateData.preferences = preferences\n    if (tags) updateData.tags = tags\n    \n    const result = await db.collection('subscribers').updateOne(\n      { _id: new (require('mongodb')).ObjectId(id) },\n      { $set: updateData }\n    )\n    \n    if (result.modifiedCount > 0) {\n      return NextResponse.json({\n        success: true,\n        message: \"Subscriber updated successfully\"\n      })\n    } else {\n      return NextResponse.json(\n        { \n          success: false,\n          message: \"Subscriber not found or no changes made\"\n        },\n        { status: 404 }\n      )\n    }\n  } catch (error: any) {\n    console.error('Error updating subscriber:', error)\n    return NextResponse.json(\n      { \n        success: false,\n        message: \"Failed to update subscriber\",\n        error: error.message\n      },\n      { status: 500 }\n    )\n  }\n}\n\n// DELETE - Remove subscriber\nexport async function DELETE(request: NextRequest) {\n  try {\n    const { searchParams } = new URL(request.url)\n    const id = searchParams.get('id')\n    \n    if (!id) {\n      return NextResponse.json(\n        { message: \"Subscriber ID is required\" },\n        { status: 400 }\n      )\n    }\n    \n    const { db } = await connectToDatabase()\n    \n    const result = await db.collection('subscribers').deleteOne({\n      _id: new (require('mongodb')).ObjectId(id)\n    })\n    \n    if (result.deletedCount > 0) {\n      return NextResponse.json({\n        success: true,\n        message: \"Subscriber removed successfully\"\n      })\n    } else {\n      return NextResponse.json(\n        { \n          success: false,\n          message: \"Subscriber not found\"\n        },\n        { status: 404 }\n      )\n    }\n  } catch (error: any) {\n    console.error('Error removing subscriber:', error)\n    return NextResponse.json(\n      { \n        success: false,\n        message: \"Failed to remove subscriber\",\n        error: error.message\n      },\n      { status: 500 }\n    )\n  }\n}"
+import { type NextRequest, NextResponse } from "next/server"
+import { connectToDatabase } from "@/lib/mongodb"
+import { validateAndFormatPhone } from '@/lib/phone-utils'
+
+// GET - Retrieve subscribers with filtering and pagination
+export async function GET(request: NextRequest) {
+  try {
+    const { searchParams } = new URL(request.url)
+    
+    const page = parseInt(searchParams.get('page') || '1')
+    const limit = parseInt(searchParams.get('limit') || '20')
+    const status = searchParams.get('status')
+    const source = searchParams.get('source')
+    const search = searchParams.get('search')
+    const sortBy = searchParams.get('sortBy') || 'subscribedAt'
+    const sortOrder = (searchParams.get('sortOrder') || 'desc') as 'asc' | 'desc'
+    
+    const { db } = await connectToDatabase()
+    
+    // Build filter query
+    const filter: any = {}
+    
+    if (status) filter.status = status
+    if (source) filter.source = source
+    
+    if (search) {
+      filter.$or = [
+        { firstName: { $regex: search, $options: 'i' } },
+        { lastName: { $regex: search, $options: 'i' } },
+        { email: { $regex: search, $options: 'i' } },
+        { mobile: { $regex: search, $options: 'i' } }
+      ]
+    }
+    
+    // Get total count
+    const total = await db.collection('subscribers').countDocuments(filter)
+    
+    // Get subscribers with pagination
+    const subscribers = await db.collection('subscribers')
+      .find(filter)
+      .sort({ [sortBy]: sortOrder === 'desc' ? -1 : 1 })
+      .skip((page - 1) * limit)
+      .limit(limit)
+      .toArray()
+    
+    return NextResponse.json({
+      success: true,
+      data: {
+        subscribers,
+        pagination: {
+          page,
+          limit,
+          total,
+          totalPages: Math.ceil(total / limit)
+        }
+      }
+    })
+  } catch (error: any) {
+    console.error('Error fetching subscribers:', error)
+    return NextResponse.json(
+      { 
+        success: false,
+        message: 'Failed to fetch subscribers',
+        error: error.message
+      },
+      { status: 500 }
+    )
   }
-]</function_calls>
+}
 
-Now let me test the contact system:
+// POST - Add new subscriber
+export async function POST(request: NextRequest) {
+  try {
+    const body = await request.json()
+    const { firstName, lastName, email, mobile, source, preferences } = body
+    
+    // Validate required fields
+    if (!firstName || !lastName || !email) {
+      return NextResponse.json(
+        { message: "First name, last name, and email are required" },
+        { status: 400 }
+      )
+    }
+    
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    if (!emailRegex.test(email)) {
+      return NextResponse.json(
+        { message: "Please enter a valid email address" },
+        { status: 400 }
+      )
+    }
+    
+    // Validate and format phone number if provided
+    let formattedPhone = "";
+    if (mobile && mobile.trim()) {
+      const phoneValidation = validateAndFormatPhone(mobile.trim());
+      if (!phoneValidation.isValid) {
+        return NextResponse.json(
+          { 
+            success: false, 
+            message: phoneValidation.error || 'Please enter a valid phone number'
+          },
+          { status: 400 }
+        );
+      }
+      formattedPhone = phoneValidation.formattedPhone || "";
+    }
+    
+    const { db } = await connectToDatabase()
+    
+    // Check if subscriber already exists
+    const existingSubscriber = await db.collection('subscribers').findOne({ email })
+    
+    if (existingSubscriber) {
+      return NextResponse.json(
+        { 
+          success: false,
+          message: "Email address is already subscribed"
+        },
+        { status: 409 }
+      )
+    }
+    
+    // Create new subscriber
+    const subscriber = {
+      firstName: firstName.trim(),
+      lastName: lastName.trim(),
+      email: email.toLowerCase().trim(),
+      mobile: formattedPhone,
+      source: source || 'manual',
+      status: 'active',
+      subscribedAt: new Date(),
+      preferences: {
+        email: true,
+        sms: !!formattedPhone,
+        whatsapp: !!formattedPhone,
+        newsletter: true,
+        updates: true,
+        promotions: false,
+        ...preferences
+      },
+      tags: [source || 'manual'],
+      metadata: {
+        subscriptionMethod: source || 'manual',
+        ipAddress: request.headers.get('x-forwarded-for') || request.ip,
+        userAgent: request.headers.get('user-agent')
+      }
+    }
+    
+    const result = await db.collection('subscribers').insertOne(subscriber)
+    
+    if (result.insertedId) {
+      return NextResponse.json({
+        success: true,
+        message: "Subscriber added successfully",
+        subscriberId: result.insertedId.toString()
+      })
+    } else {
+      throw new Error("Failed to add subscriber")
+    }
+  } catch (error: any) {
+    console.error('Error adding subscriber:', error)
+    return NextResponse.json(
+      { 
+        success: false,
+        message: "Failed to add subscriber",
+        error: error.message
+      },
+      { status: 500 }
+    )
+  }
+}
 
-<function_calls>
-<invoke name="shell_execute">
-<parameter name="operation_type">EXECUTE
+// PUT - Update subscriber
+export async function PUT(request: NextRequest) {
+  try {
+    const body = await request.json()
+    const { id, firstName, lastName, email, mobile, status, preferences, tags } = body
+    
+    if (!id) {
+      return NextResponse.json(
+        { message: "Subscriber ID is required" },
+        { status: 400 }
+      )
+    }
+    
+    const { db } = await connectToDatabase()
+    
+    // Validate and format phone number if provided
+    let formattedPhone = mobile;
+    if (mobile && mobile.trim()) {
+      const phoneValidation = validateAndFormatPhone(mobile.trim());
+      if (!phoneValidation.isValid) {
+        return NextResponse.json(
+          { 
+            success: false, 
+            message: phoneValidation.error || 'Please enter a valid phone number'
+          },
+          { status: 400 }
+        );
+      }
+      formattedPhone = phoneValidation.formattedPhone;
+    }
+    
+    const updateData: any = {
+      lastUpdated: new Date()
+    }
+    
+    if (firstName) updateData.firstName = firstName.trim()
+    if (lastName) updateData.lastName = lastName.trim()
+    if (email) updateData.email = email.toLowerCase().trim()
+    if (formattedPhone !== undefined) updateData.mobile = formattedPhone
+    if (status) updateData.status = status
+    if (preferences) updateData.preferences = preferences
+    if (tags) updateData.tags = tags
+    
+    const result = await db.collection('subscribers').updateOne(
+      { _id: new (require('mongodb')).ObjectId(id) },
+      { $set: updateData }
+    )
+    
+    if (result.modifiedCount > 0) {
+      return NextResponse.json({
+        success: true,
+        message: "Subscriber updated successfully"
+      })
+    } else {
+      return NextResponse.json(
+        { 
+          success: false,
+          message: "Subscriber not found or no changes made"
+        },
+        { status: 404 }
+      )
+    }
+  } catch (error: any) {
+    console.error('Error updating subscriber:', error)
+    return NextResponse.json(
+      { 
+        success: false,
+        message: "Failed to update subscriber",
+        error: error.message
+      },
+      { status: 500 }
+    )
+  }
+}
+
+// DELETE - Remove subscriber
+export async function DELETE(request: NextRequest) {
+  try {
+    const { searchParams } = new URL(request.url)
+    const id = searchParams.get('id')
+    
+    if (!id) {
+      return NextResponse.json(
+        { message: "Subscriber ID is required" },
+        { status: 400 }
+      )
+    }
+    
+    const { db } = await connectToDatabase()
+    
+    const result = await db.collection('subscribers').deleteOne({
+      _id: new (require('mongodb')).ObjectId(id)
+    })
+    
+    if (result.deletedCount > 0) {
+      return NextResponse.json({
+        success: true,
+        message: "Subscriber removed successfully"
+      })
+    } else {
+      return NextResponse.json(
+        { 
+          success: false,
+          message: "Subscriber not found"
+        },
+        { status: 404 }
+      )
+    }
+  } catch (error: any) {
+    console.error('Error removing subscriber:', error)
+    return NextResponse.json(
+      { 
+        success: false,
+        message: "Failed to remove subscriber",
+        error: error.message
+      },
+      { status: 500 }
+    )
+  }
+}

@@ -1,1 +1,400 @@
-import { Server as SocketIOServer } from \"socket.io\"\nimport type { Server as HTTPServer } from \"http\"\nimport { connectToDatabase } from \"./mongodb\"\nimport type { BroadcastSession, ChatMessage, Reaction } from \"@/models/BroadcastAdmin\"\n\ninterface ConnectedUser {\n  id: string\n  broadcastId: string\n  userName: string\n  isHost: boolean\n  joinedAt: Date\n  lastSeen: Date\n}\n\nconst connectedUsers = new Map<string, ConnectedUser>()\nconst broadcastRooms = new Map<string, Set<string>>()\n\nexport function initializeEnhancedSocket(server: HTTPServer) {\n  const io = new SocketIOServer(server, {\n    cors: {\n      origin: \"*\",\n      methods: [\"GET\", \"POST\"],\n      credentials: true\n    },\n    transports: ['websocket', 'polling'],\n    pingTimeout: 60000,\n    pingInterval: 25000\n  })\n\n  io.on(\"connection\", (socket) => {\n    console.log(\"User connected:\", socket.id)\n\n    // Join broadcast room\n    socket.on(\"join-broadcast\", async (data) => {\n      try {\n        const { broadcastId, isHost, userName } = data\n        \n        // Add user to room\n        socket.join(broadcastId)\n        \n        // Track connected user\n        const user: ConnectedUser = {\n          id: socket.id,\n          broadcastId,\n          userName,\n          isHost,\n          joinedAt: new Date(),\n          lastSeen: new Date()\n        }\n        \n        connectedUsers.set(socket.id, user)\n        \n        // Add to broadcast room tracking\n        if (!broadcastRooms.has(broadcastId)) {\n          broadcastRooms.set(broadcastId, new Set())\n        }\n        broadcastRooms.get(broadcastId)?.add(socket.id)\n        \n        // Update database\n        await updateBroadcastParticipants(broadcastId)\n        \n        // Notify others in the room\n        socket.to(broadcastId).emit(\"user-joined\", {\n          peerId: socket.id,\n          userName,\n          isHost,\n          joinedAt: user.joinedAt\n        })\n        \n        // Send current participants to new user\n        const roomUsers = Array.from(broadcastRooms.get(broadcastId) || [])\n          .map(id => connectedUsers.get(id))\n          .filter(Boolean)\n        \n        socket.emit(\"participants-list\", roomUsers)\n        \n        console.log(`User ${userName} joined broadcast ${broadcastId}`)\n      } catch (error) {\n        console.error(\"Join broadcast error:\", error)\n        socket.emit(\"error\", { message: \"Failed to join broadcast\" })\n      }\n    })\n\n    // Handle WebRTC signaling\n    socket.on(\"signal\", ({ signal, peerId, broadcastId, targetPeerId }) => {\n      if (targetPeerId) {\n        // Direct peer-to-peer signaling\n        socket.to(targetPeerId).emit(\"signal\", {\n          signal,\n          peerId: socket.id,\n          broadcastId\n        })\n      } else {\n        // Broadcast to room\n        socket.to(broadcastId).emit(\"signal\", {\n          signal,\n          peerId: socket.id,\n          broadcastId\n        })\n      }\n    })\n\n    // Handle chat messages\n    socket.on(\"chat-message\", async (data) => {\n      try {\n        const { broadcastId, message, userName } = data\n        const user = connectedUsers.get(socket.id)\n        \n        if (!user || user.broadcastId !== broadcastId) {\n          socket.emit(\"error\", { message: \"Not authorized for this broadcast\" })\n          return\n        }\n        \n        const chatMessage: ChatMessage = {\n          id: Math.random().toString(36).substring(2, 15),\n          broadcastId,\n          participantId: socket.id,\n          participantName: userName,\n          message,\n          type: 'message',\n          timestamp: new Date(),\n          isDeleted: false\n        }\n        \n        // Save to database\n        await saveChatMessage(chatMessage)\n        \n        // Broadcast to room\n        io.to(broadcastId).emit(\"chat-message\", chatMessage)\n        \n        console.log(`Chat message from ${userName} in ${broadcastId}: ${message}`)\n      } catch (error) {\n        console.error(\"Chat message error:\", error)\n        socket.emit(\"error\", { message: \"Failed to send message\" })\n      }\n    })\n\n    // Handle reactions\n    socket.on(\"reaction\", async (data) => {\n      try {\n        const { broadcastId, emoji, userName } = data\n        const user = connectedUsers.get(socket.id)\n        \n        if (!user || user.broadcastId !== broadcastId) {\n          socket.emit(\"error\", { message: \"Not authorized for this broadcast\" })\n          return\n        }\n        \n        const reaction: Reaction = {\n          id: Math.random().toString(36).substring(2, 15),\n          broadcastId,\n          participantId: socket.id,\n          participantName: userName,\n          emoji,\n          timestamp: new Date()\n        }\n        \n        // Save to database\n        await saveReaction(reaction)\n        \n        // Broadcast to room\n        io.to(broadcastId).emit(\"reaction\", reaction)\n        \n        console.log(`Reaction ${emoji} from ${userName} in ${broadcastId}`)\n      } catch (error) {\n        console.error(\"Reaction error:\", error)\n        socket.emit(\"error\", { message: \"Failed to send reaction\" })\n      }\n    })\n\n    // Handle media status updates\n    socket.on(\"media-status\", (data) => {\n      const { broadcastId, type, enabled } = data\n      const user = connectedUsers.get(socket.id)\n      \n      if (user && user.broadcastId === broadcastId) {\n        socket.to(broadcastId).emit(\"participant-media-update\", {\n          peerId: socket.id,\n          userName: user.userName,\n          type,\n          enabled\n        })\n      }\n    })\n\n    // Handle participant updates\n    socket.on(\"participant-update\", (data) => {\n      const { broadcastId, update } = data\n      const user = connectedUsers.get(socket.id)\n      \n      if (user && user.broadcastId === broadcastId) {\n        socket.to(broadcastId).emit(\"participant-update\", {\n          peerId: socket.id,\n          userName: user.userName,\n          update\n        })\n      }\n    })\n\n    // Handle ping for connection quality monitoring\n    socket.on(\"ping\", (data) => {\n      const user = connectedUsers.get(socket.id)\n      if (user) {\n        user.lastSeen = new Date()\n        socket.emit(\"pong\", { timestamp: Date.now() })\n      }\n    })\n\n    // Handle host controls\n    socket.on(\"host-control\", async (data) => {\n      try {\n        const { broadcastId, action, targetPeerId } = data\n        const user = connectedUsers.get(socket.id)\n        \n        if (!user || !user.isHost || user.broadcastId !== broadcastId) {\n          socket.emit(\"error\", { message: \"Not authorized for host controls\" })\n          return\n        }\n        \n        switch (action) {\n          case 'mute-participant':\n            socket.to(targetPeerId).emit(\"host-mute\", { broadcastId })\n            break\n          case 'remove-participant':\n            socket.to(targetPeerId).emit(\"host-remove\", { broadcastId })\n            break\n          case 'end-broadcast':\n            io.to(broadcastId).emit(\"broadcast-ended\", { broadcastId })\n            await endBroadcast(broadcastId)\n            break\n        }\n      } catch (error) {\n        console.error(\"Host control error:\", error)\n        socket.emit(\"error\", { message: \"Failed to execute host control\" })\n      }\n    })\n\n    // Handle disconnection\n    socket.on(\"disconnect\", async () => {\n      try {\n        const user = connectedUsers.get(socket.id)\n        \n        if (user) {\n          const { broadcastId, userName, isHost } = user\n          \n          // Remove from tracking\n          connectedUsers.delete(socket.id)\n          broadcastRooms.get(broadcastId)?.delete(socket.id)\n          \n          // Update database\n          await updateBroadcastParticipants(broadcastId)\n          \n          // Notify others\n          socket.to(broadcastId).emit(\"user-left\", {\n            peerId: socket.id,\n            userName,\n            isHost\n          })\n          \n          console.log(`User ${userName} left broadcast ${broadcastId}`)\n          \n          // If host disconnected, handle broadcast cleanup\n          if (isHost) {\n            const remainingUsers = broadcastRooms.get(broadcastId)?.size || 0\n            if (remainingUsers === 0) {\n              await endBroadcast(broadcastId)\n            }\n          }\n        }\n        \n        console.log(\"User disconnected:\", socket.id)\n      } catch (error) {\n        console.error(\"Disconnect handling error:\", error)\n      }\n    })\n\n    // Handle errors\n    socket.on(\"error\", (error) => {\n      console.error(\"Socket error:\", error)\n    })\n  })\n\n  // Cleanup inactive connections\n  setInterval(() => {\n    const now = new Date()\n    const timeout = 5 * 60 * 1000 // 5 minutes\n    \n    connectedUsers.forEach((user, socketId) => {\n      if (now.getTime() - user.lastSeen.getTime() > timeout) {\n        console.log(`Cleaning up inactive user: ${user.userName}`)\n        connectedUsers.delete(socketId)\n        broadcastRooms.get(user.broadcastId)?.delete(socketId)\n      }\n    })\n  }, 60000) // Check every minute\n\n  return io\n}\n\n// Database helper functions\nasync function updateBroadcastParticipants(broadcastId: string) {\n  try {\n    const { db } = await connectToDatabase()\n    const roomUsers = Array.from(broadcastRooms.get(broadcastId) || [])\n      .map(id => connectedUsers.get(id))\n      .filter(Boolean)\n    \n    await db.collection(\"broadcasts\").updateOne(\n      { id: broadcastId },\n      {\n        $set: {\n          participants: roomUsers.map(user => ({\n            id: user!.id,\n            name: user!.userName,\n            isHost: user!.isHost,\n            joinedAt: user!.joinedAt,\n            userType: user!.isHost ? 'host' : 'viewer',\n            isApproved: true,\n            permissions: {\n              canSpeak: true,\n              canVideo: true,\n              canScreenShare: user!.isHost,\n              canChat: true,\n              canReact: true\n            },\n            connectionStatus: 'connected',\n            mediaStatus: {\n              video: true,\n              audio: true,\n              screenShare: false\n            }\n          })),\n          viewerCount: roomUsers.length,\n          lastActivity: new Date()\n        }\n      }\n    )\n  } catch (error) {\n    console.error(\"Update participants error:\", error)\n  }\n}\n\nasync function saveChatMessage(message: ChatMessage) {\n  try {\n    const { db } = await connectToDatabase()\n    await db.collection(\"chatMessages\").insertOne(message)\n    \n    // Also update broadcast stats\n    await db.collection(\"broadcasts\").updateOne(\n      { id: message.broadcastId },\n      {\n        $inc: { \"stats.chatMessages\": 1 },\n        $set: { lastActivity: new Date() }\n      }\n    )\n  } catch (error) {\n    console.error(\"Save chat message error:\", error)\n  }\n}\n\nasync function saveReaction(reaction: Reaction) {\n  try {\n    const { db } = await connectToDatabase()\n    await db.collection(\"reactions\").insertOne(reaction)\n    \n    // Also update broadcast stats\n    await db.collection(\"broadcasts\").updateOne(\n      { id: reaction.broadcastId },\n      {\n        $inc: { \"stats.reactions\": 1 },\n        $set: { lastActivity: new Date() }\n      }\n    )\n  } catch (error) {\n    console.error(\"Save reaction error:\", error)\n  }\n}\n\nasync function endBroadcast(broadcastId: string) {\n  try {\n    const { db } = await connectToDatabase()\n    await db.collection(\"broadcasts\").updateOne(\n      { id: broadcastId },\n      {\n        $set: {\n          isActive: false,\n          endedAt: new Date(),\n          lastActivity: new Date()\n        }\n      }\n    )\n    \n    // Clean up room tracking\n    broadcastRooms.delete(broadcastId)\n    \n    console.log(`Broadcast ${broadcastId} ended`)\n  } catch (error) {\n    console.error(\"End broadcast error:\", error)\n  }\n}"
+import { Server as SocketIOServer } from "socket.io"
+import type { Server as HTTPServer } from "http"
+import { connectToDatabase } from "./mongodb"
+import type { BroadcastSession, ChatMessage, Reaction } from "@/models/BroadcastAdmin"
+
+interface ConnectedUser {
+  id: string
+  broadcastId: string
+  userName: string
+  isHost: boolean
+  joinedAt: Date
+  lastSeen: Date
+}
+
+const connectedUsers = new Map<string, ConnectedUser>()
+const broadcastRooms = new Map<string, Set<string>>()
+
+export function initializeEnhancedSocket(server: HTTPServer) {
+  const io = new SocketIOServer(server, {
+    cors: {
+      origin: "*",
+      methods: ["GET", "POST"],
+      credentials: true
+    },
+    transports: ['websocket', 'polling'],
+    pingTimeout: 60000,
+    pingInterval: 25000
+  })
+
+  io.on("connection", (socket) => {
+    console.log("User connected:", socket.id)
+
+    // Join broadcast room
+    socket.on("join-broadcast", async (data) => {
+      try {
+        const { broadcastId, isHost, userName } = data
+        
+        // Add user to room
+        socket.join(broadcastId)
+        
+        // Track connected user
+        const user: ConnectedUser = {
+          id: socket.id,
+          broadcastId,
+          userName,
+          isHost,
+          joinedAt: new Date(),
+          lastSeen: new Date()
+        }
+        
+        connectedUsers.set(socket.id, user)
+        
+        // Add to broadcast room tracking
+        if (!broadcastRooms.has(broadcastId)) {
+          broadcastRooms.set(broadcastId, new Set())
+        }
+        broadcastRooms.get(broadcastId)?.add(socket.id)
+        
+        // Update database
+        await updateBroadcastParticipants(broadcastId)
+        
+        // Notify others in the room
+        socket.to(broadcastId).emit("user-joined", {
+          peerId: socket.id,
+          userName,
+          isHost,
+          joinedAt: user.joinedAt
+        })
+        
+        // Send current participants to new user
+        const roomUsers = Array.from(broadcastRooms.get(broadcastId) || [])
+          .map(id => connectedUsers.get(id))
+          .filter(Boolean)
+        
+        socket.emit("participants-list", roomUsers)
+        
+        console.log(`User ${userName} joined broadcast ${broadcastId}`)
+      } catch (error) {
+        console.error("Join broadcast error:", error)
+        socket.emit("error", { message: "Failed to join broadcast" })
+      }
+    })
+
+    // Handle WebRTC signaling
+    socket.on("signal", ({ signal, peerId, broadcastId, targetPeerId }) => {
+      if (targetPeerId) {
+        // Direct peer-to-peer signaling
+        socket.to(targetPeerId).emit("signal", {
+          signal,
+          peerId: socket.id,
+          broadcastId
+        })
+      } else {
+        // Broadcast to room
+        socket.to(broadcastId).emit("signal", {
+          signal,
+          peerId: socket.id,
+          broadcastId
+        })
+      }
+    })
+
+    // Handle chat messages
+    socket.on("chat-message", async (data) => {
+      try {
+        const { broadcastId, message, userName } = data
+        const user = connectedUsers.get(socket.id)
+        
+        if (!user || user.broadcastId !== broadcastId) {
+          socket.emit("error", { message: "Not authorized for this broadcast" })
+          return
+        }
+        
+        const chatMessage: ChatMessage = {
+          id: Math.random().toString(36).substring(2, 15),
+          broadcastId,
+          participantId: socket.id,
+          participantName: userName,
+          message,
+          type: 'message',
+          timestamp: new Date(),
+          isDeleted: false
+        }
+        
+        // Save to database
+        await saveChatMessage(chatMessage)
+        
+        // Broadcast to room
+        io.to(broadcastId).emit("chat-message", chatMessage)
+        
+        console.log(`Chat message from ${userName} in ${broadcastId}: ${message}`)
+      } catch (error) {
+        console.error("Chat message error:", error)
+        socket.emit("error", { message: "Failed to send message" })
+      }
+    })
+
+    // Handle reactions
+    socket.on("reaction", async (data) => {
+      try {
+        const { broadcastId, emoji, userName } = data
+        const user = connectedUsers.get(socket.id)
+        
+        if (!user || user.broadcastId !== broadcastId) {
+          socket.emit("error", { message: "Not authorized for this broadcast" })
+          return
+        }
+        
+        const reaction: Reaction = {
+          id: Math.random().toString(36).substring(2, 15),
+          broadcastId,
+          participantId: socket.id,
+          participantName: userName,
+          emoji,
+          timestamp: new Date()
+        }
+        
+        // Save to database
+        await saveReaction(reaction)
+        
+        // Broadcast to room
+        io.to(broadcastId).emit("reaction", reaction)
+        
+        console.log(`Reaction ${emoji} from ${userName} in ${broadcastId}`)
+      } catch (error) {
+        console.error("Reaction error:", error)
+        socket.emit("error", { message: "Failed to send reaction" })
+      }
+    })
+
+    // Handle media status updates
+    socket.on("media-status", (data) => {
+      const { broadcastId, type, enabled } = data
+      const user = connectedUsers.get(socket.id)
+      
+      if (user && user.broadcastId === broadcastId) {
+        socket.to(broadcastId).emit("participant-media-update", {
+          peerId: socket.id,
+          userName: user.userName,
+          type,
+          enabled
+        })
+      }
+    })
+
+    // Handle participant updates
+    socket.on("participant-update", (data) => {
+      const { broadcastId, update } = data
+      const user = connectedUsers.get(socket.id)
+      
+      if (user && user.broadcastId === broadcastId) {
+        socket.to(broadcastId).emit("participant-update", {
+          peerId: socket.id,
+          userName: user.userName,
+          update
+        })
+      }
+    })
+
+    // Handle ping for connection quality monitoring
+    socket.on("ping", (data) => {
+      const user = connectedUsers.get(socket.id)
+      if (user) {
+        user.lastSeen = new Date()
+        socket.emit("pong", { timestamp: Date.now() })
+      }
+    })
+
+    // Handle host controls
+    socket.on("host-control", async (data) => {
+      try {
+        const { broadcastId, action, targetPeerId } = data
+        const user = connectedUsers.get(socket.id)
+        
+        if (!user || !user.isHost || user.broadcastId !== broadcastId) {
+          socket.emit("error", { message: "Not authorized for host controls" })
+          return
+        }
+        
+        switch (action) {
+          case 'mute-participant':
+            socket.to(targetPeerId).emit("host-mute", { broadcastId })
+            break
+          case 'remove-participant':
+            socket.to(targetPeerId).emit("host-remove", { broadcastId })
+            break
+          case 'end-broadcast':
+            io.to(broadcastId).emit("broadcast-ended", { broadcastId })
+            await endBroadcast(broadcastId)
+            break
+        }
+      } catch (error) {
+        console.error("Host control error:", error)
+        socket.emit("error", { message: "Failed to execute host control" })
+      }
+    })
+
+    // Handle disconnection
+    socket.on("disconnect", async () => {
+      try {
+        const user = connectedUsers.get(socket.id)
+        
+        if (user) {
+          const { broadcastId, userName, isHost } = user
+          
+          // Remove from tracking
+          connectedUsers.delete(socket.id)
+          broadcastRooms.get(broadcastId)?.delete(socket.id)
+          
+          // Update database
+          await updateBroadcastParticipants(broadcastId)
+          
+          // Notify others
+          socket.to(broadcastId).emit("user-left", {
+            peerId: socket.id,
+            userName,
+            isHost
+          })
+          
+          console.log(`User ${userName} left broadcast ${broadcastId}`)
+          
+          // If host disconnected, handle broadcast cleanup
+          if (isHost) {
+            const remainingUsers = broadcastRooms.get(broadcastId)?.size || 0
+            if (remainingUsers === 0) {
+              await endBroadcast(broadcastId)
+            }
+          }
+        }
+        
+        console.log("User disconnected:", socket.id)
+      } catch (error) {
+        console.error("Disconnect handling error:", error)
+      }
+    })
+
+    // Handle errors
+    socket.on("error", (error) => {
+      console.error("Socket error:", error)
+    })
+  })
+
+  // Cleanup inactive connections
+  setInterval(() => {
+    const now = new Date()
+    const timeout = 5 * 60 * 1000 // 5 minutes
+    
+    connectedUsers.forEach((user, socketId) => {
+      if (now.getTime() - user.lastSeen.getTime() > timeout) {
+        console.log(`Cleaning up inactive user: ${user.userName}`)
+        connectedUsers.delete(socketId)
+        broadcastRooms.get(user.broadcastId)?.delete(socketId)
+      }
+    })
+  }, 60000) // Check every minute
+
+  return io
+}
+
+// Database helper functions
+async function updateBroadcastParticipants(broadcastId: string) {
+  try {
+    const { db } = await connectToDatabase()
+    const roomUsers = Array.from(broadcastRooms.get(broadcastId) || [])
+      .map(id => connectedUsers.get(id))
+      .filter(Boolean)
+    
+    await db.collection("broadcasts").updateOne(
+      { id: broadcastId },
+      {
+        $set: {
+          participants: roomUsers.map(user => ({
+            id: user!.id,
+            name: user!.userName,
+            isHost: user!.isHost,
+            joinedAt: user!.joinedAt,
+            userType: user!.isHost ? 'host' : 'viewer',
+            isApproved: true,
+            permissions: {
+              canSpeak: true,
+              canVideo: true,
+              canScreenShare: user!.isHost,
+              canChat: true,
+              canReact: true
+            },
+            connectionStatus: 'connected',
+            mediaStatus: {
+              video: true,
+              audio: true,
+              screenShare: false
+            }
+          })),
+          viewerCount: roomUsers.length,
+          lastActivity: new Date()
+        }
+      }
+    )
+  } catch (error) {
+    console.error("Update participants error:", error)
+  }
+}
+
+async function saveChatMessage(message: ChatMessage) {
+  try {
+    const { db } = await connectToDatabase()
+    await db.collection("chatMessages").insertOne(message)
+    
+    // Also update broadcast stats
+    await db.collection("broadcasts").updateOne(
+      { id: message.broadcastId },
+      {
+        $inc: { "stats.chatMessages": 1 },
+        $set: { lastActivity: new Date() }
+      }
+    )
+  } catch (error) {
+    console.error("Save chat message error:", error)
+  }
+}
+
+async function saveReaction(reaction: Reaction) {
+  try {
+    const { db } = await connectToDatabase()
+    await db.collection("reactions").insertOne(reaction)
+    
+    // Also update broadcast stats
+    await db.collection("broadcasts").updateOne(
+      { id: reaction.broadcastId },
+      {
+        $inc: { "stats.reactions": 1 },
+        $set: { lastActivity: new Date() }
+      }
+    )
+  } catch (error) {
+    console.error("Save reaction error:", error)
+  }
+}
+
+async function endBroadcast(broadcastId: string) {
+  try {
+    const { db } = await connectToDatabase()
+    await db.collection("broadcasts").updateOne(
+      { id: broadcastId },
+      {
+        $set: {
+          isActive: false,
+          endedAt: new Date(),
+          lastActivity: new Date()
+        }
+      }
+    )
+    
+    // Clean up room tracking
+    broadcastRooms.delete(broadcastId)
+    
+    console.log(`Broadcast ${broadcastId} ended`)
+  } catch (error) {
+    console.error("End broadcast error:", error)
+  }
+}

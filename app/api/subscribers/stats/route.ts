@@ -1,9 +1,112 @@
-import { type NextRequest, NextResponse } from \"next/server\"\nimport { connectToDatabase } from \"@/lib/mongodb\"\n\nexport async function GET(request: NextRequest) {\n  try {\n    const { db } = await connectToDatabase()\n    \n    // Get total subscribers\n    const totalSubscribers = await db.collection('subscribers').countDocuments()\n    \n    // Get active subscribers\n    const activeSubscribers = await db.collection('subscribers').countDocuments({ status: 'active' })\n    \n    // Get subscribers by source\n    const subscribersBySource = await db.collection('subscribers').aggregate([\n      {\n        $group: {\n          _id: '$source',\n          count: { $sum: 1 }\n        }\n      },\n      {\n        $sort: { count: -1 }\n      }\n    ]).toArray()\n    \n    // Get recent subscribers (last 30 days)\n    const thirtyDaysAgo = new Date()\n    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)\n    \n    const recentSubscribers = await db.collection('subscribers').countDocuments({\n      subscribedAt: { $gte: thirtyDaysAgo }\n    })\n    \n    // Get subscribers with mobile numbers\n    const subscribersWithMobile = await db.collection('subscribers').countDocuments({\n      mobile: { $ne: '' }\n    })\n    \n    // Get subscribers by preferences\n    const emailSubscribers = await db.collection('subscribers').countDocuments({\n      'preferences.email': true\n    })\n    \n    const smsSubscribers = await db.collection('subscribers').countDocuments({\n      'preferences.sms': true\n    })\n    \n    const whatsappSubscribers = await db.collection('subscribers').countDocuments({\n      'preferences.whatsapp': true\n    })\n    \n    const newsletterSubscribers = await db.collection('subscribers').countDocuments({\n      'preferences.newsletter': true\n    })\n    \n    // Get growth data (last 12 months)\n    const twelveMonthsAgo = new Date()\n    twelveMonthsAgo.setMonth(twelveMonthsAgo.getMonth() - 12)\n    \n    const growthData = await db.collection('subscribers').aggregate([\n      {\n        $match: {\n          subscribedAt: { $gte: twelveMonthsAgo }\n        }\n      },\n      {\n        $group: {\n          _id: {\n            year: { $year: '$subscribedAt' },\n            month: { $month: '$subscribedAt' }\n          },\n          count: { $sum: 1 }\n        }\n      },\n      {\n        $sort: { '_id.year': 1, '_id.month': 1 }\n      }\n    ]).toArray()\n    \n    return NextResponse.json({\n      success: true,\n      data: {\n        overview: {\n          total: totalSubscribers,\n          active: activeSubscribers,\n          inactive: totalSubscribers - activeSubscribers,\n          recent: recentSubscribers,\n          withMobile: subscribersWithMobile\n        },\n        preferences: {\n          email: emailSubscribers,\n          sms: smsSubscribers,\n          whatsapp: whatsappSubscribers,\n          newsletter: newsletterSubscribers\n        },\n        sources: subscribersBySource,\n        growth: growthData\n      }\n    })\n  } catch (error: any) {\n    console.error('Error fetching subscriber stats:', error)\n    return NextResponse.json(\n      { \n        success: false,\n        message: 'Failed to fetch subscriber statistics',\n        error: error.message\n      },\n      { status: 500 }\n    )\n  }\n}"
+import { type NextRequest, NextResponse } from "next/server"
+import { connectToDatabase } from "@/lib/mongodb"
+
+export async function GET(request: NextRequest) {
+  try {
+    const { db } = await connectToDatabase()
+    
+    // Get total subscribers
+    const totalSubscribers = await db.collection('subscribers').countDocuments()
+    
+    // Get active subscribers
+    const activeSubscribers = await db.collection('subscribers').countDocuments({ status: 'active' })
+    
+    // Get subscribers by source
+    const subscribersBySource = await db.collection('subscribers').aggregate([
+      {
+        $group: {
+          _id: '$source',
+          count: { $sum: 1 }
+        }
+      },
+      {
+        $sort: { count: -1 }
+      }
+    ]).toArray()
+    
+    // Get recent subscribers (last 30 days)
+    const thirtyDaysAgo = new Date()
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
+    
+    const recentSubscribers = await db.collection('subscribers').countDocuments({
+      subscribedAt: { $gte: thirtyDaysAgo }
+    })
+    
+    // Get subscribers with mobile numbers
+    const subscribersWithMobile = await db.collection('subscribers').countDocuments({
+      mobile: { $ne: '' }
+    })
+    
+    // Get subscribers by preferences
+    const emailSubscribers = await db.collection('subscribers').countDocuments({
+      'preferences.email': true
+    })
+    
+    const smsSubscribers = await db.collection('subscribers').countDocuments({
+      'preferences.sms': true
+    })
+    
+    const whatsappSubscribers = await db.collection('subscribers').countDocuments({
+      'preferences.whatsapp': true
+    })
+    
+    const newsletterSubscribers = await db.collection('subscribers').countDocuments({
+      'preferences.newsletter': true
+    })
+    
+    // Get growth data (last 12 months)
+    const twelveMonthsAgo = new Date()
+    twelveMonthsAgo.setMonth(twelveMonthsAgo.getMonth() - 12)
+    
+    const growthData = await db.collection('subscribers').aggregate([
+      {
+        $match: {
+          subscribedAt: { $gte: twelveMonthsAgo }
+        }
+      },
+      {
+        $group: {
+          _id: {
+            year: { $year: '$subscribedAt' },
+            month: { $month: '$subscribedAt' }
+          },
+          count: { $sum: 1 }
+        }
+      },
+      {
+        $sort: { '_id.year': 1, '_id.month': 1 }
+      }
+    ]).toArray()
+    
+    return NextResponse.json({
+      success: true,
+      data: {
+        overview: {
+          total: totalSubscribers,
+          active: activeSubscribers,
+          inactive: totalSubscribers - activeSubscribers,
+          recent: recentSubscribers,
+          withMobile: subscribersWithMobile
+        },
+        preferences: {
+          email: emailSubscribers,
+          sms: smsSubscribers,
+          whatsapp: whatsappSubscribers,
+          newsletter: newsletterSubscribers
+        },
+        sources: subscribersBySource,
+        growth: growthData
+      }
+    })
+  } catch (error: any) {
+    console.error('Error fetching subscriber stats:', error)
+    return NextResponse.json(
+      { 
+        success: false,
+        message: 'Failed to fetch subscriber statistics',
+        error: error.message
+      },
+      { status: 500 }
+    )
   }
-]</function_calls>
-
-Now let me test the contact system to make sure it's working:
-
-<function_calls>
-<invoke name="shell_execute">
-<parameter name="operation_type">EXECUTE
+}
