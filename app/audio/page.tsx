@@ -570,7 +570,12 @@ export default function AudioPage() {
         },
         onloaderror: (id, error) => {
           console.error("Audio load error:", error)
-          setAudioError("Failed to load audio. Please check your connection and try again.")
+          // Check if it's a 404 error (file not found)
+          if (error && typeof error === 'object' && 'status' in error && error.status === 404) {
+            setAudioError(`Audio file not found: ${track.name}. This track may not be available yet.`)
+          } else {
+            setAudioError("Failed to load audio. Please check your connection and try again.")
+          }
           setIsPlaying(false)
           setIsBuffering(false)
           setIsLoaded(false)
@@ -726,7 +731,21 @@ export default function AudioPage() {
             setAudioError("Failed to start audio. Please try again.")
           })
       } else {
-        audioRef.current.play()
+        // Check if the audio is loaded before trying to play
+        if (audioRef.current.state() === "loaded") {
+          audioRef.current.play()
+        } else if (audioRef.current.state() === "unloaded") {
+          // If unloaded, try to load and play
+          audioRef.current.load()
+          // Set a timeout to try playing after loading
+          setTimeout(() => {
+            if (audioRef.current && audioRef.current.state() === "loaded") {
+              audioRef.current.play()
+            }
+          }, 500)
+        } else {
+          audioRef.current.play()
+        }
       }
     }
   }, [])
@@ -1060,6 +1079,25 @@ export default function AudioPage() {
                       <Alert className="mb-4 bg-red-500/20 border-red-500/30">
                         <AlertCircle className="h-4 w-4" />
                         <AlertDescription className="text-red-300">{audioError}</AlertDescription>
+                        <div className="mt-2">
+                          <Button 
+                            onClick={() => {
+                              // Reset the audio and try to reload
+                              if (audioRef.current) {
+                                audioRef.current.unload()
+                                setIsLoaded(false)
+                                setAudioError(null)
+                                setIsBuffering(true)
+                                // Create a new Howl instance
+                                audioRef.current = createHowlInstance(currentTrack)
+                              }
+                            }}
+                            className="bg-red-600 hover:bg-red-700 text-white mt-2"
+                            size="sm"
+                          >
+                            Retry
+                          </Button>
+                        </div>
                       </Alert>
                     )}
 

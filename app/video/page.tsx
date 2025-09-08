@@ -1,3 +1,5 @@
+"use client"
+
 import type { Metadata } from "next"
 import Header from "@/components/header"
 import Footer from "@/components/footer"
@@ -7,13 +9,47 @@ import ScrollToTop from "@/components/scroll-to-top"
 import Image from "next/image"
 import Link from "next/link"
 import { ArrowRight, Video, Play, Film, Camera } from "lucide-react"
+import { useEffect, useState } from "react"
 
-export const metadata: Metadata = {
-  title: "Video Gallery - AKY Media Center",
-  description: "Watch the latest videos from Governor Abba Kabir Yusuf's administration and key events in Kano State.",
+interface VideoStats {
+  totalVideos: number
+  totalViews: number
+  featuredVideos: number
+  categories: number // Changed from Record<string, number> to number
+  mostViewedVideo: {
+    id: string
+    title: string
+    views: number
+  } | null
 }
 
 export default function VideoPage() {
+  const [stats, setStats] = useState<VideoStats | null>(null)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    const fetchStats = async () => {
+      try {
+        const response = await fetch("/api/dashboard/videos/stats")
+        if (response.ok) {
+          const data = await response.json()
+          setStats(data)
+        }
+      } catch (error) {
+        console.error("Failed to fetch video stats:", error)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchStats()
+  }, [])
+
+  // Format large numbers with commas
+  const formatNumber = (num: number): string => {
+    return num.toLocaleString()
+  }
+
   return (
     <>
       <Header />
@@ -82,16 +118,34 @@ export default function VideoPage() {
                 {/* Enhanced stats */}
                 <div className="grid grid-cols-3 gap-4 max-w-md mx-auto lg:mx-0">
                   <div className="text-center p-4 bg-white/10 backdrop-blur-sm rounded-xl border border-white/20">
-                    <div className="text-2xl font-bold text-white">50+</div>
+                    <div className="text-2xl font-bold text-white">
+                      {loading ? (
+                        <div className="h-6 bg-white/20 rounded animate-pulse"></div>
+                      ) : (
+                        formatNumber(stats?.totalVideos || 0)
+                      )}
+                    </div>
                     <div className="text-sm text-white/80">Videos</div>
                   </div>
                   <div className="text-center p-4 bg-white/10 backdrop-blur-sm rounded-xl border border-white/20">
-                    <div className="text-2xl font-bold text-white">10K+</div>
+                    <div className="text-2xl font-bold text-white">
+                      {loading ? (
+                        <div className="h-6 bg-white/20 rounded animate-pulse"></div>
+                      ) : (
+                        formatNumber(stats?.totalViews || 0)
+                      )}
+                    </div>
                     <div className="text-sm text-white/80">Views</div>
                   </div>
                   <div className="text-center p-4 bg-white/10 backdrop-blur-sm rounded-xl border border-white/20">
-                    <div className="text-2xl font-bold text-white">5</div>
-                    <div className="text-sm text-white/80">Categories</div>
+                    <div className="text-2xl font-bold text-white">
+                      {loading ? (
+                        <div className="h-6 bg-white/20 rounded animate-pulse"></div>
+                      ) : (
+                        formatNumber(stats?.featuredVideos || 0)
+                      )}
+                    </div>
+                    <div className="text-sm text-white/80">Featured</div>
                   </div>
                 </div>
               </div>

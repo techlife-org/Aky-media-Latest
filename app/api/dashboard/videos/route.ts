@@ -13,6 +13,9 @@ interface Video {
   category: string
   createdAt: Date
   updatedAt: Date
+  views?: number
+  duration?: string
+  featured?: boolean
 }
 
 export async function GET() {
@@ -34,15 +37,35 @@ export async function GET() {
       )
     }
 
-    const videos = await db.collection<Video>("videos").find({}).sort({ createdAt: -1 }).toArray()
+    const videos = await db.collection("videos").find({}).sort({ createdAt: -1 }).toArray()
 
     // Map MongoDB ObjectId to string 'id' for client-side consumption
-    const formattedVideos = videos.map((video) => ({
-      ...video,
-      id: video._id!.toString(), // Ensure _id exists and convert to string
-      createdAt: video.createdAt.toISOString(),
-      updatedAt: video.updatedAt.toISOString(),
-    }))
+    const formattedVideos = videos.map((video) => {
+      // Ensure all fields are properly serialized
+      const formattedVideo: any = {
+        id: video._id?.toString() || '',
+        title: video.title || '',
+        description: video.description || '',
+        videoUrl: video.videoUrl || '',
+        thumbnail: video.thumbnail || null,
+        category: video.category || 'Other',
+        createdAt: video.createdAt ? new Date(video.createdAt).toISOString() : new Date().toISOString(),
+        updatedAt: video.updatedAt ? new Date(video.updatedAt).toISOString() : new Date().toISOString(),
+      }
+      
+      // Add optional fields if they exist
+      if (video.views !== undefined) {
+        formattedVideo.views = video.views
+      }
+      if (video.duration !== undefined) {
+        formattedVideo.duration = video.duration
+      }
+      if (video.featured !== undefined) {
+        formattedVideo.featured = video.featured
+      }
+      
+      return formattedVideo
+    })
 
     return NextResponse.json(formattedVideos, {
       headers: {
@@ -98,37 +121,45 @@ export async function POST(req: Request) {
       }
     }
 
-    const newVideo: Omit<Video, "_id" | "id"> = {
+    const newVideo = {
       title: title.trim(),
       description: description.trim(),
       videoUrl: videoUrl.trim(),
-      thumbnail: finalThumbnail,
+      thumbnail: finalThumbnail || null,
       category: category.trim(),
       createdAt: new Date(),
       updatedAt: new Date(),
+      views: 0,
+      featured: Boolean(featured)
     }
 
-    const result = await db.collection<Video>("videos").insertOne(newVideo as any) // Type assertion for _id
+    const result = await db.collection("videos").insertOne(newVideo)
 
     if (!result.insertedId) {
       throw new Error("Failed to insert video into database")
     }
 
-    const insertedVideo = await db.collection<Video>("videos").findOne({ _id: result.insertedId })
+    const insertedVideo = await db.collection("videos").findOne({ _id: result.insertedId })
 
     if (!insertedVideo) {
       throw new Error("Failed to retrieve inserted video")
     }
 
-    return NextResponse.json(
-      {
-        ...insertedVideo,
-        id: insertedVideo._id.toString(), // Convert ObjectId to string for client
-        createdAt: insertedVideo.createdAt.toISOString(),
-        updatedAt: insertedVideo.updatedAt.toISOString(),
-      },
-      { status: 201 },
-    )
+    // Format the response properly
+    const formattedVideo: any = {
+      id: insertedVideo._id.toString(),
+      title: insertedVideo.title,
+      description: insertedVideo.description,
+      videoUrl: insertedVideo.videoUrl,
+      thumbnail: insertedVideo.thumbnail,
+      category: insertedVideo.category,
+      createdAt: insertedVideo.createdAt.toISOString(),
+      updatedAt: insertedVideo.updatedAt.toISOString(),
+      views: insertedVideo.views || 0,
+      featured: insertedVideo.featured || false
+    }
+
+    return NextResponse.json(formattedVideo, { status: 201 })
   } catch (error) {
     console.error("Error adding video:", error)
     return NextResponse.json({ 

@@ -4,7 +4,7 @@ import { useState, useEffect } from "react"
 import Link from "next/link"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Calendar, ArrowRight } from "lucide-react"
+import { Calendar, ArrowRight, Eye } from "lucide-react"
 import { getBlogApiUrl } from "@/lib/api-config"
 import AutoCarousel from "./auto-carousel"
 
@@ -277,9 +277,17 @@ export default function NewsSection() {
                   <Link href={`/news/${blog.id}`}>{blog.title || "No Title"}</Link>
                 </h3>
 
-                <p className="text-gray-600 mb-6 line-clamp-3 leading-relaxed">
+                <p className="text-gray-600 mb-4 line-clamp-3 leading-relaxed">
                   {truncateContent(blog.content || "No Content")}
                 </p>
+                {blog.views !== undefined && (
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-gray-500 flex items-center gap-1">
+                      <Eye size={14} />
+                      {blog.views} {blog.views === 1 ? 'view' : 'views'}
+                    </span>
+                  </div>
+                )}
               </CardContent>
             </Card>
           ))}
