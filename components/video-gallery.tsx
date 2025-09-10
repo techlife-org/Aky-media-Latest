@@ -63,6 +63,17 @@ const MobileVideoPlayer = ({
     toggleMute()
   }
 
+  // Handle volume button press for mobile devices
+  const handleVolumeButtonPress = (e: React.MouseEvent<HTMLButtonElement>) => {
+    e.stopPropagation()
+    toggleMute()
+  }
+
+  // Handle touch events for volume control
+  const handleTouchVolumeControl = () => {
+    toggleMute()
+  }
+
   return (
     <div className="relative w-full h-full bg-black flex items-center justify-center">
       {isPlaying ? (
@@ -158,17 +169,28 @@ const MobileVideoPlayer = ({
               {isPlaying ? <Pause size={24} /> : <Play size={24} />}
               <span className="sr-only">{isPlaying ? "Pause" : "Play"}</span>
             </Button>
+            
+            {/* Volume control with better mobile handling */}
             <Button
-              onClick={handleMuteToggleClick}
+              onClick={handleVolumeButtonPress}
+              onTouchStart={handleTouchVolumeControl}
               className="bg-white/20 hover:bg-white/30 text-white rounded-full p-3 backdrop-blur-sm"
               size="icon"
+              aria-label={isMuted ? "Unmute" : "Mute"}
             >
               {isMuted ? <VolumeX size={20} /> : <Volume2 size={20} />}
-              <span className="sr-only">{isMuted ? "Unmute" : "Mute"}</span>
             </Button>
           </div>
         </div>
       </div>
+      
+      {/* Volume indicator overlay for mobile */}
+      {!isMuted && (
+        <div className="absolute top-4 right-4 bg-black/50 text-white px-2 py-1 rounded-full text-xs backdrop-blur-sm animate-fadeIn">
+          <Volume2 size={16} className="inline mr-1" />
+          Sound on
+        </div>
+      )}
     </div>
   )
 }
@@ -191,7 +213,7 @@ export default function VideoGallery() {
           
           // Use real data from API
           setVideos(data)
-          // Initialize video states
+          // Initialize video states - ALL videos start muted by default (like Instagram)
           setMobileVideoStates(data.map(() => ({ isPlaying: false, isMuted: true })))
         } catch (error) {
           console.error("Error fetching videos:", error)

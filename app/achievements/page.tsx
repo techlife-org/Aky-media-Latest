@@ -498,130 +498,129 @@ export default function AchievementPage() {
               </div>
 
               <TabsContent value={selectedCategory} className="mt-8">
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
-                  {paginatedAchievements.map((achievement) => {
-                    const IconComponent = getIconComponent(achievement.icon);
-                    return (
-                      <Card
-                        key={achievement._id}
-                        className={`group relative overflow-hidden bg-white border-0 shadow-xl hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-3 hover:rotate-1 ${
-                          achievement.status === "completed"
-                            ? "ring-2 ring-green-200 bg-gradient-to-br from-green-50 to-emerald-50"
-                            : achievement.status === "ongoing"
-                            ? "ring-2 ring-blue-200 bg-gradient-to-br from-blue-50 to-cyan-50"
-                            : "ring-2 ring-orange-200 bg-gradient-to-br from-orange-50 to-amber-50"
-                        }`}
-                        style={{ height: "520px" }}
-                      >
-                        <div className="relative h-48 overflow-hidden">
-                          <AutoCarousel
-                            images={achievement.images || []}
-                            title={achievement.title}
-                            className="h-full"
-                            showControls={false}
-                            aspectRatio="auto"
-                          />
-                          <div className="absolute top-3 right-3">
-                            <Badge
-                              className={`${getStatusColor(
-                                achievement.status
-                              )} flex items-center gap-1 text-xs shadow-lg backdrop-blur-sm`}
-                            >
-                              {getStatusIcon(achievement.status)}
-                              {achievement.status.toUpperCase()}
-                            </Badge>
-                          </div>
-                          <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent" />
+                              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                {paginatedAchievements.map((achievement) => {
+                  const IconComponent = getIconComponent(achievement.icon);
+                  return (
+                    <Card
+                      key={achievement._id}
+                      className={`group relative overflow-hidden bg-white border-0 shadow-lg hover:shadow-xl transition-all duration-300 ${
+                        achievement.status === "completed"
+                          ? "ring-2 ring-green-200 bg-gradient-to-br from-green-50 to-emerald-50"
+                          : achievement.status === "ongoing"
+                          ? "ring-2 ring-blue-200 bg-gradient-to-br from-blue-50 to-cyan-50"
+                          : "ring-2 ring-orange-200 bg-gradient-to-br from-orange-50 to-amber-50"
+                      }`}
+                    >
+                      <div className="relative h-40 sm:h-48 overflow-hidden">
+                        <AutoCarousel
+                          images={achievement.images || []}
+                          title={achievement.title}
+                          className="h-full"
+                          showControls={false}
+                          aspectRatio="auto"
+                        />
+                        <div className="absolute top-2 right-2">
+                          <Badge
+                            className={`${getStatusColor(
+                              achievement.status
+                            )} flex items-center gap-1 text-xs shadow-md backdrop-blur-sm`}
+                          >
+                            {getStatusIcon(achievement.status)}
+                            {achievement.status.toUpperCase()}
+                          </Badge>
                         </div>
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent" />
+                      </div>
 
-                        <CardHeader className="pb-3 px-6">
-                          <div className="flex items-start gap-3">
-                            <div
-                              className={`p-2 rounded-xl shadow-lg ${
+                      <CardHeader className="pb-2 px-4">
+                        <div className="flex items-start gap-2">
+                          <div
+                            className={`p-2 rounded-lg shadow ${
+                              achievement.status === "completed"
+                                ? "bg-green-100"
+                                : achievement.status === "ongoing"
+                                ? "bg-blue-100"
+                                : "bg-orange-100"
+                            }`}
+                          >
+                            <IconComponent
+                              className={`w-4 h-4 ${
                                 achievement.status === "completed"
-                                  ? "bg-green-100"
+                                  ? "text-green-600"
                                   : achievement.status === "ongoing"
-                                  ? "bg-blue-100"
-                                  : "bg-orange-100"
+                                  ? "text-blue-600"
+                                  : "text-orange-600"
                               }`}
-                            >
-                              <IconComponent
-                                className={`w-5 h-5 ${
-                                  achievement.status === "completed"
-                                    ? "text-green-600"
-                                    : achievement.status === "ongoing"
-                                    ? "text-blue-600"
-                                    : "text-orange-600"
-                                }`}
-                              />
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <CardTitle className="text-lg font-bold text-gray-900 group-hover:text-red-600 transition-colors line-clamp-2 leading-tight">
-                                {achievement.title}
-                              </CardTitle>
-                            </div>
+                            />
                           </div>
-                        </CardHeader>
-
-                        <CardContent className="px-6 pb-6 flex flex-col justify-between flex-1">
-                          <div className="space-y-4 flex-1">
-                            <p className="text-gray-600 text-sm line-clamp-3 leading-relaxed">
-                              {achievement.description}
-                            </p>
-
-                            <div className="space-y-2">
-                              <div className="flex justify-between items-center">
-                                <span className="text-xs font-medium text-gray-500">
-                                  Progress
-                                </span>
-                                <span className="text-xs font-bold text-gray-700">
-                                  {achievement.progress}%
-                                </span>
-                              </div>
-                              <Progress
-                                value={achievement.progress}
-                                className="h-2 bg-gray-100"
-                              />
-                            </div>
+                          <div className="flex-1 min-w-0">
+                            <CardTitle className="text-base sm:text-lg font-bold text-gray-900 group-hover:text-red-600 transition-colors line-clamp-2 leading-tight">
+                              {achievement.title}
+                            </CardTitle>
                           </div>
+                        </div>
+                      </CardHeader>
 
-                          <div className="space-y-4 mt-4">
-                            <div className="flex items-center text-gray-600 bg-gray-50 rounded-lg p-3">
-                              <MapPin className="w-4 h-4 mr-2 flex-shrink-0 text-red-500" />
-                              <span className="text-sm font-medium truncate">
-                                {achievement.location}
+                      <CardContent className="px-4 pb-4 flex flex-col justify-between flex-1">
+                        <div className="space-y-3 flex-1">
+                          <p className="text-gray-600 text-sm line-clamp-3 leading-relaxed">
+                            {achievement.description}
+                          </p>
+
+                          <div className="space-y-2">
+                            <div className="flex justify-between items-center">
+                              <span className="text-xs font-medium text-gray-500">
+                                Progress
+                              </span>
+                              <span className="text-xs font-bold text-gray-700">
+                                {achievement.progress}%
                               </span>
                             </div>
-
-                            <Button
-                              onClick={() =>
-                                handleAchievementClick(achievement)
-                              }
-                              className={`w-full shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105 ${
-                                achievement.status === "completed"
-                                  ? "bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700"
-                                  : achievement.status === "ongoing"
-                                  ? "bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700"
-                                  : "bg-gradient-to-r from-orange-600 to-amber-600 hover:from-orange-700 hover:to-amber-700"
-                              } text-white font-semibold`}
-                            >
-                              View Details
-                              <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
-                            </Button>
+                            <Progress
+                              value={achievement.progress}
+                              className="h-2 bg-gray-100"
+                            />
                           </div>
-                        </CardContent>
+                        </div>
 
-                        {achievement.status === "completed" && (
-                          <div className="absolute top-2 left-2">
-                            <div className="bg-green-500 text-white rounded-full p-1 shadow-lg animate-pulse">
-                              <CheckCircle className="w-4 h-4" />
-                            </div>
+                        <div className="space-y-3 mt-3">
+                          <div className="flex items-center text-gray-600 bg-gray-50 rounded-lg p-2">
+                            <MapPin className="w-4 h-4 mr-2 flex-shrink-0 text-red-500" />
+                            <span className="text-xs font-medium truncate">
+                              {achievement.location}
+                            </span>
                           </div>
-                        )}
-                      </Card>
-                    );
-                  })}
-                </div>
+
+                          <Button
+                            onClick={() =>
+                              handleAchievementClick(achievement)
+                            }
+                            className={`w-full shadow transition-all duration-200 text-xs sm:text-sm py-2 ${
+                              achievement.status === "completed"
+                                ? "bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700"
+                                : achievement.status === "ongoing"
+                                ? "bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700"
+                                : "bg-gradient-to-r from-orange-600 to-amber-600 hover:from-orange-700 hover:to-amber-700"
+                            } text-white font-semibold`}
+                          >
+                            View Details
+                            <ArrowRight className="w-3 h-3 ml-1 group-hover:translate-x-1 transition-transform" />
+                          </Button>
+                        </div>
+                      </CardContent>
+
+                      {achievement.status === "completed" && (
+                        <div className="absolute top-2 left-2">
+                          <div className="bg-green-500 text-white rounded-full p-1 shadow">
+                            <CheckCircle className="w-3 h-3" />
+                          </div>
+                        </div>
+                      )}
+                    </Card>
+                  );
+                })}
+              </div>
 
                 {totalPages > 1 && (
                   <div className="mt-12 flex justify-center">

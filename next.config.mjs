@@ -3,6 +3,7 @@ const nextConfig = {
   env: {
     NEXT_PUBLIC_BASE_URL: process.env.NEXT_PUBLIC_BASE_URL || 'https://abbakabiryusuf.com',
     NEXT_PUBLIC_BACKEND_URL: process.env.NEXT_PUBLIC_BACKEND_URL || 'https://server.bitcoops.com',
+    MONGODB_URI: process.env.MONGODB_URI,
   },
   eslint: {
     ignoreDuringBuilds: true,

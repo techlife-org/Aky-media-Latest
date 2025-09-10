@@ -141,7 +141,14 @@ export default function VideosPage() {
       const response = await fetch("/api/dashboard/videos/stats")
       if (response.ok) {
         const data = await response.json()
-        setStats(data)
+        setStats({
+          totalVideos: data.totalVideos || 0,
+          thisMonth: data.thisMonth || 0,
+          totalViews: data.totalViews || 0,
+          totalDuration: data.totalDuration || "0:00:00",
+          categories: data.categories || 0, // This is now a number, not an object
+          featured: data.featured || 0
+        })
       } else {
         // Calculate stats from videos data if API not available
         const currentDate = new Date()

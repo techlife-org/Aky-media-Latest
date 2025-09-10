@@ -6,17 +6,57 @@ export class EmailService {
   private transporter: nodemailer.Transporter;
 
   constructor() {
-    this.transporter = nodemailer.createTransporter({
+    // Log all SMTP-related environment variables for debugging
+    console.log('=== SMTP ENVIRONMENT VARIABLES ===');
+    console.log('SMTP_HOST:', process.env.SMTP_HOST || 'NOT SET');
+    console.log('SMTP_PORT:', process.env.SMTP_PORT || 'NOT SET');
+    console.log('SMTP_SECURE:', process.env.SMTP_SECURE || 'NOT SET');
+    console.log('SMTP_USER:', process.env.SMTP_USER || 'NOT SET');
+    console.log('SMTP_PASS:', process.env.SMTP_PASS ? 'SET (hidden)' : 'NOT SET');
+    console.log('SMTP_PASSWORD:', process.env.SMTP_PASSWORD ? 'SET (hidden)' : 'NOT SET');
+    console.log('EMAIL_FROM:', process.env.EMAIL_FROM || 'NOT SET');
+    console.log('EMAIL_FROM_NAME:', process.env.EMAIL_FROM_NAME || 'NOT SET');
+    console.log('===================================');
+
+    // Validate required environment variables (using SMTP_PASS as in .env file)
+    if (!process.env.SMTP_HOST) {
+      throw new Error('SMTP_HOST environment variable is not set');
+    }
+    
+    if (!process.env.SMTP_USER) {
+      throw new Error('SMTP_USER environment variable is not set');
+    }
+    
+    // Check for both SMTP_PASS and SMTP_PASSWORD for compatibility
+    if (!process.env.SMTP_PASS && !process.env.SMTP_PASSWORD) {
+      throw new Error('SMTP_PASS (or SMTP_PASSWORD) environment variable is not set');
+    }
+
+    const port = parseInt(process.env.SMTP_PORT || '587');
+    const secure = process.env.SMTP_SECURE === 'true';
+    // Use SMTP_PASS if available, otherwise fall back to SMTP_PASSWORD
+    const password = process.env.SMTP_PASS || process.env.SMTP_PASSWORD;
+
+    console.log('SMTP Configuration being used:', {
       host: process.env.SMTP_HOST,
-      port: parseInt(process.env.SMTP_PORT || '587'),
-      secure: process.env.SMTP_SECURE === 'true',
+      port: port,
+      secure: secure,
+      user: process.env.SMTP_USER ? `${process.env.SMTP_USER.substring(0, 5)}***` : 'Not set'
+    });
+
+    this.transporter = nodemailer.createTransport({
+      host: process.env.SMTP_HOST,
+      port: port,
+      secure: secure,
       auth: {
         user: process.env.SMTP_USER,
-        pass: process.env.SMTP_PASSWORD,
+        pass: password,
       },
       pool: true,
       maxConnections: 1,
       maxMessages: 5,
+      debug: process.env.NODE_ENV === 'development',
+      logger: process.env.NODE_ENV === 'development'
     });
   }
 

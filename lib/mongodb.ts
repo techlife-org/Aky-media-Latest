@@ -128,14 +128,22 @@ export async function connectToDatabase(): Promise<{ client: MongoClient; db: Db
       
       await Promise.race([pingPromise, timeoutPromise])
     } catch (pingError) {
+      console.warn('[MongoDB] Ping failed, attempting to reconnect...', pingError.message)
       // If ping fails, try to reconnect silently
-      const newClient = await createConnection()
-      return { client: newClient, db: newClient.db() }
+      try {
+        const newClient = await createConnection()
+        return { client: newClient, db: newClient.db() }
+      } catch (reconnectError) {
+        console.error('[MongoDB] Reconnection failed:', reconnectError.message)
+        throw reconnectError
+      }
     }
     
     return { client, db }
   } catch (error: any) {
     // Provide user-friendly error messages
+    console.error('[MongoDB] Connection error:', error.message)
+    
     if (error.message.includes('timeout') || error.message.includes('Ping timeout')) {
       throw new Error('Network connection timeout. Please check your internet connection.')
     } else if (error.message.includes('authentication') || error.message.includes('auth')) {

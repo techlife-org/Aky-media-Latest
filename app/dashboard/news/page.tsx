@@ -387,10 +387,43 @@ export default function NewsPage() {
       return
     }
 
-    setNewArticle((prev) => ({
-      ...prev,
-      files: [...prev.files, ...files.slice(0, remainingSlots)],
-    }))
+    // Validate file types
+    const validFiles = files.filter(file => {
+      const fileType = file.type
+      const fileName = file.name.toLowerCase()
+      
+      // Accept images, PDFs, Word documents, and videos
+      const isValid = 
+        fileType.startsWith('image/') || 
+        fileType === 'application/pdf' || 
+        fileType === 'application/msword' || 
+        fileType === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' ||
+        fileType.startsWith('video/')
+      
+      if (!isValid) {
+        toast({
+          title: "Invalid file type",
+          description: `File ${file.name} is not supported. Please upload images, PDFs, Word documents, or videos.`,
+          variant: "destructive",
+        })
+      }
+      
+      return isValid
+    })
+
+    if (validFiles.length > 0) {
+      setNewArticle((prev) => ({
+        ...prev,
+        files: [...prev.files, ...validFiles.slice(0, remainingSlots)],
+      }))
+      
+      if (validFiles.length < files.length) {
+        toast({
+          title: "Some files skipped",
+          description: `${files.length - validFiles.length} files were not uploaded due to unsupported file types.`,
+        })
+      }
+    }
   }
 
   const removeFile = (index: number, isUploaded = false) => {
@@ -425,17 +458,31 @@ export default function NewsPage() {
       const formData = new FormData()
       formData.append("file", file)
       formData.append("upload_preset", process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET || "")
+      
+      // Add folder parameter for organization
+      formData.append("folder", "aky_news")
+      
+      // Add tags for easier management
+      formData.append("tags", "news,aky_media")
+
+      const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME
+      if (!cloudName) {
+        throw new Error("Cloudinary cloud name not configured")
+      }
 
       const uploadResponse = await fetch(
-        `https://api.cloudinary.com/v1_1/${process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME}/upload`,
+        `https://api.cloudinary.com/v1_1/${cloudName}/upload`,
         { method: "POST", body: formData },
       )
 
       if (!uploadResponse.ok) {
-        throw new Error(`Failed to upload file: ${file.name}`)
+        const errorText = await uploadResponse.text()
+        console.error("Cloudinary upload error:", errorText)
+        throw new Error(`Failed to upload file: ${file.name}. Status: ${uploadResponse.status}`)
       }
 
       const uploadResult = await uploadResponse.json()
+      console.log("Cloudinary upload result:", uploadResult)
 
       let fileType: "image" | "document" | "video" | "link" = "link"
       if (uploadResult.resource_type === "image") {
@@ -548,6 +595,22 @@ export default function NewsPage() {
       toast({
         title: "Missing Information",
         description: "Please fill in all required fields.",
+        variant: "destructive",
+      })
+      return
+    }
+
+    // Check if at least one image is included
+    const hasImage = [...newArticle.attachments, ...newArticle.files].some(
+      (item) => 
+        (item.type && item.type === "image") || 
+        (item instanceof File && item.type.startsWith("image/"))
+    )
+
+    if (!hasImage) {
+      toast({
+        title: "Image Required",
+        description: "Please upload at least one image for the article.",
         variant: "destructive",
       })
       return
@@ -919,7 +982,7 @@ export default function NewsPage() {
                             />
                             <p className="text-xs text-muted-foreground mt-1 flex items-center justify-between">
                               <span>{5 - (newArticle.attachments.length + newArticle.files.length)} of 5 slots remaining</span>
-                              <span className="text-blue-600">At least 1 image required</span>
+                              <span className="text-blue-600">Supported: Images, PDFs, Word docs, Videos</span>
                             </p>
                           </div>
                         </div>

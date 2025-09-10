@@ -511,8 +511,8 @@ ${message.message}`
 
     setIsSending(true)
     try {
-      // Use the communication email API with template
-      const response = await fetch("/api/communication/email", {
+      // First, send the email using the communication email API
+      const emailResponse = await fetch("/api/communication/email", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -525,11 +525,12 @@ ${message.message}`
         }),
       })
 
-      if (!response.ok) {
-        const errorData = await response.json();
+      if (!emailResponse.ok) {
+        const errorData = await emailResponse.json();
         throw new Error(errorData.error || "Failed to send email")
       }
 
+      // If email was sent successfully, update the message status
       await updateMessageStatus(selectedMessage._id, "replied")
 
       toast({
@@ -616,6 +617,17 @@ ${message.message}`
       toast({
         title: "Error",
         description: "Please fill in all fields",
+        variant: "destructive",
+      })
+      return
+    }
+
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    if (!emailRegex.test(composeData.to)) {
+      toast({
+        title: "Error",
+        description: "Please enter a valid email address",
         variant: "destructive",
       })
       return

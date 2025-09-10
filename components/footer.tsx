@@ -5,6 +5,7 @@ import {
   Twitter,
   Linkedin,
   Youtube,
+  Instagram,
   Phone,
   Mail,
 } from "lucide-react";
@@ -30,25 +31,33 @@ export default function Footer() {
             </p>
             <div className="flex space-x-4">
               <Link
-                href="#"
+                href="https://www.facebook.com/share/18p6gDcA1B/?mibextid=LQQJ4"
+                target="_blank"
+                rel="noopener noreferrer"
                 className="w-10 h-10 bg-red-600 rounded-full flex items-center justify-center hover:bg-red-700 transition-colors"
               >
                 <Facebook size={20} />
               </Link>
               <Link
-                href="#"
+                href="https://x.com/kyusufabba?s=21&t=QVAaej86af3fs31NIYvGSA"
+                target="_blank"
+                rel="noopener noreferrer"
                 className="w-10 h-10 bg-red-600 rounded-full flex items-center justify-center hover:bg-red-700 transition-colors"
               >
                 <Twitter size={20} />
               </Link>
               <Link
-                href="#"
+                href="https://www.instagram.com/abba_kabir_yusuf?igsh=MzR0NWNodG56amZwv"
+                target="_blank"
+                rel="noopener noreferrer"
                 className="w-10 h-10 bg-red-600 rounded-full flex items-center justify-center hover:bg-red-700 transition-colors"
               >
-                <Linkedin size={20} />
+                <Instagram size={20} />
               </Link>
               <Link
-                href="#"
+                href="https://www.youtube.com/channel/UCItndHwRDg4rQ0-DgBRv4W"
+                target="_blank"
+                rel="noopener noreferrer"
                 className="w-10 h-10 bg-red-600 rounded-full flex items-center justify-center hover:bg-red-700 transition-colors"
               >
                 <Youtube size={20} />
