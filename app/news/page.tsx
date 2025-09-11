@@ -384,20 +384,45 @@ export default function NewsPage() {
                 {filteredBlogs.map((blog) => (
                   <Card key={blog.id} className="group overflow-hidden transition-all duration-300 hover:shadow-lg">
                     <Link href={`/news/${blog.id}`} className="block h-48 relative overflow-hidden">
-                      {blog.attachments && blog.attachments.length > 0 ? (
-                        <AutoCarousel
-                          images={blog.attachments.map((att) => att.url)}
-                          title={blog.title}
-                          className="h-full"
-                          aspectRatio="auto"
-                          showControls={false}
-                          autoAdvanceInterval={5000}
-                        />
-                      ) : (
-                        <div className="w-full h-full bg-gray-100 flex items-center justify-center">
-                          <span className="text-gray-400">No image</span>
-                        </div>
-                      )}
+                      {(() => {
+                        // Get valid image URLs
+                        const validImages = blog.attachments
+                          ?.filter(att => {
+                            const isImage = att.type === 'image' || 
+                                           att.url?.toLowerCase().match(/\.(jpg|jpeg|png|gif|webp|svg)$/)
+                            const hasValidUrl = att.url && att.url.trim() !== ''
+                            return isImage && hasValidUrl
+                          })
+                          ?.map(att => att.url)
+                          ?.filter(url => url && url.trim() !== '') || []
+                        
+                        if (validImages.length > 0) {
+                          return (
+                            <AutoCarousel
+                              images={validImages}
+                              title={blog.title}
+                              className="h-full"
+                              aspectRatio="auto"
+                              showControls={false}
+                              autoAdvanceInterval={5000}
+                            />
+                          )
+                        } else {
+                          return (
+                            <div className="w-full h-full bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center">
+                              <div className="text-center">
+                                <span className="text-4xl mb-2 block">📰</span>
+                                <span className="text-xs text-gray-400">
+                                  {blog.attachments && blog.attachments.length > 0 
+                                    ? `${blog.attachments.length} attachment(s) - No valid images` 
+                                    : 'No image available'
+                                  }
+                                </span>
+                              </div>
+                            </div>
+                          )
+                        }
+                      })()}
                     </Link>
                     <CardContent className="p-6">
                       <div className="flex items-center gap-2 mb-2">

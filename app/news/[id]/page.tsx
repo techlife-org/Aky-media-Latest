@@ -244,39 +244,76 @@ export default function NewsDetailPage() {
             </div>
 
             {/* Featured Images */}
-            {blog.attachments && blog.attachments.length > 0 && (
-              <div className="mb-8">
-                <div className="relative overflow-hidden rounded-xl shadow-lg">
-                  <AutoCarousel
-                    images={blog.attachments.filter(att => att.type === 'image').map((att) => att.url)}
-                    title={blog.title}
-                    className="h-96 md:h-[500px]"
-                    aspectRatio="video"
-                    showControls={true}
-                    autoAdvanceInterval={6000}
-                  />
-                  {blog.attachments.filter(att => att.type === 'image').length > 1 && (
-                    <div className="absolute bottom-4 left-4 bg-black/50 text-white px-3 py-1 rounded-full text-sm backdrop-blur-sm">
-                      {blog.attachments.filter(att => att.type === 'image').length} Images
+            {(() => {
+              // Get all valid image attachments
+              const imageAttachments = blog.attachments
+                ?.filter(att => {
+                  // Check if it's an image type and has a valid URL
+                  const isImage = att.type === 'image' || 
+                                 att.url?.toLowerCase().match(/\.(jpg|jpeg|png|gif|webp|svg)$/)
+                  const hasValidUrl = att.url && att.url.trim() !== ''
+                  return isImage && hasValidUrl
+                })
+                ?.map(att => att.url)
+                ?.filter(url => url && url.trim() !== '') || []
+              
+              console.log('[News Detail] Image attachments found:', imageAttachments)
+              
+              if (imageAttachments.length > 0) {
+                return (
+                  <div className="mb-8">
+                    <div className="relative overflow-hidden rounded-xl shadow-lg">
+                      <AutoCarousel
+                        images={imageAttachments}
+                        title={blog.title}
+                        className="h-96 md:h-[500px]"
+                        aspectRatio="video"
+                        showControls={true}
+                        autoAdvanceInterval={6000}
+                      />
+                      {imageAttachments.length > 1 && (
+                        <div className="absolute bottom-4 left-4 bg-black/50 text-white px-3 py-1 rounded-full text-sm backdrop-blur-sm">
+                          {imageAttachments.length} Images
+                        </div>
+                      )}
                     </div>
-                  )}
-                </div>
-              </div>
-            )}
-            
-            {/* Fallback Image if no attachments */}
-            {(!blog.attachments || blog.attachments.length === 0) && (
-              <div className="mb-8">
-                <div className="relative h-96 md:h-[500px] bg-gradient-to-br from-gray-100 to-gray-200 rounded-xl flex items-center justify-center overflow-hidden">
-                  <div className="text-center">
-                    <div className="text-6xl mb-4">📰</div>
-                    <h3 className="text-xl font-semibold text-gray-600 mb-2">News Article</h3>
-                    <p className="text-gray-500">{blog.doc_type || 'General News'}</p>
                   </div>
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/10 to-transparent" />
-                </div>
-              </div>
-            )}
+                )
+              }
+              return null
+            })()}
+            
+            {/* Fallback Image if no valid image attachments */}
+            {(() => {
+              const hasValidImages = blog.attachments
+                ?.some(att => {
+                  const isImage = att.type === 'image' || 
+                                 att.url?.toLowerCase().match(/\.(jpg|jpeg|png|gif|webp|svg)$/)
+                  const hasValidUrl = att.url && att.url.trim() !== ''
+                  return isImage && hasValidUrl
+                }) || false
+              
+              if (!hasValidImages) {
+                return (
+                  <div className="mb-8">
+                    <div className="relative h-96 md:h-[500px] bg-gradient-to-br from-gray-100 to-gray-200 rounded-xl flex items-center justify-center overflow-hidden">
+                      <div className="text-center">
+                        <div className="text-6xl mb-4">📰</div>
+                        <h3 className="text-xl font-semibold text-gray-600 mb-2">News Article</h3>
+                        <p className="text-gray-500">{blog.doc_type || 'General News'}</p>
+                        {blog.attachments && blog.attachments.length > 0 && (
+                          <p className="text-xs text-gray-400 mt-2">
+                            {blog.attachments.length} attachment(s) - No valid images found
+                          </p>
+                        )}
+                      </div>
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/10 to-transparent" />
+                    </div>
+                  </div>
+                )
+              }
+              return null
+            })()}
 
             {/* Article Content */}
             <div
@@ -309,28 +346,46 @@ export default function NewsDetailPage() {
                   <Card key={relatedBlog.id} className="overflow-hidden hover:shadow-lg transition-shadow">
                     {/* Related Blog Images */}
                     <div className="relative h-48 overflow-hidden">
-                      {relatedBlog.attachments && relatedBlog.attachments.filter(att => att.type === 'image').length > 0 ? (
-                        <AutoCarousel
-                          images={relatedBlog.attachments.filter(att => att.type === 'image').map((att) => att.url)}
-                          title={relatedBlog.title}
-                          className="h-full"
-                          aspectRatio="auto"
-                          showControls={false}
-                          autoAdvanceInterval={7000}
-                        />
-                      ) : (
-                        <div className="w-full h-full bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center">
-                          <div className="text-center">
-                            <span className="text-4xl mb-2 block">📰</span>
-                            <span className="text-xs text-gray-500">{relatedBlog.doc_type || 'News'}</span>
-                          </div>
-                        </div>
-                      )}
-                      {relatedBlog.attachments && relatedBlog.attachments.filter(att => att.type === 'image').length > 1 && (
-                        <div className="absolute top-2 right-2 bg-black/50 text-white px-2 py-1 rounded text-xs backdrop-blur-sm">
-                          +{relatedBlog.attachments.filter(att => att.type === 'image').length - 1}
-                        </div>
-                      )}
+                      {(() => {
+                        const validImages = relatedBlog.attachments
+                          ?.filter(att => {
+                            const isImage = att.type === 'image' || 
+                                           att.url?.toLowerCase().match(/\.(jpg|jpeg|png|gif|webp|svg)$/)
+                            const hasValidUrl = att.url && att.url.trim() !== ''
+                            return isImage && hasValidUrl
+                          })
+                          ?.map(att => att.url)
+                          ?.filter(url => url && url.trim() !== '') || []
+                        
+                        if (validImages.length > 0) {
+                          return (
+                            <>
+                              <AutoCarousel
+                                images={validImages}
+                                title={relatedBlog.title}
+                                className="h-full"
+                                aspectRatio="auto"
+                                showControls={false}
+                                autoAdvanceInterval={7000}
+                              />
+                              {validImages.length > 1 && (
+                                <div className="absolute top-2 right-2 bg-black/50 text-white px-2 py-1 rounded text-xs backdrop-blur-sm">
+                                  +{validImages.length - 1}
+                                </div>
+                              )}
+                            </>
+                          )
+                        } else {
+                          return (
+                            <div className="w-full h-full bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center">
+                              <div className="text-center">
+                                <span className="text-4xl mb-2 block">📰</span>
+                                <span className="text-xs text-gray-500">{relatedBlog.doc_type || 'News'}</span>
+                              </div>
+                            </div>
+                          )
+                        }
+                      })()}
                     </div>
 
                     <CardContent className="p-6">

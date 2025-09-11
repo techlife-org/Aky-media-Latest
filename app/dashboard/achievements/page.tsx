@@ -76,6 +76,7 @@ export default function AchievementsPage() {
   const [deleteModalOpen, setDeleteModalOpen] = useState(false)
   const [achievementToDelete, setAchievementToDelete] = useState<Achievement | null>(null)
   const [deleteLoading, setDeleteLoading] = useState(false)
+  const [exportLoading, setExportLoading] = useState(false)
 
   useEffect(() => {
     fetchAchievements()
@@ -126,6 +127,56 @@ export default function AchievementsPage() {
       })
     } finally {
       setRefreshing(false)
+    }
+  }
+
+  const handleExport = async (format: 'csv' | 'json' = 'csv') => {
+    setExportLoading(true)
+    try {
+      // Build query parameters based on current filters
+      const params = new URLSearchParams({
+        format,
+        ...(statusFilter !== 'all' && { status: statusFilter }),
+        ...(categoryFilter !== 'all' && { category: categoryFilter }),
+      })
+
+      const response = await fetch(`/api/achievements/export?${params.toString()}`)
+      
+      if (!response.ok) {
+        throw new Error('Failed to export achievements')
+      }
+
+      // Get the filename from the response headers
+      const contentDisposition = response.headers.get('content-disposition')
+      const filename = contentDisposition
+        ? contentDisposition.split('filename=')[1]?.replace(/"/g, '')
+        : `achievements_export_${new Date().toISOString().split('T')[0]}.${format}`
+
+      // Create blob and download
+      const blob = await response.blob()
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = filename
+      document.body.appendChild(a)
+      a.click()
+      window.URL.revokeObjectURL(url)
+      document.body.removeChild(a)
+
+      toast({
+        title: "Success",
+        description: `Achievements exported successfully as ${format.toUpperCase()}`,
+        className: "bg-green-50 border-green-200 text-green-800",
+      })
+    } catch (error) {
+      console.error('Error exporting achievements:', error)
+      toast({
+        title: "Error",
+        description: "Failed to export achievements. Please try again.",
+        variant: "destructive",
+      })
+    } finally {
+      setExportLoading(false)
     }
   }
 
@@ -312,12 +363,27 @@ export default function AchievementsPage() {
                     <RefreshCw className={`w-4 h-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
                     {refreshing ? 'Refreshing...' : 'Refresh Data'}
                   </Button>
-                  <Button 
-                    className="bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105"
-                  >
-                    <Download className="w-4 h-4 mr-2" />
-                    Export Report
-                  </Button>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button 
+                        disabled={exportLoading}
+                        className="bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105"
+                      >
+                        <Download className={`w-4 h-4 mr-2 ${exportLoading ? 'animate-pulse' : ''}`} />
+                        {exportLoading ? 'Exporting...' : 'Export Report'}
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-48">
+                      <DropdownMenuItem onClick={() => handleExport('csv')} disabled={exportLoading}>
+                        <Download className="mr-2 h-4 w-4" />
+                        Export as CSV
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => handleExport('json')} disabled={exportLoading}>
+                        <Download className="mr-2 h-4 w-4" />
+                        Export as JSON
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                   <Button 
                     onClick={() => router.push("/dashboard/achievements/new")}
                     className="bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105"

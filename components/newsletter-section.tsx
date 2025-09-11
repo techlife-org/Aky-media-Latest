@@ -87,14 +87,14 @@ export default function NewsletterSection() {
               <br />
               with Governor's Updates
             </h2>
-            <p className="text-xl text-white/90">Join our community to receive exclusive insights, updates, and initiatives from the governor's office</p>
+            <p className="text-xl text-white font-medium drop-shadow-lg">Join our community to receive exclusive insights, updates, and initiatives from the governor's office</p>
           </div>
 
           {isSuccess ? (
             <div className="bg-white/10 backdrop-blur-sm rounded-lg p-8 border border-white/20">
               <CheckCircle className="w-16 h-16 text-green-400 mx-auto mb-4" />
               <h3 className="text-2xl font-bold text-white mb-2">Thank You!</h3>
-              <p className="text-white/90 mb-4">You've successfully subscribed to our newsletter.</p>
+              <p className="text-white font-medium drop-shadow-md mb-4">You've successfully subscribed to our newsletter.</p>
               <Button
                 onClick={() => setIsSuccess(false)}
                 className="bg-white/20 hover:bg-white/30 text-white border-white/20"
@@ -106,20 +106,20 @@ export default function NewsletterSection() {
             <form onSubmit={handleSubmit} className="max-w-lg mx-auto space-y-4">
               {/* Name Input */}
               <div className="relative">
-                <User className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-white/70" />
+                <User className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-white/90" />
                 <Input
                   type="text"
                   placeholder="Your full name (optional)"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   disabled={isLoading}
-                  className="bg-white/10 border-white/20 text-white placeholder:text-white/70 backdrop-blur-sm focus:bg-white/20 focus:border-white/40 transition-all duration-300 pl-10"
+                  className="bg-white/10 border-white/20 text-white placeholder:text-white/95 placeholder:font-medium backdrop-blur-sm focus:bg-white/20 focus:border-white/40 transition-all duration-300 pl-10"
                 />
               </div>
               
               {/* Email Input */}
               <div className="relative">
-                <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-white/70" />
+                <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-white/90" />
                 <Input
                   type="email"
                   placeholder="Enter your email address"
@@ -127,7 +127,7 @@ export default function NewsletterSection() {
                   onChange={(e) => setEmail(e.target.value)}
                   required
                   disabled={isLoading}
-                  className="bg-white/10 border-white/20 text-white placeholder:text-white/70 backdrop-blur-sm focus:bg-white/20 focus:border-white/40 transition-all duration-300 pl-10"
+                  className="bg-white/10 border-white/20 text-white placeholder:text-white/95 placeholder:font-medium backdrop-blur-sm focus:bg-white/20 focus:border-white/40 transition-all duration-300 pl-10"
                 />
                 {email && (
                   <CheckCircle className="absolute right-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-green-400" />
@@ -136,14 +136,14 @@ export default function NewsletterSection() {
               
               {/* Phone Input */}
               <div className="relative">
-                <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-white/70" />
+                <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-white/90" />
                 <Input
                   type="tel"
                   placeholder="Phone number (e.g., 08161781643 or +2348161781643)"
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
                   disabled={isLoading}
-                  className="bg-white/10 border-white/20 text-white placeholder:text-white/70 backdrop-blur-sm focus:bg-white/20 focus:border-white/40 transition-all duration-300 pl-10"
+                  className="bg-white/10 border-white/20 text-white placeholder:text-white/95 placeholder:font-medium backdrop-blur-sm focus:bg-white/20 focus:border-white/40 transition-all duration-300 pl-10"
                 />
                 {phone && (
                   <CheckCircle className="absolute right-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-green-400" />
@@ -153,7 +153,7 @@ export default function NewsletterSection() {
               <Button
                 type="submit"
                 disabled={isLoading || !email}
-                className="w-full bg-red-600 hover:bg-red-700 text-white py-3 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 shadow-lg hover:shadow-xl font-semibold"
+                className="w-full bg-red-600 hover:bg-red-700 text-white py-3 disabled:cursor-not-allowed transition-all duration-300 shadow-lg hover:shadow-xl font-semibold"
               >
                 {isLoading ? (
                   <>
@@ -166,18 +166,18 @@ export default function NewsletterSection() {
               </Button>
               
               {phone && (
-                <p className="text-white/80 text-sm text-center">
+                <p className="text-white font-medium text-sm text-center drop-shadow-md">
                   📱 You'll receive updates via email, SMS, and WhatsApp
                 </p>
               )}
               
-              <p className="text-white/70 text-xs text-center">
+              <p className="text-white/90 font-medium text-xs text-center drop-shadow-md">
                 Nigerian numbers: 08161781643 • International: +1234567890
               </p>
             </form>
           )}
 
-          <p className="text-white/70 text-sm mt-4">Join over 2,000+ subscribers.</p>
+          <p className="text-white/90 font-medium text-sm mt-4 drop-shadow-md">Join over 2,000+ subscribers.</p>
         </div>
       </div>
     </section>

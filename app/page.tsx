@@ -8,6 +8,7 @@ import Header from "@/components/header"
 import HeroSection from "@/components/hero-section"
 import NewsSection from "@/components/news-section"
 import VideoSection from "@/components/video-section"
+import AchievementsSection from "@/components/achievements-section"
 import SocialMediaSection from "@/components/social-media-section"
 import ContactSection from "@/components/contact-section"
 import NewsletterSection from "@/components/newsletter-section"
@@ -40,6 +41,7 @@ export default function HomePage() {
           <HeroSection />
           <NewsSection />
           <VideoSection />
+          <AchievementsSection />
           <SocialMediaSection />
           <ContactSection />
           <NewsletterSection />

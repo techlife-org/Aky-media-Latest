@@ -71,24 +71,30 @@ export function AutoCarousel({
     }
   }, [api])
 
-  if (!images || images.length === 0) {
-    console.log("[v0] No images provided, showing trophy fallback")
+  // Filter out invalid or empty image URLs
+  const validImages = images?.filter(img => img && img.trim() !== '' && img !== 'undefined' && img !== 'null') || []
+  
+  if (!validImages || validImages.length === 0) {
+    console.log("[AutoCarousel] No valid images provided, showing fallback")
     return (
       <div
         className={cn(
-          "flex items-center justify-center bg-muted rounded-lg",
+          "flex items-center justify-center bg-gradient-to-br from-gray-100 to-gray-200 rounded-lg",
           aspectRatio === "square" && "aspect-square",
           aspectRatio === "video" && "aspect-video",
           className,
         )}
       >
-        <span className="text-4xl">🏆</span>
+        <div className="text-center">
+          <span className="text-4xl mb-2 block">📰</span>
+          <span className="text-xs text-gray-500">No image available</span>
+        </div>
       </div>
     )
   }
 
-  if (images.length === 1) {
-    console.log("[v0] Single image display:", images[0])
+  if (validImages.length === 1) {
+    console.log("[AutoCarousel] Single image display:", validImages[0])
     return (
       <div
         className={cn(
@@ -99,23 +105,37 @@ export function AutoCarousel({
         )}
       >
         <img
-          src={images[0] || "/placeholder.svg"}
+          src={validImages[0]}
           alt={title}
           className={cn("w-full h-full object-cover", imageClassName)}
           onError={(e) => {
-            console.log("[v0] Image failed to load:", images[0])
+            console.log("[AutoCarousel] Image failed to load:", validImages[0])
             const target = e.target as HTMLImageElement
-            target.src = "/placeholder.svg?height=300&width=400&text=Image+Not+Found"
+            // Create a fallback placeholder
+            const canvas = document.createElement('canvas')
+            canvas.width = 400
+            canvas.height = 300
+            const ctx = canvas.getContext('2d')
+            if (ctx) {
+              ctx.fillStyle = '#f3f4f6'
+              ctx.fillRect(0, 0, 400, 300)
+              ctx.fillStyle = '#9ca3af'
+              ctx.font = '16px Arial'
+              ctx.textAlign = 'center'
+              ctx.fillText('Image Not Available', 200, 140)
+              ctx.fillText('📰', 200, 170)
+              target.src = canvas.toDataURL()
+            }
           }}
           onLoad={() => {
-            console.log("[v0] Image loaded successfully:", images[0])
+            console.log("[AutoCarousel] Image loaded successfully:", validImages[0])
           }}
         />
       </div>
     )
   }
 
-  console.log("[v0] Multiple images carousel with", images.length, "images")
+  console.log("[AutoCarousel] Multiple images carousel with", validImages.length, "images")
   return (
     <div className={cn("relative", className)}>
       <Carousel
@@ -127,7 +147,7 @@ export function AutoCarousel({
         }}
       >
         <CarouselContent>
-          {images.map((image, index) => (
+          {validImages.map((image, index) => (
             <CarouselItem key={index}>
               <div
                 className={cn(
@@ -137,19 +157,33 @@ export function AutoCarousel({
                 )}
               >
                 <img
-                  src={image || "/placeholder.svg"}
+                  src={image}
                   alt={`${title} - Image ${index + 1}`}
                   className={cn(
                     "w-full h-full object-cover transition-transform duration-300 hover:scale-105",
                     imageClassName,
                   )}
                   onError={(e) => {
-                    console.log("[v0] Carousel image failed to load:", image)
+                    console.log("[AutoCarousel] Carousel image failed to load:", image)
                     const target = e.target as HTMLImageElement
-                    target.src = "/placeholder.svg?height=300&width=400&text=Image+Not+Found"
+                    // Create a fallback placeholder
+                    const canvas = document.createElement('canvas')
+                    canvas.width = 400
+                    canvas.height = 300
+                    const ctx = canvas.getContext('2d')
+                    if (ctx) {
+                      ctx.fillStyle = '#f3f4f6'
+                      ctx.fillRect(0, 0, 400, 300)
+                      ctx.fillStyle = '#9ca3af'
+                      ctx.font = '16px Arial'
+                      ctx.textAlign = 'center'
+                      ctx.fillText('Image Not Available', 200, 140)
+                      ctx.fillText('📰', 200, 170)
+                      target.src = canvas.toDataURL()
+                    }
                   }}
                   onLoad={() => {
-                    console.log("[v0] Carousel image loaded successfully:", image)
+                    console.log("[AutoCarousel] Carousel image loaded successfully:", image)
                   }}
                 />
               </div>
@@ -165,18 +199,18 @@ export function AutoCarousel({
         )}
       </Carousel>
 
-      {/* Dots indicator */}
-      {images.length > 1 && (
-        <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex space-x-1">
-          {images.map((_, index) => (
-            <button
-              key={index}
-              className={cn("w-2 h-2 rounded-full transition-all", current === index ? "bg-white" : "bg-white/50")}
-              onClick={() => api?.scrollTo(index)}
-            />
-          ))}
-        </div>
-      )}
+        {/* Dots indicator */}
+        {validImages.length > 1 && (
+          <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex space-x-1">
+            {validImages.map((_, index) => (
+              <button
+                key={index}
+                className={cn("w-2 h-2 rounded-full transition-all", current === index ? "bg-white" : "bg-white/50")}
+                onClick={() => api?.scrollTo(index)}
+              />
+            ))}
+          </div>
+        )}
     </div>
   )
 }

@@ -392,7 +392,7 @@ export default function AboutPage() {
                   width={240}
                   height={240}
                   alt="Governor Abba Kabir Yusuf"
-                  className="w-60 h-60 rounded-full mx-auto border-4 border-white/30 shadow-2xl relative z-10 object-cover"
+                  className="w-60 h-60 rounded-full mx-auto border-4 border-white/30 shadow-2xl relative z-10 object-cover object-center"
                 />
                 <div className="absolute -inset-4 border border-white/20 rounded-full" />
               </div>
@@ -579,13 +579,13 @@ export default function AboutPage() {
               </div>
 
               <div className="relative animate-slide-in-right">
-                <div className="relative w-full h-96 bg-gradient-to-br from-red-500/20 to-blue-500/20 rounded-2xl overflow-hidden">
+                <div className="relative w-full aspect-[5/4] bg-gradient-to-br from-red-500/20 to-blue-500/20 rounded-2xl overflow-hidden">
                   <Image
                     src="/pictures/assets/img/he/6.png"
-                    width={500}
-                    height={400}
+                    fill
                     alt="Kano State Map"
-                    className="w-full h-full object-cover opacity-80"
+                    className="object-cover object-center opacity-80"
+                    sizes="(max-width: 768px) 100vw, 50vw"
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
                   <div className="absolute bottom-6 left-6 right-6">
@@ -615,8 +615,45 @@ export default function AboutPage() {
         <Footer />
       </div>
 
-      {/* Custom CSS for animations */}
+      {/* Custom CSS for animations and responsive images */}
       <style jsx>{`
+        .responsive-image-container {
+          position: relative;
+          overflow: hidden;
+        }
+        
+        .responsive-image-container img {
+          transition: transform 0.3s ease;
+        }
+        
+        .responsive-image-container:hover img {
+          transform: scale(1.05);
+        }
+        
+        .gallery-image {
+          max-width: 90vw;
+          max-height: 85vh;
+          width: auto;
+          height: auto;
+          object-fit: contain;
+        }
+        
+        .timeline-image {
+          width: 100%;
+          height: auto;
+          min-height: 200px;
+          max-height: 400px;
+          object-fit: cover;
+          object-position: center;
+        }
+        
+        @media (max-width: 768px) {
+          .timeline-image {
+            min-height: 180px;
+            max-height: 300px;
+          }
+        }
+        
         @keyframes float {
           0%, 100% { transform: translateY(0px) rotate(0deg); }
           50% { transform: translateY(-20px) rotate(5deg); }
@@ -722,13 +759,23 @@ function TimelineEvent({ event, index, isEven, isVisible }: {
           <Card className="bg-white border border-gray-200 hover:shadow-lg transition-all duration-300 overflow-hidden">
             <CardContent className="p-0">
               <div className="relative cursor-pointer group" onClick={() => setShowGallery(true)}>
-                <Image
-                  src={event.image}
-                  width={400}
-                  height={300}
-                  alt={event.title}
-                  className="w-full h-85 object-cover transition-transform duration-500 group-hover:scale-105"
-                />
+                <div className="relative w-full min-h-[200px] max-h-[400px] overflow-hidden responsive-image-container">
+                  <Image
+                    src={event.image}
+                    width={400}
+                    height={300}
+                    alt={event.title}
+                    className="timeline-image"
+                    style={{
+                      width: '100%',
+                      height: 'auto',
+                      minHeight: '200px',
+                      maxHeight: '400px',
+                      objectFit: 'cover',
+                      objectPosition: 'center'
+                    }}
+                  />
+                </div>
                 <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent" />
                 
                 {/* Year Badge */}
@@ -820,13 +867,22 @@ function GalleryModal({ images, currentIndex, onClose, onNext, onPrev }: {
   return (
     <div className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-4 animate-fade-in-up">
       <div className="relative max-w-4xl max-h-full animate-scale-in">
-        <Image
-          src={images[currentIndex]}
-          width={800}
-          height={600}
-          alt="Gallery image"
-          className="w-full h-auto max-h-[80vh] object-contain rounded-lg"
-        />
+        <div className="relative flex items-center justify-center max-w-[90vw] max-h-[85vh]">
+          <Image
+            src={images[currentIndex]}
+            width={800}
+            height={600}
+            alt="Gallery image"
+            className="gallery-image rounded-lg shadow-2xl"
+            style={{ 
+              objectFit: 'contain',
+              maxWidth: '90vw',
+              maxHeight: '85vh',
+              width: 'auto',
+              height: 'auto'
+            }}
+          />
+        </div>
         
         <Button
           onClick={onPrev}
