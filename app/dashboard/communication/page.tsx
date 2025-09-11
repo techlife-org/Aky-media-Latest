@@ -176,7 +176,7 @@ export default function CommunicationPage() {
         category: 'contact-us',
         type: 'email',
         subject: 'Thank you for contacting AKY Media - {{ref}}',
-        content: 'Dear {{name}},\n\nThank you for reaching out to AKY Media. We have received your message and appreciate you taking the time to contact us.\n\nYour Message:\n{{message}}\n\nOur team will review your inquiry and respond within 24 hours. If your matter is urgent, please call us at +234-XXX-XXXX.\n\nReference Number: {{ref}}\n\nBest regards,\nAKY Media Customer Service Team\n\nEmail: notify@abbakabiryusuf.info\nWebsite: https://abbakabiryusuf.com',
+        content: 'Dear {{name}},\n\nThank you for reaching out to AKY Media. We have received your message and appreciate you taking the time to contact us.\n\nYour Message:\n{{message}}\n\nOur team will review your inquiry and respond within 24 hours. If your matter is urgent, please call us at +234 707 4222 2252.\n\nReference Number: {{ref}}\n\nBest regards,\nAKY Media Customer Service Team\n\nEmail: notify@abbakabiryusuf.info\nWebsite: https://abbakabiryusuf.com',
         variables: ['name', 'message', 'ref'],
         createdAt: new Date(),
         updatedAt: new Date()

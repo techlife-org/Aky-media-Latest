@@ -11,6 +11,31 @@ interface NotificationOptions {
   additionalVariables?: TemplateVariables;
 }
 
+interface NewsNotificationOptions {
+  email: string;
+  phone?: string;
+  name?: string;
+  newsTitle: string;
+  newsContent: string;
+  newsCategory: string;
+  newsUrl: string;
+  newsImage?: string;
+}
+
+interface AchievementNotificationOptions {
+  email: string;
+  phone?: string;
+  name?: string;
+  achievementTitle: string;
+  achievementDescription: string;
+  achievementCategory: string;
+  achievementProgress: number;
+  achievementLocation: string;
+  achievementDate: string;
+  achievementUrl?: string;
+  achievementImage?: string;
+}
+
 interface NotificationResult {
   success: boolean;
   messageId?: string;
@@ -181,6 +206,200 @@ export class EnhancedNotificationService {
     console.log('WhatsApp sent:', !!results.whatsapp?.success);
     console.log('Errors:', results.errors);
     console.log('=====================================\n');
+
+    return results;
+  }
+
+  /**
+   * Send notifications for news articles
+   */
+  async sendNewsNotifications(options: NewsNotificationOptions): Promise<NotificationResults> {
+    const { email, phone, name, newsTitle, newsContent, newsCategory, newsUrl, newsImage } = options;
+    
+    console.log('\n=== SENDING NEWS NOTIFICATIONS ===');
+    console.log('Email:', email);
+    console.log('Phone:', phone);
+    console.log('Name:', name);
+    console.log('News:', newsTitle);
+    
+    const results: NotificationResults = {
+      email: null,
+      sms: null,
+      whatsapp: null,
+      errors: []
+    };
+
+    // Prepare variables for news templates
+    const variables = this.prepareVariables({
+      email,
+      phone,
+      name,
+      category: 'news',
+      additionalVariables: {
+        news_title: newsTitle,
+        news_content: newsContent.substring(0, 200) + (newsContent.length > 200 ? '...' : ''),
+        news_category: newsCategory,
+        news_url: newsUrl,
+        news_image: newsImage || '',
+        article_title: newsTitle,
+        article_content: newsContent,
+        article_category: newsCategory,
+        article_url: newsUrl,
+        read_more_url: newsUrl
+      }
+    });
+
+    // Send email notification
+    if (email) {
+      try {
+        console.log('\n--- Sending News Email ---');
+        results.email = await this.sendEmailNotification('news', email, variables);
+        console.log('Email result:', results.email);
+      } catch (error) {
+        const errorMsg = `Failed to send news email: ${error instanceof Error ? error.message : 'Unknown error'}`;
+        console.error(errorMsg);
+        results.errors.push(errorMsg);
+        results.email = { success: false, error: errorMsg };
+      }
+    }
+
+    // Send SMS notification if phone is provided
+    if (phone) {
+      try {
+        console.log('\n--- Sending News SMS ---');
+        results.sms = await this.sendSMSNotification('news', phone, variables);
+        console.log('SMS result:', results.sms);
+      } catch (error) {
+        const errorMsg = `Failed to send news SMS: ${error instanceof Error ? error.message : 'Unknown error'}`;
+        console.error(errorMsg);
+        results.errors.push(errorMsg);
+        results.sms = { success: false, error: errorMsg };
+      }
+
+      // Send WhatsApp notification
+      try {
+        console.log('\n--- Sending News WhatsApp ---');
+        results.whatsapp = await this.sendWhatsAppNotification('news', phone, variables);
+        console.log('WhatsApp result:', results.whatsapp);
+      } catch (error) {
+        const errorMsg = `Failed to send news WhatsApp: ${error instanceof Error ? error.message : 'Unknown error'}`;
+        console.error(errorMsg);
+        results.errors.push(errorMsg);
+        results.whatsapp = { success: false, error: errorMsg };
+      }
+    }
+
+    console.log('\n=== NEWS NOTIFICATION RESULTS ===');
+    console.log('Email sent:', !!results.email?.success);
+    console.log('SMS sent:', !!results.sms?.success);
+    console.log('WhatsApp sent:', !!results.whatsapp?.success);
+    console.log('Errors:', results.errors);
+    console.log('==================================\n');
+
+    return results;
+  }
+
+  /**
+   * Send notifications for achievements
+   */
+  async sendAchievementNotifications(options: AchievementNotificationOptions): Promise<NotificationResults> {
+    const { 
+      email, 
+      phone, 
+      name, 
+      achievementTitle, 
+      achievementDescription, 
+      achievementCategory,
+      achievementProgress,
+      achievementLocation,
+      achievementDate,
+      achievementUrl,
+      achievementImage 
+    } = options;
+    
+    console.log('\n=== SENDING ACHIEVEMENT NOTIFICATIONS ===');
+    console.log('Email:', email);
+    console.log('Phone:', phone);
+    console.log('Name:', name);
+    console.log('Achievement:', achievementTitle);
+    
+    const results: NotificationResults = {
+      email: null,
+      sms: null,
+      whatsapp: null,
+      errors: []
+    };
+
+    // Prepare variables for achievement templates
+    const variables = this.prepareVariables({
+      email,
+      phone,
+      name,
+      category: 'achievements',
+      additionalVariables: {
+        achievement_title: achievementTitle,
+        achievement_description: achievementDescription.substring(0, 200) + (achievementDescription.length > 200 ? '...' : ''),
+        achievement_category: achievementCategory,
+        achievement_progress: achievementProgress.toString(),
+        achievement_location: achievementLocation,
+        achievement_date: achievementDate,
+        achievement_url: achievementUrl || '',
+        achievement_image: achievementImage || '',
+        project_title: achievementTitle,
+        project_description: achievementDescription,
+        project_category: achievementCategory,
+        project_progress: achievementProgress.toString(),
+        project_location: achievementLocation,
+        project_date: achievementDate
+      }
+    });
+
+    // Send email notification
+    if (email) {
+      try {
+        console.log('\n--- Sending Achievement Email ---');
+        results.email = await this.sendEmailNotification('achievements', email, variables);
+        console.log('Email result:', results.email);
+      } catch (error) {
+        const errorMsg = `Failed to send achievement email: ${error instanceof Error ? error.message : 'Unknown error'}`;
+        console.error(errorMsg);
+        results.errors.push(errorMsg);
+        results.email = { success: false, error: errorMsg };
+      }
+    }
+
+    // Send SMS notification if phone is provided
+    if (phone) {
+      try {
+        console.log('\n--- Sending Achievement SMS ---');
+        results.sms = await this.sendSMSNotification('achievements', phone, variables);
+        console.log('SMS result:', results.sms);
+      } catch (error) {
+        const errorMsg = `Failed to send achievement SMS: ${error instanceof Error ? error.message : 'Unknown error'}`;
+        console.error(errorMsg);
+        results.errors.push(errorMsg);
+        results.sms = { success: false, error: errorMsg };
+      }
+
+      // Send WhatsApp notification
+      try {
+        console.log('\n--- Sending Achievement WhatsApp ---');
+        results.whatsapp = await this.sendWhatsAppNotification('achievements', phone, variables);
+        console.log('WhatsApp result:', results.whatsapp);
+      } catch (error) {
+        const errorMsg = `Failed to send achievement WhatsApp: ${error instanceof Error ? error.message : 'Unknown error'}`;
+        console.error(errorMsg);
+        results.errors.push(errorMsg);
+        results.whatsapp = { success: false, error: errorMsg };
+      }
+    }
+
+    console.log('\n=== ACHIEVEMENT NOTIFICATION RESULTS ===');
+    console.log('Email sent:', !!results.email?.success);
+    console.log('SMS sent:', !!results.sms?.success);
+    console.log('WhatsApp sent:', !!results.whatsapp?.success);
+    console.log('Errors:', results.errors);
+    console.log('=========================================\n');
 
     return results;
   }

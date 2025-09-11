@@ -1,5 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { connectToDatabase } from "@/lib/mongodb"
+import { connectToDatabaseWithFallback } from "@/lib/mongodb-fallback"
 import { corsHeaders } from "@/lib/cors"
 
 export async function POST(request: NextRequest) {
@@ -9,19 +10,43 @@ export async function POST(request: NextRequest) {
       const dbConnection = await connectToDatabase()
       db = dbConnection.db
     } catch (error) {
-      console.error("Database connection error:", error)
-      return NextResponse.json(
-        {
-          message: "Service temporarily unavailable. Please try again later.",
-          success: false,
-          health: {
-            server: false,
-            database: false,
-            streaming: false
-          }
-        },
-        { status: 503 },
-      )
+      console.warn("Primary database connection failed, trying fallback:", error)
+      
+      if (process.env.NODE_ENV === "development") {
+        try {
+          const fallbackConnection = await connectToDatabaseWithFallback()
+          db = fallbackConnection.db
+          console.log("✅ Using fallback database for broadcast stop")
+        } catch (fallbackError) {
+          console.error("Both primary and fallback database connections failed:", fallbackError)
+          return NextResponse.json(
+            {
+              message: "Service temporarily unavailable. Please try again later.",
+              success: false,
+              health: {
+                server: false,
+                database: false,
+                streaming: false
+              }
+            },
+            { status: 503 },
+          )
+        }
+      } else {
+        console.error("Database connection error:", error)
+        return NextResponse.json(
+          {
+            message: "Service temporarily unavailable. Please try again later.",
+            success: false,
+            health: {
+              server: false,
+              database: false,
+              streaming: false
+            }
+          },
+          { status: 503 },
+        )
+      }
     }
 
     // Get the request body (might include specific broadcast ID)

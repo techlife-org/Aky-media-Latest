@@ -91,6 +91,9 @@ export default function SubscribersPage() {
   const [newStatus, setNewStatus] = useState<string>("")
   const [statusReason, setStatusReason] = useState("")
   const [deleteReason, setDeleteReason] = useState("")
+  const [sendingMessage, setSendingMessage] = useState(false)
+  const [updatingStatus, setUpdatingStatus] = useState(false)
+  const [deletingSubscriber, setDeletingSubscriber] = useState(false)
   const [sortBy, setSortBy] = useState<"date" | "name" | "email">("date")
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc")
   const [dateFilter, setDateFilter] = useState<"all" | "today" | "week" | "month">("all")
@@ -366,6 +369,7 @@ export default function SubscribersPage() {
   const submitMessage = async () => {
     if (!selectedSubscriber || !messageText.trim()) return
 
+    setSendingMessage(true)
     try {
       const response = await fetch('/api/dashboard/subscribers/manage?action=send-message', {
         method: 'POST',
@@ -380,31 +384,53 @@ export default function SubscribersPage() {
       const data = await response.json()
       
       if (data.success) {
+        const details = data.data?.details || {}
+        const successChannels = []
+        if (details.emailSent) successChannels.push('Email')
+        if (details.smsSent) successChannels.push('SMS')
+        if (details.whatsappSent) successChannels.push('WhatsApp')
+        
+        let description = `Message sent successfully via ${successChannels.join(', ')}`
+        if (details.errors && details.errors.length > 0) {
+          description += `. Some errors occurred: ${details.errors.join(', ')}`
+        }
+        
         toast({
           title: "Message Sent",
-          description: "Message sent successfully to subscriber",
+          description,
           className: "bg-green-50 border-green-200 text-green-800",
         })
         setShowMessageModal(false)
+        setMessageText("")
+        setMessageChannels(["email"])
       } else {
+        const errorDetails = data.data?.details?.errors || []
+        const errorMessage = errorDetails.length > 0 
+          ? `${data.message}: ${errorDetails.join(', ')}`
+          : data.message || "Failed to send message"
+        
         toast({
           title: "Failed to Send Message",
-          description: data.message,
+          description: errorMessage,
           variant: "destructive",
         })
       }
     } catch (error) {
+      console.error('Message sending error:', error)
       toast({
         title: "Error",
-        description: "Failed to send message",
+        description: "Failed to send message. Please try again.",
         variant: "destructive",
       })
+    } finally {
+      setSendingMessage(false)
     }
   }
 
   const submitStatusChange = async () => {
     if (!selectedSubscriber || !newStatus) return
 
+    setUpdatingStatus(true)
     try {
       const response = await fetch('/api/dashboard/subscribers/manage?action=update-status', {
         method: 'POST',
@@ -439,12 +465,15 @@ export default function SubscribersPage() {
         description: "Failed to update status",
         variant: "destructive",
       })
+    } finally {
+      setUpdatingStatus(false)
     }
   }
 
   const submitDelete = async () => {
     if (!selectedSubscriber) return
 
+    setDeletingSubscriber(true)
     try {
       const response = await fetch('/api/dashboard/subscribers/manage?action=delete-subscriber', {
         method: 'POST',
@@ -478,6 +507,8 @@ export default function SubscribersPage() {
         description: "Failed to delete subscriber",
         variant: "destructive",
       })
+    } finally {
+      setDeletingSubscriber(false)
     }
   }
 
@@ -1267,11 +1298,11 @@ export default function SubscribersPage() {
                   <div className="flex gap-3 pt-4 border-t border-gray-100">
                     <Button 
                       onClick={submitMessage} 
-                      disabled={!messageText.trim() || messageChannels.length === 0}
+                      disabled={!messageText.trim() || messageChannels.length === 0 || sendingMessage}
                       className="bg-gradient-to-r from-blue-600 to-blue-600 hover:from-blue-700 hover:to-blue-700 text-white"
                     >
-                      <Send className="w-4 h-4 mr-2" />
-                      Send Message
+                      <Send className={`w-4 h-4 mr-2 ${sendingMessage ? 'animate-spin' : ''}`} />
+                      {sendingMessage ? 'Sending...' : 'Send Message'}
                     </Button>
                     <Button variant="outline" onClick={() => setShowMessageModal(false)}>
                       Cancel
@@ -1331,11 +1362,11 @@ export default function SubscribersPage() {
                   <div className="flex gap-3 pt-4 border-t border-gray-100">
                     <Button 
                       onClick={submitStatusChange} 
-                      disabled={!newStatus || newStatus === selectedSubscriber.status}
+                      disabled={!newStatus || newStatus === selectedSubscriber.status || updatingStatus}
                       className="bg-gradient-to-r from-purple-600 to-purple-600 hover:from-purple-700 hover:to-purple-700 text-white"
                     >
-                      <UserCheck className="w-4 h-4 mr-2" />
-                      Update Status
+                      <UserCheck className={`w-4 h-4 mr-2 ${updatingStatus ? 'animate-spin' : ''}`} />
+                      {updatingStatus ? 'Updating...' : 'Update Status'}
                     </Button>
                     <Button variant="outline" onClick={() => setShowStatusModal(false)}>
                       Cancel
@@ -1400,10 +1431,11 @@ export default function SubscribersPage() {
                   <div className="flex gap-3 pt-4 border-t border-gray-100">
                     <Button 
                       onClick={submitDelete} 
+                      disabled={deletingSubscriber}
                       className="bg-red-600 hover:bg-red-700 text-white"
                     >
-                      <Trash2 className="w-4 h-4 mr-2" />
-                      Delete Permanently
+                      <Trash2 className={`w-4 h-4 mr-2 ${deletingSubscriber ? 'animate-spin' : ''}`} />
+                      {deletingSubscriber ? 'Deleting...' : 'Delete Permanently'}
                     </Button>
                     <Button variant="outline" onClick={() => setShowDeleteModal(false)}>
                       Cancel

@@ -55,10 +55,10 @@ interface Track {
 const tracks: Track[] = [
   {
     track: 1,
-    name: "Ko Hasidin",
+    name: "Ko Hasidin Iza Hasada",
     duration: "06:21",
     file: "koHasidin",
-    artist: "AKY Media",
+    artist: "AKY Digital Hub",
     genre: "Tijjani Gandu",
     color: "from-red-500 to-red-800",
   },
@@ -67,7 +67,7 @@ const tracks: Track[] = [
     name: "Kareemi",
     duration: "11:03",
     file: "kareemi",
-    artist: "AKY Media",
+    artist: "AKY Digital Hub",
     genre: "Tijjani Gandu",
     color: "from-red-600 to-red-800",
   },
@@ -76,7 +76,7 @@ const tracks: Track[] = [
     name: "Abba Gida Gida",
     duration: "11:03",
     file: "abbaBilly",
-    artist: "AKY Media",
+    artist: "AKY Digital Hub",
     genre: "Billy-o",
     color: "from-red-500 to-red-800",
   },
@@ -94,7 +94,7 @@ const tracks: Track[] = [
     name: "Dan Farin Gida",
     duration: "13:03",
     file: "danFarinGida",
-    artist: "AKY Media",
+    artist: "AKY Digital Hub",
     genre: "Tijjani Gandu",
     color: "from-red-500 to-red-800",
   },
@@ -103,7 +103,7 @@ const tracks: Track[] = [
     name: "Lamba Daya",
     duration: "5:12",
     file: "lambaDaya",
-    artist: "AKY Media",
+    artist: "AKY Digital Hub",
     genre: "Tijjani Gandu",
     color: "from-red-500 to-red-800",
   },
@@ -112,127 +112,220 @@ const tracks: Track[] = [
     name: "Hasbunallahu",
     duration: "5:10",
     file: "hasbunallahu",
-    artist: "AKY Media",
+    artist: "AKY Digital Hub",
     genre: "Tijjani Gandu",
     color: "from-red-500 to-red-800",
   },
   {
     track: 8,
-    name: "Sakona",
-    duration: "4:08",
-    file: "sakoNa",
-    artist: "AKY Media",
+    name: "Oyoyo Abba Kanawa",
+    duration: "03:35",
+    file: "oyoyoAbbanKanawa",
+    artist: "AKY Digital Hub",
     genre: "Tijjani Gandu",
     color: "from-red-500 to-red-800",
   },
   {
     track: 9,
-    name: "Sunaji suna gani",
-    duration: "5:59",
-    file: "sunaJiSunaGani",
-    artist: "AKY Media",
+    name: "Sakona",
+    duration: "4:08",
+    file: "sakoNa",
+    artist: "AKY Digital Hub",
     genre: "Tijjani Gandu",
     color: "from-red-500 to-red-800",
   },
   {
     track: 10,
-    name: "Ga Comrade ga Abba",
-    duration: "6:26",
-    file: "gaAbbaGaComrd",
-    artist: "AKY Media",
-    genre: "Tijjani Gandu",
-    color: "from-red-500 to-rose-600",
-  },
-  {
-    track: 11,
-    name: "Ramadanan Gwamna",
-    duration: "9:21",
-    file: "ramadanan",
-    artist: "AKY Media",
+    name: "Sunaji suna gani",
+    duration: "5:59",
+    file: "sunaJiSunaGani",
+    artist: "AKY Digital Hub",
     genre: "Tijjani Gandu",
     color: "from-red-500 to-red-800",
   },
   {
+    track: 11,
+    name: "Ga Comrade ga Abba",
+    duration: "6:26",
+    file: "gaAbbaGaComrd",
+    artist: "AKY Digital Hub",
+    genre: "Tijjani Gandu",
+    color: "from-red-500 to-rose-600",
+  },
+  {
     track: 12,
-    name: "Zama daram dakam abba",
-    duration: "6:19",
-    file: "ZAMA_DARAM_DAƘAU_ABBA_KABIR_YUSUF__BY_TIJJANI_GANDU(0)",
-    artist: "AKY Media",
+    name: "Ramadanan Gwamna",
+    duration: "9:21",
+    file: "ramadan",
+    artist: "AKY Digital Hub",
     genre: "Tijjani Gandu",
     color: "from-red-500 to-red-800",
   },
   {
     track: 13,
-    name: "Abba ka cika gwarzo",
-    duration: "23:27",
-    file: "Abba Kacika Gwarzo",
-    artist: "AKY Media",
-    genre: "Kosan Waka",
+    name: "Abba Zama daram",
+    duration: "6:19",
+    file: "abbaZamaDaram",
+    artist: "AKY Digital Hub",
+    genre: "",
     color: "from-red-500 to-red-800",
   },
   {
     track: 14,
-    name: "Gwamna Jikan Dabo",
-    duration: "5:33",
-    file: "GWAMNA_JIKAN_DABO_ABBA_GIDA_GIDA(0)",
-    artist: "AKY Media",
-    genre: "Tijjani Gandu",
+    name: "Abba ka cika gwarzo",
+    duration: "23:27",
+    file: "abbaKacikaGwarzo",
+    artist: "AKY Digital Hub",
+    genre: "Kosan Waka",
     color: "from-red-500 to-red-800",
   },
   {
     track: 15,
-    name: "Kanawa ga Abba nan",
-    duration: "6:29",
-    file: "KANAWA_GA_ABBA_NAN_SABUWAR_WAKAR_KOSAN_WAKA(128k)",
-    artist: "Kosan Waka",
+    name: "Gwamna Jikan Dabo",
+    duration: "5:33",
+    file: "gwamnaJikanDabo",
+    artist: "AKY Digital Hub",
     genre: "Tijjani Gandu",
     color: "from-red-500 to-red-800",
   },
   {
     track: 16,
-    name: "Gyara Kintse Abba",
-    duration: "8:52",
-    file: "Gyara_KINTSI_ABBA_GIDA_GIDA_Sabon_Gwamna(0)",
-    artist: "AKY Media",
+    name: "Kanawa ga Abba nan",
+    duration: "6:29",
+    file: "kanawaGaAbbaNan",
+    artist: "Kosan Waka",
     genre: "Tijjani Gandu",
     color: "from-red-500 to-red-800",
   },
   {
     track: 17,
-    name: "Barka da Sallah Abba",
-    duration: "12:31",
-    file: "BARKA_DA_SALLA_SABON_GWAMNA_ABBA_KABIR_YUSIF_ABBA_GIDA_GIDA(0)",
-    artist: "AKY Media",
+    name: "Gyara Kintse Abba",
+    duration: "8:52",
+    file: "gyaraKintsiAbba",
+    artist: "AKY Digital Hub",
     genre: "Tijjani Gandu",
     color: "from-red-500 to-red-800",
   },
   {
     track: 18,
-    name: "Karshen tika tiki tik",
-    duration: "19:54",
-    file: "KARSHEN_TIKA_TIKI_TIK_BY_TIJJANI_GANDU(0)",
-    artist: "AKY Media",
+    name: "Allah KaRikawa Abba Gwamnan na Kanawa",
+    duration: "07:03",
+    file: "allahKaRikawaAbbaGwamnanKanawa",
+    artist: "AKY Digital Hub",
     genre: "Tijjani Gandu",
     color: "from-red-500 to-red-800",
   },
   {
     track: 19,
-    name: "Allah Ka rikawa Abba",
-    duration: "14:07",
-    file: "Allah_Ka_Riƙawa_Abba_Gwamna_Na_Kanawa_Sabuwar_Wakar_TIJJANI_GANDU,_Abba_gida_gida_KWANKWASIYYA_amana(0)",
-    artist: "AKY Media",
+    name: "Abban Kanawa",
+    duration: "19:54",
+    file: "abbanKanawa",
+    artist: "AKY Digital Hub",
     genre: "Tijjani Gandu",
     color: "from-red-500 to-red-800",
   },
   {
     track: 20,
-    name: "Mai gyara bashi barna",
-    duration: "15:50",
-    file: "Mai_Gyara_Bashi_Barna_Saide_Inba_Gyaran_Yake_Ba,_By_TIJJANI_GANDU(0)",
-    artist: "AKY Media",
+    name: "Haske Maganin Duhu",
+    duration: "07:32",
+    file: "haskeMaganinDuhu",
+    artist: "AKY Digital Hub",
     genre: "Tijjani Gandu",
     color: "from-red-500 to-red-800",
   },
+
+  {
+    track: 21,
+    name: "Shigar Ranar Rantsuwa",
+    duration: "01:42",
+    file: "shigarRanarRantsuwa",
+    artist: "AKY Digital Hub",
+    genre: "Tijjani Gandu",
+    color: "from-red-500 to-red-800",
+  },
+  {
+    track: 22,
+    name: "Abba Gida Gida Abba",
+    duration: "10:47",
+    file: "abbaGidaGidaAbba",
+    artist: "AKY Digital Hub",
+    genre: "Tijjani Gandu",
+    color: "from-red-500 to-red-800",
+  },
+  {
+    track: 23,
+    name: "Abban Dai Abban Dai",
+    duration: "13:34",
+    file: "abbanDaiAbbanDai",
+    artist: "AKY Digital Hub",
+    genre: "Alan Waka",
+    color: "from-red-500 to-red-800",
+  },
+  {
+    track: 24,
+    name: "Abba Na Kowa",
+    duration: "10:19",
+    file: "abbaNaKowa",
+    artist: "AKY Digital Hub",
+    genre: "Tijjani Gandu",
+    color: "from-red-500 to-red-800",
+  },
+  {
+    track: 25,
+    name: "Ko Gezau Abba",
+    duration: "07:01",
+    file: "koGezauAbba",
+    artist: "AKY Digital Hub",
+    genre: "",
+    color: "from-red-500 to-red-800",
+  },
+  {
+    track: 26,
+    name: "Sabon Gwamna Barka Da Sallah",
+    duration: "06:15",
+    file: "sabonGwamnaBarkaDaSallah",
+    artist: "AKY Digital Hub",
+    genre: "Tijjani Gandu",
+    color: "from-red-500 to-red-800",
+  },
+  {
+    track: 27,
+    name: "Kwana Dari",
+    duration: "05:45",
+    file: "kwanaDari",
+    artist: "AKY Digital Hub",
+    genre: "Tijjani Gandu",
+    color: "from-red-500 to-red-800",
+  },
+  {
+    track: 28,
+    name: "Yanzu Abba Ne Gwamna",
+    duration: "05:48",
+    file: "yanzuAbbaNeGwamna",
+    artist: "AKY Digital Hub",
+    genre: "",
+    color: "from-red-500 to-red-800",
+  },
+  {
+    track: 29,
+    name: "Zama Daram",
+    duration: "06:18",
+    file: "zamaDaram",
+    artist: "AKY Digital Hub",
+    genre: "Tijjani Gandu",
+    color: "from-red-500 to-red-800",
+  },
+  {
+    track: 30,
+    name: "Tijjani Gandu Abba K Yusuf",
+    duration: "08:44",
+    file: "tijjaniGanduAbbaKYusuf",
+    artist: "AKY Digital Hub",
+    genre: "Tijjani Gandu",
+    color: "from-red-500 to-red-800",
+  },
+  
+   
 ]
 
 const genreColors = {
@@ -372,7 +465,7 @@ export default function AudioPage() {
   const audioRef = useRef<Howl | null>(null)
   const playerRef = useRef<HTMLDivElement>(null)
   const timeUpdateInterval = useRef<NodeJS.Timeout>()
-  const mediaPath = "https://archive.org/download/aky_20250624/"
+  const mediaPath = "https://akysongs.netlify.app/assets/"
 
   // Load favorites from localStorage
   useEffect(() => {
@@ -477,7 +570,12 @@ export default function AudioPage() {
         },
         onloaderror: (id, error) => {
           console.error("Audio load error:", error)
-          setAudioError("Failed to load audio. Please check your connection and try again.")
+          // Check if it's a 404 error (file not found)
+          if (error && typeof error === 'object' && 'status' in error && error.status === 404) {
+            setAudioError(`Audio file not found: ${track.name}. This track may not be available yet.`)
+          } else {
+            setAudioError("Failed to load audio. Please check your connection and try again.")
+          }
           setIsPlaying(false)
           setIsBuffering(false)
           setIsLoaded(false)
@@ -633,7 +731,21 @@ export default function AudioPage() {
             setAudioError("Failed to start audio. Please try again.")
           })
       } else {
-        audioRef.current.play()
+        // Check if the audio is loaded before trying to play
+        if (audioRef.current.state() === "loaded") {
+          audioRef.current.play()
+        } else if (audioRef.current.state() === "unloaded") {
+          // If unloaded, try to load and play
+          audioRef.current.load()
+          // Set a timeout to try playing after loading
+          setTimeout(() => {
+            if (audioRef.current && audioRef.current.state() === "loaded") {
+              audioRef.current.play()
+            }
+          }, 500)
+        } else {
+          audioRef.current.play()
+        }
       }
     }
   }, [])
@@ -967,6 +1079,25 @@ export default function AudioPage() {
                       <Alert className="mb-4 bg-red-500/20 border-red-500/30">
                         <AlertCircle className="h-4 w-4" />
                         <AlertDescription className="text-red-300">{audioError}</AlertDescription>
+                        <div className="mt-2">
+                          <Button 
+                            onClick={() => {
+                              // Reset the audio and try to reload
+                              if (audioRef.current) {
+                                audioRef.current.unload()
+                                setIsLoaded(false)
+                                setAudioError(null)
+                                setIsBuffering(true)
+                                // Create a new Howl instance
+                                audioRef.current = createHowlInstance(currentTrack)
+                              }
+                            }}
+                            className="bg-red-600 hover:bg-red-700 text-white mt-2"
+                            size="sm"
+                          >
+                            Retry
+                          </Button>
+                        </div>
                       </Alert>
                     )}
 
@@ -1053,22 +1184,38 @@ export default function AudioPage() {
 
                     {/* Enhanced Volume Control */}
                     <div className="flex items-center justify-center space-x-4 md:space-x-6">
-                      <Volume2 className="text-white" size={20} />
-                      <div className="relative">
+                      <Button
+                        onClick={() => setVolume(volume === 0 ? 1 : 0)}
+                        className="bg-white/20 hover:bg-white/30 border-0 text-white transition-all duration-300 p-2"
+                        size="sm"
+                      >
+                        {volume === 0 ? (
+                          <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                            <path fillRule="evenodd" d="M9.383 3.076A1 1 0 0110 4v12a1 1 0 01-1.617.816L4.414 13H2a1 1 0 01-1-1V8a1 1 0 011-1h2.414l3.969-3.816a1 1 0 011.617.816zM14.657 2.929a1 1 0 011.414 0A9.972 9.972 0 0119 10a9.972 9.972 0 01-2.929 7.071 1 1 0 01-1.414-1.414A7.971 7.971 0 0017 10c0-2.21-.894-4.208-2.343-5.657a1 1 0 010-1.414zm-2.829 2.828a1 1 0 011.415 0A5.983 5.983 0 0115 10a5.984 5.984 0 01-1.757 4.243 1 1 0 01-1.415-1.415A3.984 3.984 0 0013 10a3.983 3.983 0 00-1.172-2.828 1 1 0 010-1.415z" clipRule="evenodd" />
+                            <path d="M15.536 15.536L4.464 4.464" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                          </svg>
+                        ) : (
+                          <Volume2 size={20} />
+                        )}
+                      </Button>
+                      <div className="relative flex-1 max-w-32 md:max-w-40">
                         <input
                           type="range"
                           min="0"
                           max="1"
-                          step="0.1"
+                          step="0.01"
                           value={volume}
                           onChange={(e) => {
                             const newVolume = Number.parseFloat(e.target.value)
                             setVolume(newVolume)
                           }}
-                          className="w-32 md:w-40 h-2 md:h-3 bg-white/20 rounded-lg appearance-none cursor-pointer slider border border-white/30"
+                          className="w-full h-2 md:h-3 bg-white/20 rounded-lg appearance-none cursor-pointer slider border border-white/30 volume-slider"
+                          style={{
+                            background: `linear-gradient(to right, rgba(255,255,255,0.8) 0%, rgba(255,255,255,0.8) ${volume * 100}%, rgba(255,255,255,0.2) ${volume * 100}%, rgba(255,255,255,0.2) 100%)`
+                          }}
                         />
                       </div>
-                      <span className="text-white/80 text-sm md:text-lg font-mono w-10 md:w-12">
+                      <span className="text-white/80 text-sm md:text-lg font-mono w-10 md:w-12 text-center">
                         {Math.round(volume * 100)}%
                       </span>
                     </div>

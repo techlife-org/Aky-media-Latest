@@ -26,6 +26,238 @@ import {
   Paperclip,
   Flag,
   Check,
+  Filter,
+  Eye,
+  RefreshCw,
+  X,
+  Plus,
+  ChevronDown,
+  ChevronUp,
+  Menu,
+  Bell,
+  Settings,
+  Tag,
+  PaperPlane,
+  DraftingCompass,
+  CircleCheck,
+  CircleX,
+  CircleAlert,
+  CircleHelp,
+  CircleDot,
+  Hash,
+  AtSign,
+  Smartphone,
+  Monitor,
+  Tablet,
+  Laptop,
+  Server,
+  Database,
+  Shield,
+  Lock,
+  Unlock,
+  Key,
+  Users,
+  UserCheck,
+  UserX,
+  UserPlus,
+  UserMinus,
+  Trophy,
+  Award,
+  Zap,
+  Heart,
+  ThumbsUp,
+  ThumbsDown,
+  Smile,
+  Frown,
+  Meh,
+  Laugh,
+  EyeOff,
+  Volume2,
+  VolumeX,
+  Volume1,
+  Volume,
+  Wifi,
+  WifiOff,
+  Bluetooth,
+  BluetoothConnected,
+  BluetoothOff,
+  Cast,
+  CastConnected,
+  CastOff,
+  Power,
+  PowerOff,
+  Battery,
+  BatteryCharging,
+  BatteryFull,
+  BatteryLow,
+  BatteryMedium,
+  BatteryWarning,
+  Thermometer,
+  ThermometerSnowflake,
+  ThermometerSun,
+  Cloud,
+  CloudDrizzle,
+  CloudLightning,
+  CloudOff,
+  CloudRain,
+  CloudSnow,
+  Cloudy,
+  Sunrise,
+  Sunset,
+  Moon,
+  Sun,
+  Wind,
+  MapPin,
+  Navigation,
+  Navigation2,
+  Compass,
+  Anchor,
+  Globe,
+  Github,
+  Facebook,
+  Twitter,
+  Instagram,
+  Linkedin,
+  Youtube,
+  Twitch,
+  Discord,
+  Slack,
+  Skype,
+  Whatsapp,
+  Telegram,
+  SlackIcon,
+  ZoomIn,
+  ZoomOut,
+  Maximize,
+  Minimize,
+  Expand,
+  Collapse,
+  Move,
+  MoveDiagonal,
+  MoveHorizontal,
+  MoveVertical,
+  RotateCcw,
+  RotateCw,
+  Shuffle,
+  Repeat,
+  Repeat1,
+  CornerUpLeft,
+  CornerUpRight,
+  CornerDownLeft,
+  CornerDownRight,
+  ArrowUp,
+  ArrowDown,
+  ArrowLeft,
+  ArrowRight,
+  ArrowUpLeft,
+  ArrowUpRight,
+  ArrowDownLeft,
+  ArrowDownRight,
+  ChevronsUp,
+  ChevronsDown,
+  ChevronsLeft,
+  ChevronsRight,
+  ChevronFirst,
+  ChevronLast,
+  Play,
+  Pause,
+  Stop,
+  Rewind,
+  FastForward,
+  SkipBack,
+  SkipForward,
+  Volume2Icon,
+  VolumeXIcon,
+  Volume1Icon,
+  VolumeIcon,
+  WifiIcon,
+  WifiOffIcon,
+  BluetoothIcon,
+  BluetoothConnectedIcon,
+  BluetoothOffIcon,
+  CastIcon,
+  CastConnectedIcon,
+  CastOffIcon,
+  PowerIcon,
+  PowerOffIcon,
+  BatteryIcon,
+  BatteryChargingIcon,
+  BatteryFullIcon,
+  BatteryLowIcon,
+  BatteryMediumIcon,
+  BatteryWarningIcon,
+  ThermometerIcon,
+  ThermometerSnowflakeIcon,
+  ThermometerSunIcon,
+  CloudIcon,
+  CloudDrizzleIcon,
+  CloudLightningIcon,
+  CloudOffIcon,
+  CloudRainIcon,
+  CloudSnowIcon,
+  CloudyIcon,
+  SunriseIcon,
+  SunsetIcon,
+  MoonIcon,
+  SunIcon,
+  WindIcon,
+  MapPinIcon,
+  NavigationIcon,
+  Navigation2Icon,
+  CompassIcon,
+  AnchorIcon,
+  GlobeIcon,
+  GithubIcon,
+  FacebookIcon,
+  TwitterIcon,
+  InstagramIcon,
+  LinkedinIcon,
+  YoutubeIcon,
+  TwitchIcon,
+  DiscordIcon,
+  SkypeIcon,
+  WhatsappIcon,
+  TelegramIcon,
+  ZoomInIcon,
+  ZoomOutIcon,
+  MaximizeIcon,
+  MinimizeIcon,
+  ExpandIcon,
+  CollapseIcon,
+  MoveIcon,
+  MoveDiagonalIcon,
+  MoveHorizontalIcon,
+  MoveVerticalIcon,
+  RotateCcwIcon,
+  RotateCwIcon,
+  ShuffleIcon,
+  RepeatIcon,
+  Repeat1Icon,
+  CornerUpLeftIcon,
+  CornerUpRightIcon,
+  CornerDownLeftIcon,
+  CornerDownRightIcon,
+  ArrowUpIcon,
+  ArrowDownIcon,
+  ArrowLeftIcon,
+  ArrowRightIcon,
+  ArrowUpLeftIcon,
+  ArrowUpRightIcon,
+  ArrowDownLeftIcon,
+  ArrowDownRightIcon,
+  ChevronsUpIcon,
+  ChevronsDownIcon,
+  ChevronsLeftIcon,
+  ChevronsRightIcon,
+  ChevronFirstIcon,
+  ChevronLastIcon,
+  PlayIcon,
+  PauseIcon,
+  StopIcon,
+  RewindIcon,
+  FastForwardIcon,
+  SkipBackIcon,
+  SkipForwardIcon,
 } from "lucide-react"
 import DashboardLayout from "@/components/dashboard-layout"
 import { useToast } from "@/components/ui/use-toast"
@@ -50,6 +282,7 @@ export default function MessagesPage() {
   const [replyContent, setReplyContent] = useState("")
   const [isSending, setIsSending] = useState(false)
   const [activeFolder, setActiveFolder] = useState("inbox")
+  const [filterStatus, setFilterStatus] = useState("all")
 
   const [showCompose, setShowCompose] = useState(false)
   const [composeData, setComposeData] = useState({
@@ -69,25 +302,13 @@ export default function MessagesPage() {
     fetchMessages()
   }, [searchParams])
 
-  // const fetchMessages = async () => {
-  //   try {
-  //     const response = await fetch(`/api/dashboard/messages?status=${activeFolder === "inbox" ? "all" : activeFolder}`)
-  //     const data = await response.json()
-  //     setMessages(data.messages || [])
-  //   } catch (error) {
-  //     console.error("Error fetching messages:", error)
-  //   } finally {
-  //     setLoading(false)
-  //   }
-  // }
-
   const fetchMessages = async () => {
     try {
       // Map folder names to status values
       const statusMap: Record<string, string> = {
         inbox: "all",
         read: "read",
-        sent: "sent",  // This should be handled by your API
+        sent: "replied",  // Only show replied for sent
         outbox: "sending",
         spam: "spam",
         archived: "archived",
@@ -100,6 +321,11 @@ export default function MessagesPage() {
       setMessages(data.messages || []);
     } catch (error) {
       console.error("Error fetching messages:", error);
+      toast({
+        title: "Error",
+        description: "Failed to load messages",
+        variant: "destructive",
+      });
     } finally {
       setLoading(false);
     }
@@ -157,49 +383,6 @@ export default function MessagesPage() {
     },
   ]
 
-  // const getFilteredMessages = () => {
-  //   let filtered = messages
-
-  //   // Filter by folder
-  //   switch (activeFolder) {
-  //     case "inbox":
-  //       filtered = messages.filter((m) => m.status === "new" || m.status === "read")
-  //       break
-  //     case "read":
-  //       filtered = messages.filter((m) => m.status === "read")
-  //       break
-  //     case "sent":
-  //       filtered = messages.filter((m) => m.status === "replied" || m.status === "sent")
-  //       break
-  //     case "outbox":
-  //       filtered = messages.filter((m) => m.status === "sending")
-  //       break
-  //     case "spam":
-  //       filtered = messages.filter((m) => m.status === "spam")
-  //       break
-  //     case "archived":
-  //       filtered = messages.filter((m) => m.status === "archived")
-  //       break
-  //     case "deleted":
-  //       filtered = messages.filter((m) => m.status === "deleted")
-  //       break
-  //     default:
-  //       filtered = messages
-  //   }
-
-  //   // Filter by search term
-  //   if (searchTerm) {
-  //     filtered = filtered.filter(
-  //       (message) =>
-  //         message.firstName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-  //         message.lastName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-  //         message.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-  //         message.subject.toLowerCase().includes(searchTerm.toLowerCase()),
-  //     )
-  //   }
-
-  //   return filtered
-  // } 
   const getFilteredMessages = () => {
     let filtered = messages;
   
@@ -230,7 +413,23 @@ export default function MessagesPage() {
         filtered = messages;
     }
   
-    // Rest of your filtering logic...
+    // Filter by search term
+    if (searchTerm) {
+      filtered = filtered.filter(
+        (message) =>
+          message.firstName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          message.lastName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          message.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          message.subject.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          message.message.toLowerCase().includes(searchTerm.toLowerCase())
+      )
+    }
+
+    // Filter by status if not "all"
+    if (filterStatus !== "all") {
+      filtered = filtered.filter((m) => m.status === filterStatus);
+    }
+  
     return filtered;
   };
 
@@ -289,7 +488,12 @@ export default function MessagesPage() {
     setSelectedMessage(message)
     setReplySubject(`Re: ${message.subject}`)
     const originalMessage = includeOriginalMessage
-      ? `\n\n----------------------------------------\nOriginal message from ${message.firstName} ${message.lastName} (${message.email}):\n\n${message.message}`
+      ? `
+
+----------------------------------------
+Original message from ${message.firstName} ${message.lastName} (${message.email}):
+
+${message.message}`
       : ""
     setReplyContent(originalMessage)
     setReplyMode(true)
@@ -307,7 +511,8 @@ export default function MessagesPage() {
 
     setIsSending(true)
     try {
-      const response = await fetch("/api/dashboard/messages/reply", {
+      // First, send the email using the communication email API
+      const emailResponse = await fetch("/api/communication/email", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -316,15 +521,16 @@ export default function MessagesPage() {
           to: selectedMessage.email,
           subject: replySubject,
           html: replyContent,
-          replyTo: process.env.EMAIL_FROM || process.env.SMTP_USER,
-          recipientName: `${selectedMessage.firstName} ${selectedMessage.lastName}`,
+          message: replyContent.replace(/<[^>]*>/g, ''), // Plain text version
         }),
       })
 
-      if (!response.ok) {
-        throw new Error("Failed to send email")
+      if (!emailResponse.ok) {
+        const errorData = await emailResponse.json();
+        throw new Error(errorData.error || "Failed to send email")
       }
 
+      // If email was sent successfully, update the message status
       await updateMessageStatus(selectedMessage._id, "replied")
 
       toast({
@@ -340,7 +546,7 @@ export default function MessagesPage() {
       console.error("Error sending reply:", error)
       toast({
         title: "Error",
-        description: "Failed to send reply. Please try again.",
+        description: error instanceof Error ? error.message : "Failed to send reply. Please try again.",
         variant: "destructive",
       })
     } finally {
@@ -374,6 +580,11 @@ export default function MessagesPage() {
     if (message.status === "new") return <Mail className="w-4 h-4 text-blue-600" />
     if (message.starred) return <Star className="w-4 h-4 text-yellow-500 fill-current" />
     return <MessageSquare className="w-4 h-4 text-gray-400" />
+  }
+
+  const refreshMessages = () => {
+    setLoading(true)
+    fetchMessages()
   }
 
   if (loading) {
@@ -411,9 +622,21 @@ export default function MessagesPage() {
       return
     }
 
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    if (!emailRegex.test(composeData.to)) {
+      toast({
+        title: "Error",
+        description: "Please enter a valid email address",
+        variant: "destructive",
+      })
+      return
+    }
+
     setIsSending(true)
     try {
-      const response = await fetch("/api/dashboard/messages/send", {
+      // Use the communication email API with template
+      const response = await fetch("/api/communication/email", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -422,12 +645,13 @@ export default function MessagesPage() {
           to: composeData.to,
           subject: composeData.subject,
           html: composeData.content,
-          type: "new",
+          message: composeData.content.replace(/<[^>]*>/g, ''), // Plain text version
         }),
       })
 
       if (!response.ok) {
-        throw new Error("Failed to send email")
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Failed to send email")
       }
 
       toast({
@@ -442,7 +666,7 @@ export default function MessagesPage() {
       console.error("Error sending email:", error)
       toast({
         title: "Error",
-        description: "Failed to send email. Please try again.",
+        description: error instanceof Error ? error.message : "Failed to send email. Please try again.",
         variant: "destructive",
       })
     } finally {
@@ -452,18 +676,23 @@ export default function MessagesPage() {
 
   return (
     <DashboardLayout>
-      <div className="flex h-screen bg-white">
+      <div className="flex h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
         {/* Sidebar */}
-        <div className="w-64 bg-gray-50 border-r border-gray-200 flex flex-col">
-          <div className="p-4 border-b border-gray-200">
-            <Button className="w-full bg-red-600 hover:bg-red-700" onClick={() => setShowCompose(true)}>
-              <Send className="w-4 h-4 mr-2" />
-              Compose
+        <div className="w-64 bg-white border-r border-gray-200 flex flex-col shadow-lg">
+          {/* Compose Button */}
+          <div className="p-4 border-b border-gray-200 bg-gradient-to-r from-red-50 to-red-100">
+            <Button 
+              className="w-full bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105" 
+              onClick={() => setShowCompose(true)}
+            >
+              <Plus className="w-5 h-5 mr-2" />
+              Compose New
             </Button>
           </div>
 
-          <div className="flex-1 overflow-y-auto">
-            <nav className="p-2">
+          {/* Navigation */}
+          <div className="flex-1 overflow-y-auto py-4">
+            <nav className="px-2 space-y-1">
               {sidebarItems.map((item) => {
                 const Icon = item.icon
                 const isActive = activeFolder === item.id
@@ -475,16 +704,30 @@ export default function MessagesPage() {
                       setActiveFolder(item.id)
                       router.push(`/dashboard/messages?folder=${item.id}`)
                     }}
-                    className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-left transition-colors ${
-                      isActive ? "bg-red-100 text-red-700 font-medium" : "text-gray-700 hover:bg-gray-100"
+                    className={`w-full flex items-center justify-between px-4 py-3 rounded-xl text-left transition-all duration-200 group ${
+                      isActive 
+                        ? "bg-gradient-to-r from-red-50 to-red-100 text-red-700 font-semibold shadow-sm border border-red-200" 
+                        : "text-gray-700 hover:bg-gray-100 hover:shadow-sm"
                     }`}
                   >
                     <div className="flex items-center">
-                      <Icon className={`w-5 h-5 mr-3 ${item.color || "text-gray-400"}`} />
-                      <span>{item.label}</span>
+                      <div className={`p-2 rounded-lg mr-3 transition-all duration-200 ${
+                        isActive 
+                          ? "bg-red-100 text-red-600" 
+                          : "bg-gray-100 text-gray-500 group-hover:bg-red-50 group-hover:text-red-500"
+                      }`}>
+                        <Icon className={`w-5 h-5 ${item.color || "text-gray-400"}`} />
+                      </div>
+                      <span className="font-medium">{item.label}</span>
                     </div>
                     {item.count !== undefined && item.count > 0 && (
-                      <Badge variant="secondary" className="text-xs">
+                      <Badge 
+                        className={`text-xs font-bold ${
+                          isActive 
+                            ? "bg-red-600 text-white" 
+                            : "bg-gray-200 text-gray-700"
+                        }`}
+                      >
                         {item.count}
                       </Badge>
                     )}
@@ -493,38 +736,128 @@ export default function MessagesPage() {
               })}
             </nav>
           </div>
+
+          {/* Stats */}
+          <div className="p-4 border-t border-gray-200 bg-gradient-to-r from-gray-50 to-gray-100">
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium text-gray-600">Total Messages</span>
+                <span className="text-sm font-bold text-gray-900">{messages.length}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium text-gray-600">Unread</span>
+                <span className="text-sm font-bold text-blue-600">
+                  {messages.filter(m => m.status === "new").length}
+                </span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium text-gray-600">Replied</span>
+                <span className="text-sm font-bold text-green-600">
+                  {messages.filter(m => m.status === "replied").length}
+                </span>
+              </div>
+            </div>
+          </div>
         </div>
 
         {/* Main Content */}
         <div className="flex-1 flex flex-col">
           {/* Header */}
-          <div className="border-b border-gray-200 p-4">
+          <div className="border-b border-gray-200 bg-white/80 backdrop-blur-sm p-4 shadow-sm">
             <div className="flex items-center justify-between mb-4">
-              <h1 className="text-2xl font-bold text-gray-900 capitalize">{activeFolder}</h1>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-gradient-to-br from-red-500 to-red-600 rounded-xl flex items-center justify-center shadow-md">
+                  <Inbox className="w-5 h-5 text-white" />
+                </div>
+                <div>
+                  <h1 className="text-2xl font-bold bg-gradient-to-r from-gray-900 to-red-700 bg-clip-text text-transparent">
+                    {activeFolder.charAt(0).toUpperCase() + activeFolder.slice(1)} Messages
+                  </h1>
+                  <p className="text-sm text-gray-500">
+                    {filteredMessages.length} {filteredMessages.length === 1 ? 'message' : 'messages'}
+                  </p>
+                </div>
+              </div>
+              
+              <div className="flex items-center gap-3">
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
                   <Input
                     placeholder="Search messages..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-10 w-80"
+                    className="pl-10 w-80 bg-gray-50 border-gray-200 focus:border-red-500 focus:ring-red-500 rounded-xl"
                   />
                 </div>
+                
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={refreshMessages}
+                  className="border-gray-300 hover:bg-gray-100 rounded-xl"
+                >
+                  <RefreshCw className="w-4 h-4" />
+                </Button>
+                
+                <div className="flex items-center gap-2">
+                  <Filter className="w-4 h-4 text-gray-500" />
+                  <select 
+                    value={filterStatus}
+                    onChange={(e) => setFilterStatus(e.target.value)}
+                    className="border border-gray-300 rounded-md px-2 py-1 text-sm"
+                  >
+                    <option value="all">All Status</option>
+                    <option value="new">New</option>
+                    <option value="read">Read</option>
+                    <option value="replied">Replied</option>
+                    <option value="spam">Spam</option>
+                    <option value="archived">Archived</option>
+                    <option value="deleted">Deleted</option>
+                  </select>
+                </div>
               </div>
+            </div>
+            
+            {/* Action Buttons */}
+            <div className="flex items-center gap-2">
+              <Button variant="outline" size="sm" className="rounded-lg border-gray-300">
+                <Archive className="w-4 h-4 mr-2" />
+                Archive
+              </Button>
+              <Button variant="outline" size="sm" className="rounded-lg border-gray-300">
+                <Flag className="w-4 h-4 mr-2" />
+                Spam
+              </Button>
+              <Button variant="outline" size="sm" className="rounded-lg border-gray-300">
+                <Trash2 className="w-4 h-4 mr-2" />
+                Delete
+              </Button>
+              <Button variant="outline" size="sm" className="rounded-lg border-gray-300">
+                <MoreHorizontal className="w-4 h-4" />
+              </Button>
             </div>
           </div>
 
           <div className="flex-1 flex">
             {/* Messages List */}
-            <div className="w-1/2 border-r border-gray-200 overflow-y-auto">
+            <div className="w-1/2 border-r border-gray-200 bg-white overflow-y-auto">
               {filteredMessages.length === 0 ? (
-                <div className="p-8 text-center text-gray-500">
-                  <MessageSquare className="w-12 h-12 mx-auto mb-4 text-gray-300" />
-                  <p>No messages in {activeFolder}</p>
+                <div className="p-12 text-center text-gray-500">
+                  <div className="w-20 h-20 bg-gradient-to-br from-gray-100 to-gray-200 rounded-full flex items-center justify-center mx-auto mb-6">
+                    <MessageSquare className="w-10 h-10 text-gray-400" />
+                  </div>
+                  <h3 className="text-xl font-semibold mb-2 text-gray-700">No messages found</h3>
+                  <p className="text-gray-500 mb-6">There are no messages in your {activeFolder} folder</p>
+                  <Button 
+                    onClick={() => setShowCompose(true)}
+                    className="bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white"
+                  >
+                    <Plus className="w-4 h-4 mr-2" />
+                    Compose Message
+                  </Button>
                 </div>
               ) : (
-                <div className="divide-y divide-gray-200">
+                <div className="divide-y divide-gray-100">
                   {filteredMessages.map((message) => (
                     <div
                       key={message._id}
@@ -534,17 +867,23 @@ export default function MessagesPage() {
                           updateMessageStatus(message._id, "read")
                         }
                       }}
-                      className={`p-4 cursor-pointer hover:bg-gray-50 transition-colors ${
-                        selectedMessage?._id === message._id ? "bg-blue-50 border-r-2 border-r-blue-500" : ""
-                      } ${message.status === "new" ? "bg-blue-25 font-medium" : ""}`}
+                      className={`p-5 cursor-pointer hover:bg-gray-50 transition-all duration-200 border-l-4 ${
+                        selectedMessage?._id === message._id 
+                          ? "bg-red-50 border-l-red-500 shadow-sm" 
+                          : message.status === "new" 
+                            ? "bg-blue-25 border-l-blue-500 font-medium" 
+                            : "border-l-transparent"
+                      }`}
                     >
-                      <div className="flex items-start justify-between mb-2">
+                      <div className="flex items-start justify-between mb-3">
                         <div className="flex items-center gap-3 flex-1 min-w-0">
                           {getMessageIcon(message)}
                           <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-2 mb-1">
                               <span
-                                className={`text-sm truncate ${message.status === "new" ? "font-semibold" : "font-medium"}`}
+                                className={`text-sm truncate ${
+                                  message.status === "new" ? "font-bold text-gray-900" : "font-medium text-gray-700"
+                                }`}
                               >
                                 {message.firstName} {message.lastName}
                               </span>
@@ -564,7 +903,7 @@ export default function MessagesPage() {
                       </div>
 
                       <div className="ml-8">
-                        <p className={`text-sm mb-1 truncate ${message.status === "new" ? "font-medium" : ""}`}>
+                        <p className={`text-sm mb-2 truncate ${message.status === "new" ? "font-semibold text-gray-900" : "text-gray-700"}`}>
                           {message.subject}
                         </p>
                         <p className="text-xs text-gray-600 line-clamp-2">{message.message}</p>
@@ -576,18 +915,19 @@ export default function MessagesPage() {
             </div>
 
             {/* Message Detail */}
-            <div className="flex-1 flex flex-col">
+            <div className="flex-1 flex flex-col bg-gradient-to-br from-white to-gray-50">
               {selectedMessage ? (
                 <>
                   {/* Message Header */}
-                  <div className="border-b border-gray-200 p-4">
-                    <div className="flex items-center justify-between mb-4">
-                      <h2 className="text-lg font-semibold text-gray-900">{selectedMessage.subject}</h2>
+                  <div className="border-b border-gray-200 bg-white p-6 shadow-sm">
+                    <div className="flex items-center justify-between mb-6">
+                      <h2 className="text-2xl font-bold text-gray-900 truncate">{selectedMessage.subject}</h2>
                       <div className="flex items-center gap-2">
                         <Button
                           size="sm"
                           variant="outline"
                           onClick={() => updateMessageStatus(selectedMessage._id, "archived")}
+                          className="border-gray-300 hover:bg-gray-100"
                         >
                           <Archive className="w-4 h-4" />
                         </Button>
@@ -595,6 +935,7 @@ export default function MessagesPage() {
                           size="sm"
                           variant="outline"
                           onClick={() => updateMessageStatus(selectedMessage._id, "spam")}
+                          className="border-gray-300 hover:bg-gray-100"
                         >
                           <Flag className="w-4 h-4" />
                         </Button>
@@ -602,71 +943,86 @@ export default function MessagesPage() {
                           size="sm"
                           variant="outline"
                           onClick={() => updateMessageStatus(selectedMessage._id, "deleted")}
+                          className="border-gray-300 hover:bg-gray-100"
                         >
                           <Trash2 className="w-4 h-4" />
                         </Button>
-                        <Button size="sm" variant="outline">
+                        <Button size="sm" variant="outline" className="border-gray-300 hover:bg-gray-100">
                           <MoreHorizontal className="w-4 h-4" />
                         </Button>
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-4 text-sm text-gray-600">
-                      <div className="flex items-center gap-2">
-                        <div className="w-8 h-8 bg-red-100 rounded-full flex items-center justify-center">
-                          <User className="w-4 h-4 text-red-600" />
+                    <div className="flex items-center gap-6 mb-6 pb-6 border-b border-gray-100">
+                      <div className="flex items-center gap-3">
+                        <div className="w-12 h-12 bg-gradient-to-br from-red-100 to-red-200 rounded-full flex items-center justify-center">
+                          <User className="w-6 h-6 text-red-600" />
                         </div>
                         <div>
-                          <p className="font-medium text-gray-900">
+                          <p className="font-bold text-gray-900 text-lg">
                             {selectedMessage.firstName} {selectedMessage.lastName}
                           </p>
-                          <p className="text-xs">{selectedMessage.email}</p>
+                          <p className="text-sm text-gray-600">{selectedMessage.email}</p>
                         </div>
                       </div>
-                      <div className="flex items-center gap-4 ml-auto">
+                      
+                      <div className="flex items-center gap-6 text-sm text-gray-600">
                         {selectedMessage.mobile && (
-                          <div className="flex items-center gap-1">
-                            <Phone className="w-3 h-3" />
+                          <div className="flex items-center gap-2">
+                            <Phone className="w-4 h-4" />
                             <span>{selectedMessage.mobile}</span>
                           </div>
                         )}
-                        <div className="flex items-center gap-1">
-                          <Calendar className="w-3 h-3" />
+                        <div className="flex items-center gap-2">
+                          <Calendar className="w-4 h-4" />
                           <span>{new Date(selectedMessage.createdAt).toLocaleString()}</span>
                         </div>
                       </div>
                     </div>
+
+                    {/* Message Actions */}
+                    {!replyMode && (
+                      <div className="flex gap-3">
+                        <Button 
+                          onClick={() => handleReply(selectedMessage)} 
+                          className="bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white shadow-md hover:shadow-lg transition-all duration-300"
+                        >
+                          <Reply className="w-4 h-4 mr-2" />
+                          Reply
+                        </Button>
+                        <Button variant="outline" className="border-gray-300 hover:bg-gray-100">
+                          <Forward className="w-4 h-4 mr-2" />
+                          Forward
+                        </Button>
+                        <Button variant="outline" className="border-gray-300 hover:bg-gray-100">
+                          <Star className="w-4 h-4 mr-2" />
+                          Star
+                        </Button>
+                      </div>
+                    )}
                   </div>
 
                   {/* Message Content */}
-                  <div className="flex-1 overflow-y-auto p-4">
-                    <div className="bg-white rounded-lg border p-6">
+                  <div className="flex-1 overflow-y-auto p-6">
+                    <div className="bg-white rounded-2xl border border-gray-200 p-8 shadow-lg mb-6">
                       <div className="prose max-w-none">
-                        <p className="whitespace-pre-wrap text-gray-700">{selectedMessage.message}</p>
+                        <p className="whitespace-pre-wrap text-gray-700 leading-relaxed text-lg">
+                          {selectedMessage.message}
+                        </p>
                       </div>
                     </div>
 
                     {/* Reply Section */}
-                    {!replyMode && (
-                      <div className="mt-6 flex gap-2">
-                        <Button onClick={() => handleReply(selectedMessage)} className="bg-red-600 hover:bg-red-700">
-                          <Reply className="w-4 h-4 mr-2" />
-                          Reply
-                        </Button>
-                        <Button variant="outline">
-                          <Forward className="w-4 h-4 mr-2" />
-                          Forward
-                        </Button>
-                      </div>
-                    )}
-
                     {replyMode && (
-                      <Card className="mt-6">
-                        <CardHeader>
-                          <CardTitle className="text-lg">Reply to {selectedMessage.firstName}</CardTitle>
+                      <Card className="mt-6 border-2 border-red-200 shadow-lg">
+                        <CardHeader className="bg-gradient-to-r from-red-50 to-red-100 border-b border-red-200 rounded-t-2xl">
+                          <CardTitle className="text-xl flex items-center gap-2">
+                            <Reply className="w-5 h-5 text-red-600" />
+                            Reply to {selectedMessage.firstName}
+                          </CardTitle>
                         </CardHeader>
-                        <CardContent className="space-y-4">
-                          <div className="flex items-center space-x-2">
+                        <CardContent className="p-6 space-y-6">
+                          <div className="flex items-center space-x-3 bg-gray-50 p-4 rounded-xl">
                             <input
                               type="checkbox"
                               id="includeOriginal"
@@ -674,42 +1030,56 @@ export default function MessagesPage() {
                               onChange={(e) => {
                                 setIncludeOriginalMessage(e.target.checked)
                                 const originalMessage = e.target.checked
-                                  ? `\n\n----------------------------------------\nOriginal message from ${selectedMessage.firstName} ${selectedMessage.lastName} (${selectedMessage.email}):\n\n${selectedMessage.message}`
+                                  ? `
+
+----------------------------------------
+Original message from ${selectedMessage.firstName} ${selectedMessage.lastName} (${selectedMessage.email}):
+
+${selectedMessage.message}`
                                   : ""
                                 setReplyContent(originalMessage)
                               }}
-                              className="rounded"
+                              className="rounded text-red-600 focus:ring-red-500"
                             />
-                            <label htmlFor="includeOriginal" className="text-sm text-gray-700">
-                              Include original message
+                            <label htmlFor="includeOriginal" className="text-sm font-medium text-gray-700">
+                              Include original message in reply
                             </label>
                           </div>
+                          
                           <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Subject</label>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">Subject</label>
                             <Input
                               value={replySubject}
                               onChange={(e) => setReplySubject(e.target.value)}
                               placeholder="Reply subject"
+                              className="h-12 border-gray-300 focus:border-red-500 focus:ring-red-500 rounded-xl"
                             />
                           </div>
+                          
                           <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Message</label>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">Message</label>
                             <Textarea
                               value={replyContent}
                               onChange={(e) => setReplyContent(e.target.value)}
                               placeholder="Type your reply here..."
-                              className="min-h-[200px] resize-y"
-                              rows={8}
+                              className="min-h-[250px] resize-y border-gray-300 focus:border-red-500 focus:ring-red-500 rounded-xl p-4"
+                              rows={10}
                             />
                           </div>
-                          <div className="flex justify-end space-x-2 pt-2">
-                            <Button variant="outline" onClick={() => setReplyMode(false)} disabled={isSending}>
+                          
+                          <div className="flex justify-end space-x-3 pt-4">
+                            <Button 
+                              variant="outline" 
+                              onClick={() => setReplyMode(false)} 
+                              disabled={isSending}
+                              className="border-gray-300 hover:bg-gray-100 rounded-xl"
+                            >
                               Cancel
                             </Button>
                             <Button
                               onClick={sendReply}
                               disabled={isSending || !replyContent.trim()}
-                              className="bg-red-600 hover:bg-red-700"
+                              className="bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white shadow-lg hover:shadow-xl transition-all duration-300 rounded-xl px-6"
                             >
                               {isSending ? (
                                 <span className="flex items-center">
@@ -749,65 +1119,96 @@ export default function MessagesPage() {
                   </div>
                 </>
               ) : (
-                <div className="flex-1 flex items-center justify-center text-gray-500">
-                  <div className="text-center">
-                    <MessageSquare className="w-16 h-16 mx-auto mb-4 text-gray-300" />
-                    <p className="text-lg">Select a message to read</p>
-                    <p className="text-sm">Choose a message from the list to view its contents</p>
+                <div className="flex-1 flex items-center justify-center bg-gradient-to-br from-white to-gray-100">
+                  <div className="text-center max-w-md p-8">
+                    <div className="w-24 h-24 bg-gradient-to-br from-gray-100 to-gray-200 rounded-full flex items-center justify-center mx-auto mb-6 shadow-lg">
+                      <MessageSquare className="w-12 h-12 text-gray-400" />
+                    </div>
+                    <h3 className="text-2xl font-bold text-gray-800 mb-3">Select a message</h3>
+                    <p className="text-gray-600 mb-6">
+                      Choose a message from the list to view its contents and reply
+                    </p>
+                    <Button 
+                      onClick={() => setShowCompose(true)}
+                      className="bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white shadow-lg hover:shadow-xl transition-all duration-300"
+                    >
+                      <Plus className="w-4 h-4 mr-2" />
+                      Compose New Message
+                    </Button>
                   </div>
                 </div>
               )}
             </div>
           </div>
         </div>
+        
         {/* Compose Modal */}
         {showCompose && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <Card className="w-full max-w-2xl mx-4">
-              <CardHeader>
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <Card className="w-full max-w-4xl mx-auto bg-white rounded-2xl shadow-2xl border-0">
+              <CardHeader className="bg-gradient-to-r from-red-600 to-red-700 text-white rounded-t-2xl p-6">
                 <div className="flex items-center justify-between">
-                  <CardTitle>New Message</CardTitle>
-                  <Button variant="ghost" size="sm" onClick={() => setShowCompose(false)}>
-                    ✕
+                  <CardTitle className="text-2xl font-bold flex items-center gap-3">
+                    <PaperPlane className="w-6 h-6" />
+                    Compose New Message
+                  </CardTitle>
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    onClick={() => setShowCompose(false)}
+                    className="text-white hover:bg-white/20"
+                  >
+                    <X className="w-5 h-5" />
                   </Button>
                 </div>
               </CardHeader>
-              <CardContent className="space-y-4">
+              
+              <CardContent className="p-6 space-y-6">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">To</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">To</label>
                   <Input
                     value={composeData.to}
                     onChange={(e) => setComposeData({ ...composeData, to: e.target.value })}
                     placeholder="recipient@example.com"
                     type="email"
+                    className="h-12 border-gray-300 focus:border-red-500 focus:ring-red-500 rounded-xl text-base"
                   />
                 </div>
+                
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Subject</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Subject</label>
                   <Input
                     value={composeData.subject}
                     onChange={(e) => setComposeData({ ...composeData, subject: e.target.value })}
                     placeholder="Email subject"
+                    className="h-12 border-gray-300 focus:border-red-500 focus:ring-red-500 rounded-xl text-base"
                   />
                 </div>
+                
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Message</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Message</label>
                   <Textarea
                     value={composeData.content}
                     onChange={(e) => setComposeData({ ...composeData, content: e.target.value })}
                     placeholder="Type your message here..."
-                    className="min-h-[200px] resize-y"
-                    rows={8}
+                    className="min-h-[300px] resize-y border-gray-300 focus:border-red-500 focus:ring-red-500 rounded-xl p-4 text-base"
+                    rows={12}
                   />
                 </div>
-                <div className="flex justify-end space-x-2 pt-2">
-                  <Button variant="outline" onClick={() => setShowCompose(false)} disabled={isSending}>
+                
+                <div className="flex justify-end space-x-3 pt-4">
+                  <Button 
+                    variant="outline" 
+                    onClick={() => setShowCompose(false)} 
+                    disabled={isSending}
+                    className="border-gray-300 hover:bg-gray-100 rounded-xl px-6"
+                  >
                     Cancel
                   </Button>
                   <Button
                     onClick={sendNewEmail}
                     disabled={isSending || !composeData.to || !composeData.subject || !composeData.content}
-                    className="bg-red-600 hover:bg-red-700"
+                    className="bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white shadow-lg hover:shadow-xl transition-all duration-300 rounded-xl px-6"
                   >
                     {isSending ? (
                       <span className="flex items-center">
@@ -836,7 +1237,7 @@ export default function MessagesPage() {
                     ) : (
                       <span className="flex items-center">
                         <Send className="w-4 h-4 mr-2" />
-                        Send
+                        Send Message
                       </span>
                     )}
                   </Button>

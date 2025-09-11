@@ -41,7 +41,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
         ],
         created_at: new Date().toISOString(),
         doc_type: "News",
-        author: "AKY Media Team",
+        author: "AKY Digital Hub Team",
         location: "Kano State, Nigeria",
       })
     }

@@ -19,6 +19,24 @@ interface Attachment {
   order?: number
 }
 
+// Process attachment URLs to ensure they're properly formatted
+const processAttachmentUrl = (attachment: Attachment): string => {
+  let attachmentUrl = attachment.url
+  
+  // If it's already an absolute URL, return as is
+  if (attachmentUrl.startsWith("http")) {
+    return attachmentUrl
+  }
+  
+  // If it's a relative URL starting with /, return as is
+  if (attachmentUrl.startsWith("/")) {
+    return attachmentUrl
+  }
+  
+  // Otherwise, assume it's in the uploads directory
+  return `/uploads/${attachmentUrl}`
+}
+
 interface BlogPost {
   id: string
   title: string
@@ -67,6 +85,13 @@ export default function NewsDetailPage() {
         const data = await response.json()
         console.log("[News Detail] Received blog data:", data)
         setBlog(data)
+
+        // Increment view count after successfully fetching the article
+        try {
+          await fetch(`/api/news/${params.id}/view`, { method: 'POST' });
+        } catch (viewError) {
+          console.error("[News Detail] Failed to increment view count:", viewError);
+        }
 
         // Fetch related blogs (last 3 posts excluding the current one)
         const relatedResponse = await fetch("/api/news")

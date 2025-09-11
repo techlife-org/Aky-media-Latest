@@ -38,31 +38,31 @@ The Communication Center now includes a comprehensive template system with **fou
 ```
 Hello {{name}},
 
-Thank you for contacting AKY Media! We have received your message and will get back to you within 24 hours.
+Thank you for contacting AKY Digital Hub We have received your message and will get back to you within 24 hours.
 
 Your inquiry: {{message}}
 
 Best regards,
-AKY Media Team
+AKY Digital Hub
 ```
 
 #### SMS
 ```
-Hi {{name}}, thanks for contacting AKY Media! We'll respond to your inquiry within 24hrs. Ref: {{ref}}
+Hi {{name}}, thanks for contacting AKY Digital Hub! We'll respond to your inquiry within 24hrs. Ref: {{ref}}
 ```
 
 #### Email
 ```
-Subject: Thank you for contacting AKY Media - {{ref}}
+Subject: Thank you for contacting AKY Digital Hub - {{ref}}
 
 Dear {{name}},
 
-Thank you for reaching out to AKY Media. We have received your message and appreciate you taking the time to contact us.
+Thank you for reaching out to AKY Digital Hub. We have received your message and appreciate you taking the time to contact us.
 
 Your Message:
 {{message}}
 
-Our team will review your inquiry and respond within 24 hours. If your matter is urgent, please call us at +234-XXX-XXXX.
+Our team will review your inquiry and respond within 24 hours. If your matter is urgent, please call us at +234 707 4222 2252.
 
 Reference Number: {{ref}}
 
@@ -77,7 +77,7 @@ Website: https://abbakabiryusuf.com
 
 #### WhatsApp
 ```
-Welcome to AKY Media, {{name}}! 🎉
+Welcome to AKY Digital, {{name}}! 🎉
 
 Thank you for subscribing to our updates. You'll now receive:
 • Latest news and updates
@@ -94,11 +94,11 @@ Welcome {{name}}! You're now subscribed to AKY Media updates. Reply STOP to unsu
 
 #### Email
 ```
-Subject: Welcome to AKY Media Newsletter - {{name}}
+Subject: Welcome to AKY Digital Hub Newsletter - {{name}}
 
 Dear {{name}},
 
-Welcome to the AKY Media community! 🎉
+Welcome to the AKY Digital Hub community! 🎉
 
 Thank you for subscribing to our newsletter. You've joined thousands of readers who stay updated with:
 
@@ -118,7 +118,7 @@ You can manage your subscription preferences or unsubscribe at any time by click
 Welcome aboard!
 
 Best regards,
-The AKY Media Team
+The AKY Digital Hub
 
 Website: https://abbakabiryusuf.com
 Email: notify@abbakabiryusuf.info
@@ -146,7 +146,7 @@ NEWS: {{headline}} - {{summary}} Read more: {{link}}
 
 #### Email
 ```
-Subject: {{headline}} - AKY Media News
+Subject: {{headline}} - AKY Digital Hub
 
 Dear {{name}},
 

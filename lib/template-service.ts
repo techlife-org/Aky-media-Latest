@@ -1,12 +1,11 @@
+import { Db } from 'mongodb';
 import { connectToDatabase } from '@/lib/mongodb';
-import { ObjectId } from 'mongodb';
 
-export interface Template {
-  _id?: ObjectId;
-  id?: string;
-  name: string;
-  category: 'contact-us' | 'subscribers' | 'news' | 'achievements';
-  type: 'whatsapp' | 'sms' | 'email';
+// Define types
+interface Template {
+  _id?: string;
+  category: string;
+  type: string;
   subject?: string;
   content: string;
   variables: string[];
@@ -15,15 +14,22 @@ export interface Template {
   updatedAt: Date;
 }
 
-export interface TemplateVariables {
+interface TemplateVariables {
   [key: string]: string;
 }
 
-export class TemplateService {
+interface RenderedTemplate {
+  subject?: string;
+  content: string;
+  isCustomTemplate: boolean;
+}
+
+class TemplateService {
   private static instance: TemplateService;
+  private db: Db | null = null;
   private templateCache: Map<string, Template> = new Map();
-  private cacheExpiry: number = 5 * 60 * 1000; // 5 minutes
   private lastCacheUpdate: number = 0;
+  private cacheExpiry: number = 5 * 60 * 1000; // 5 minutes
 
   private constructor() {}
 
@@ -35,7 +41,20 @@ export class TemplateService {
   }
 
   /**
-   * Get template by category and type with caching
+   * Initialize database connection
+   */
+  async initialize(): Promise<void> {
+    try {
+      const { db } = await connectToDatabase();
+      this.db = db;
+      await this.ensureDefaultTemplates();
+    } catch (error) {
+      console.error('Failed to initialize template service:', error);
+    }
+  }
+
+  /**
+   * Get template by category and type
    */
   async getTemplate(category: string, type: string): Promise<Template | null> {
     const cacheKey = `${category}-${type}`;
@@ -45,123 +64,81 @@ export class TemplateService {
       return this.templateCache.get(cacheKey) || null;
     }
 
+    if (!this.db) {
+      throw new Error('Database not initialized');
+    }
+
     try {
-      const { db } = await connectToDatabase();
-      
-      const template = await db.collection('communication_templates').findOne({
+      const template = await this.db.collection<Template>('templates').findOne({
         category,
         type,
         isActive: true
-      }, {
-        sort: { updatedAt: -1 } // Get the most recent active template
       });
 
       if (template) {
-        const templateObj: Template = {
-          ...template,
-          id: template._id.toString()
-        };
-        
-        // Cache the template
-        this.templateCache.set(cacheKey, templateObj);
+        this.templateCache.set(cacheKey, template);
         this.lastCacheUpdate = Date.now();
-        
-        return templateObj;
       }
+
+      return template;
     } catch (error) {
-      console.error('Failed to fetch template:', error);
-    }
-
-    return null;
-  }
-
-  /**
-   * Apply variables to template content
-   */
-  applyVariables(content: string, variables: TemplateVariables): string {
-    let processedContent = content;
-    
-    // Replace variables in the format {{variable_name}}
-    Object.entries(variables).forEach(([key, value]) => {
-      const regex = new RegExp(`{{\\s*${key}\\s*}}`, 'g');
-      processedContent = processedContent.replace(regex, value || '');
-    });
-
-    // Clean up any remaining unreplaced variables
-    processedContent = processedContent.replace(/{{[^}]*}}/g, '');
-    
-    return processedContent;
-  }
-
-  /**
-   * Get processed template with variables applied
-   */
-  async getProcessedTemplate(
-    category: string, 
-    type: string, 
-    variables: TemplateVariables
-  ): Promise<{ subject?: string; content: string; template?: Template } | null> {
-    const template = await this.getTemplate(category, type);
-    
-    if (!template) {
+      console.error(`Failed to fetch template ${category}-${type}:`, error);
       return null;
     }
-
-    const processedContent = this.applyVariables(template.content, variables);
-    const processedSubject = template.subject ? this.applyVariables(template.subject, variables) : undefined;
-
-    return {
-      subject: processedSubject,
-      content: processedContent,
-      template
-    };
   }
 
   /**
-   * Get default templates for fallback
+   * Render template with variables
    */
-  getDefaultTemplate(category: string, type: string, variables: TemplateVariables): { subject?: string; content: string } {
-    const defaults = this.getDefaultTemplates();
-    const key = `${category}-${type}`;
-    
-    if (defaults[key]) {
-      const template = defaults[key];
-      return {
-        subject: template.subject ? this.applyVariables(template.subject, variables) : undefined,
-        content: this.applyVariables(template.content, variables)
-      };
-    }
-
-    // Ultimate fallback
-    return this.getUltimateFallback(category, type, variables);
-  }
-
-  /**
-   * Get template with fallback to defaults
-   */
-  async getTemplateWithFallback(
-    category: string, 
-    type: string, 
+  async renderTemplate(
+    category: string,
+    type: string,
     variables: TemplateVariables
-  ): Promise<{ subject?: string; content: string; isCustomTemplate: boolean }> {
-    // Try to get custom template first
-    const customTemplate = await this.getProcessedTemplate(category, type, variables);
-    
-    if (customTemplate) {
+  ): Promise<RenderedTemplate> {
+    try {
+      const template = await this.getTemplate(category, type);
+      
+      if (template) {
+        return {
+          subject: template.subject ? this.interpolate(template.subject, variables) : undefined,
+          content: this.interpolate(template.content, variables),
+          isCustomTemplate: true
+        };
+      }
+      
+      // Fallback to default template
+      const defaultTemplate = this.getDefaultTemplate(category, type, variables);
       return {
-        subject: customTemplate.subject,
-        content: customTemplate.content,
-        isCustomTemplate: true
+        subject: defaultTemplate.subject,
+        content: defaultTemplate.content,
+        isCustomTemplate: false
+      };
+    } catch (error) {
+      console.error(`Failed to render template ${category}-${type}:`, error);
+      
+      // Ultimate fallback
+      const fallback = this.getUltimateFallback(category, type, variables);
+      return {
+        subject: fallback.subject,
+        content: fallback.content,
+        isCustomTemplate: false
       };
     }
+  }
 
-    // Fallback to default template
-    const defaultTemplate = this.getDefaultTemplate(category, type, variables);
-    return {
-      subject: defaultTemplate.subject,
-      content: defaultTemplate.content,
-      isCustomTemplate: false
-    };
+  /**
+   * Interpolate variables in template
+   */
+  private interpolate(template: string, variables: TemplateVariables): string {
+    let result = template;
+    
+    // Replace variables in the format {{variable_name}}
+    for (const [key, value] of Object.entries(variables)) {
+      const regex = new RegExp(`{{${key}}}`, 'g');
+      result = result.replace(regex, value);
+    }
+    
+    return result;
   }
 
   /**
@@ -186,31 +163,44 @@ export class TemplateService {
     return {
       // Subscriber templates
       'subscribers-email': {
-        subject: 'Welcome to {{site_name}} Newsletter! 🎉',
+        subject: '🎉 You\'re Now Subscribed to AKY Digital',
         content: `
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Welcome to {{site_name}}</title>
+  <title>Subscription Successful - AKY Digital</title>
 </head>
 <body style="margin: 0; padding: 0; background-color: #f8fafc; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">
   <div style="max-width: 600px; margin: 0 auto; background: #ffffff; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
     <div style="background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%); padding: 40px 30px; text-align: center; color: white;">
-      <h1 style="margin: 0; font-size: 32px; font-weight: 700;">🎉 Welcome to {{site_name}}!</h1>
-      <p style="margin: 15px 0 0 0; font-size: 18px; opacity: 0.95;">Your gateway to exclusive updates</p>
+     <img src="https://res.cloudinary.com/dxsc0fqrt/image/upload/v1756715780/aky_logo_R_oaofzg.png" 
+        alt="AKY Digital Logo" 
+        style="width:110px; height:auto; display:block; margin:0 auto 15px;">
+      <h1 style="margin: 0; font-size: 32px; font-weight: 700;">Subscription Successful ✅</h1>
+      <p style="margin: 15px 0 0 0; font-size: 18px; opacity: 0.95;">Welcome to AKY Digital</p>
     </div>
     
     <div style="padding: 50px 40px; background: white;">
-      <div style="text-align: center; margin-bottom: 40px;">
-        <h2 style="color: #1f2937; margin: 0 0 15px 0; font-size: 28px;">Hello {{name}}!</h2>
-        <p style="color: #6b7280; font-size: 16px; margin: 0;">We're thrilled to have you join our community</p>
-      </div>
-      
-      <div style="background: #f8fafc; padding: 30px; border-radius: 12px; margin: 30px 0; border-left: 4px solid #dc2626;">
-        <p style="color: #374151; line-height: 1.7; margin: 0;">
-          🎯 <strong>You're now connected!</strong> Thank you for subscribing to our newsletter. You'll receive the latest updates, news, and exclusive announcements directly to your inbox.
+      <div style="margin-bottom: 40px;">
+        <h2 style="color: #1f2937; margin: 0 0 20px 0; font-size: 24px;">Dear {{name}},</h2>
+        
+        <p style="color: #374151; line-height: 1.7; margin: 0 0 20px 0; font-size: 16px;">
+          Thank you for subscribing to AKY Digital.
+        </p>
+        
+        <p style="color: #374151; line-height: 1.7; margin: 0 0 20px 0; font-size: 16px;">
+          You will now receive exclusive updates, insights, and announcements directly from us. Stay tuned for information on digital programs, events, and opportunities that matter.
+        </p>
+        
+        <p style="color: #374151; line-height: 1.7; margin: 0 0 30px 0; font-size: 16px;">
+          We're excited to keep you informed as we work toward driving digital innovation and growth.
+        </p>
+        
+        <p style="color: #374151; line-height: 1.7; margin: 0; font-size: 16px;">
+          Best regards,<br>
+          <strong>The AKY Digital Team</strong>
         </p>
       </div>
       
@@ -222,7 +212,7 @@ export class TemplateService {
     </div>
     
     <div style="background: #f8fafc; padding: 30px; text-align: center; border-top: 1px solid #e5e7eb;">
-      <p style="color: #6b7280; font-size: 14px; margin: 0 0 15px 0;">© {{current_year}} {{site_name}}. All rights reserved.</p>
+      <p style="color: #6b7280; font-size: 14px; margin: 0 0 15px 0;">© {{current_year}} AKY Digital. All rights reserved.</p>
       <a href="{{unsubscribe_url}}" style="color: #dc2626; text-decoration: none; font-size: 13px;">Unsubscribe</a>
     </div>
   </div>
@@ -231,65 +221,76 @@ export class TemplateService {
         `
       },
       'subscribers-sms': {
-        content: `🎉 Welcome to {{site_name}}, {{name}}!
+        content: `🎉 You're Now Subscribed to AKY Digital!
 
-Thank you for subscribing! You'll receive:
-• Latest updates
-• Exclusive announcements  
-• Important news
+Dear {{name}},
 
-Visit: {{website_url}}
+Thank you for subscribing to AKY Digital. You will now receive exclusive updates, insights, and announcements directly from us.
+
+We're excited to keep you informed as we work toward driving digital innovation and growth.
+
+Best regards,
+The AKY Digital Team
 
 Reply STOP to unsubscribe.`
       },
       'subscribers-whatsapp': {
-        content: `🎉 *Welcome to {{site_name}}!*
+        content: `🎉 *You're Now Subscribed to AKY Digital!*
 
-Hello *{{name}}*,
+Dear *{{name}}*,
 
-Thank you for subscribing to our newsletter! 🙏
+Thank you for subscribing to AKY Digital. 🙏
 
-📰 You'll now receive:
-• Latest updates
-• Exclusive announcements
-• Important news
-• Special insights
+You will now receive exclusive updates, insights, and announcements directly from us. Stay tuned for information on digital programs, events, and opportunities that matter.
+
+We're excited to keep you informed as we work toward driving digital innovation and growth.
 
 🌐 Visit our website: {{website_url}}
 
-We're excited to have you with us! 🚀`
+Best regards,
+*The AKY Digital Team*`
       },
 
       // Contact Us templates
       'contact-us-email': {
-        subject: 'Thank you for contacting {{site_name}}',
+        subject: '📩 We\'ve Received Your Message – AKY Digital',
         content: `
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Thank you for contacting us</title>
+  <title>Thank You for Contacting Us - AKY Digital</title>
 </head>
 <body style="margin: 0; padding: 0; background-color: #f8fafc; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">
   <div style="max-width: 600px; margin: 0 auto; background: #ffffff; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
-    <div style="background: linear-gradient(135deg, #059669 0%, #047857 100%); padding: 40px 30px; text-align: center; color: white;">
-      <h1 style="margin: 0; font-size: 32px; font-weight: 700;">📧 Message Received!</h1>
-      <p style="margin: 15px 0 0 0; font-size: 18px; opacity: 0.95;">We'll get back to you soon</p>
+    <div style="background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%); padding: 40px 30px; text-align: center; color: white;">
+    <img src="https://res.cloudinary.com/dxsc0fqrt/image/upload/v1756715780/aky_logo_R_oaofzg.png" 
+        alt="AKY Digital Logo" 
+        style="width:110px; height:auto; display:block; margin:0 auto 15px;">
+      <h1 style="margin: 0; font-size: 32px; font-weight: 700;">Thank You for Contacting Us</h1>
+      <p style="margin: 15px 0 0 0; font-size: 18px; opacity: 0.95;">AKY Digital</p>
     </div>
-    
+   
     <div style="padding: 50px 40px; background: white;">
-      <div style="text-align: center; margin-bottom: 40px;">
-        <h2 style="color: #1f2937; margin: 0 0 15px 0; font-size: 28px;">Hello {{first_name}}!</h2>
-        <p style="color: #6b7280; font-size: 16px; margin: 0;">Thank you for reaching out to us</p>
-      </div>
-      
-      <div style="background: #f0fdf4; padding: 30px; border-radius: 12px; margin: 30px 0; border-left: 4px solid #059669;">
-        <p style="color: #374151; line-height: 1.7; margin: 0 0 20px 0;">
-          ✅ <strong>Your message has been received!</strong> We appreciate you taking the time to contact us.
+      <div style="margin-bottom: 40px;">
+        <h2 style="color: #1f2937; margin: 0 0 20px 0; font-size: 24px;">Dear {{first_name}},</h2>
+        
+        <p style="color: #374151; line-height: 1.7; margin: 0 0 20px 0; font-size: 16px;">
+          Thank you for reaching out to AKY Digital. Your message has been received, and our team will review it carefully.
         </p>
-        <p style="color: #374151; line-height: 1.7; margin: 0;">
-          🕐 <strong>Response time:</strong> We'll get back to you within 30 minutes during business hours.
+        
+        <p style="color: #374151; line-height: 1.7; margin: 0 0 20px 0; font-size: 16px;">
+          You can expect a response from us within 2 working days. If your matter is urgent, please indicate this in your subject line or reach us through our official phone number.
+        </p>
+        
+        <p style="color: #374151; line-height: 1.7; margin: 0 0 30px 0; font-size: 16px;">
+          We appreciate your patience and look forward to assisting you.
+        </p>
+        
+        <p style="color: #374151; line-height: 1.7; margin: 0; font-size: 16px;">
+          Best regards,<br>
+          <strong>The AKY Digital Team</strong>
         </p>
       </div>
 
@@ -301,14 +302,14 @@ We're excited to have you with us! 🚀`
       </div>
       
       <div style="text-align: center; margin: 40px 0;">
-        <a href="{{website_url}}" style="display: inline-block; padding: 16px 32px; background: linear-gradient(135deg, #059669 0%, #047857 100%); color: white; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px;">
+        <a href="{{website_url}}" style="display: inline-block; padding: 16px 32px; background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%); color: white; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px;">
           🌐 Visit Our Website
         </a>
       </div>
     </div>
     
     <div style="background: #f8fafc; padding: 30px; text-align: center; border-top: 1px solid #e5e7eb;">
-      <p style="color: #6b7280; font-size: 14px; margin: 0;">© {{current_year}} {{site_name}}. All rights reserved.</p>
+      <p style="color: #6b7280; font-size: 14px; margin: 0;">© {{current_year}} AKY Digital. All rights reserved.</p>
     </div>
   </div>
 </body>
@@ -316,95 +317,256 @@ We're excited to have you with us! 🚀`
         `
       },
       'contact-us-sms': {
-        content: `📧 Thank you for contacting {{site_name}}, {{first_name}}!
+        content: `📩 We've Received Your Message – AKY Digital
 
-Your message has been received. We'll respond within 30 minutes during business hours.
+Dear {{first_name}},
 
-Subject: {{subject}}
+Thank you for reaching out to AKY Digital. Your message has been received, and our team will review it carefully.
 
-Visit: {{website_url}}`
+You can expect a response from us within 2 working days. If your matter is urgent, please indicate this in your subject line or reach us through our official phone number.
+
+We appreciate your patience and look forward to assisting you.
+
+Best regards,
+The AKY Digital Team`
       },
       'contact-us-whatsapp': {
-        content: `📧 *Thank you for contacting {{site_name}}!*
+        content: `📩 *We've Received Your Message – AKY Digital*
 
-Hello *{{first_name}}*,
+Dear *{{first_name}}*,
 
-Your message has been received! ✅
+Thank you for reaching out to AKY Digital. Your message has been received, and our team will review it carefully. ✅
 
-📋 *Subject:* {{subject}}
-🕐 *Response time:* Within 30 minutes during business hours
+You can expect a response from us within 2 working days. If your matter is urgent, please indicate this in your subject line or reach us through our official phone number.
+
+We appreciate your patience and look forward to assisting you.
 
 🌐 Visit our website: {{website_url}}
 
-Thank you for reaching out to us! 🙏`
+Best regards,
+*The AKY Digital Team* 🙏`
+      },
+
+      // Messages templates (for replies)
+      'messages-email': {
+        subject: 'Re: {{original_subject}} - AKY Digital',
+        content: `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Re: {{original_subject}} - AKY Digital</title>
+</head>
+<body style="margin: 0; padding: 0; background-color: #f8fafc; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">
+  <div style="max-width: 600px; margin: 0 auto; background: #ffffff; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
+    <div style="background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%); padding: 40px 30px; text-align: center; color: white;">
+      <img src="https://res.cloudinary.com/dxsc0fqrt/image/upload/v1756715780/aky_logo_R_oaofzg.png" 
+        alt="AKY Digital Logo" 
+        style="width:110px; height:auto; display:block; margin:0 auto 15px;">
+      <h1 style="margin: 0; font-size: 32px; font-weight: 700;">AKY Digital Response</h1>
+      <p style="margin: 15px 0 0 0; font-size: 18px; opacity: 0.95;">Re: {{original_subject}}</p>
+    </div>
+   
+    <div style="padding: 50px 40px; background: white;">
+      <div style="margin-bottom: 40px;">
+        <h2 style="color: #1f2937; margin: 0 0 20px 0; font-size: 24px;">Dear {{name}},</h2>
+        
+        <div style="background: linear-gradient(135deg, #fef2f2 0%, #fdf4f4 100%); padding: 25px; border-left: 5px solid #dc2626; border-radius: 0 8px 8px 0; margin: 25px 0;">
+          <p style="color: #374151; line-height: 1.7; margin: 0 0 20px 0; font-size: 16px;">
+            {{message_content}}
+          </p>
+        </div>
+        
+        <p style="color: #374151; line-height: 1.7; margin: 0 0 30px 0; font-size: 16px;">
+          If you have any further questions or need additional assistance, please don't hesitate to reach out.
+        </p>
+        
+        <p style="color: #374151; line-height: 1.7; margin: 0; font-size: 16px;">
+          Best regards,<br>
+          <strong>The AKY Digital Team</strong>
+        </p>
+      </div>
+      
+      <div style="text-align: center; margin: 40px 0;">
+        <a href="{{website_url}}" style="display: inline-block; padding: 16px 32px; background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%); color: white; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px;">
+          🌐 Visit Our Website
+        </a>
+      </div>
+    </div>
+    
+    <div style="background: #f8fafc; padding: 30px; text-align: center; border-top: 1px solid #e5e7eb;">
+      <p style="color: #6b7280; font-size: 14px; margin: 0;">© {{current_year}} AKY Digital. All rights reserved.</p>
+    </div>
+  </div>
+</body>
+</html>
+        `
+      },
+      'messages-sms': {
+        content: `Re: {{original_subject}} - AKY Digital
+
+Dear {{name}},
+
+{{message_content}}
+
+If you have any further questions, please don't hesitate to reach out.
+
+Best regards,
+The AKY Digital Team`
+      },
+      'messages-whatsapp': {
+        content: `*Re: {{original_subject}} - AKY Digital*
+
+Dear *{{name}}*,
+
+{{message_content}}
+
+If you have any further questions, please don't hesitate to reach out.
+
+🌐 Visit our website: {{website_url}}
+
+Best regards,
+*The AKY Digital Team* 🙏`
       }
     };
+  }
+
+  /**
+   * Get default template
+   */
+  private getDefaultTemplate(
+    category: string,
+    type: string,
+    variables: TemplateVariables
+  ): { subject?: string; content: string } {
+    const templates = this.getDefaultTemplates();
+    const key = `${category}-${type}`;
+    const template = templates[key];
+    
+    if (template) {
+      return {
+        subject: template.subject,
+        content: template.content
+      };
+    }
+    
+    // Ultimate fallback
+    return this.getUltimateFallback(category, type, variables);
   }
 
   /**
    * Ultimate fallback when no template is found
    */
-  private getUltimateFallback(category: string, type: string, variables: TemplateVariables): { subject?: string; content: string } {
-    const siteName = variables.site_name || 'AKY Media';
+  private getUltimateFallback(
+    category: string,
+    type: string,
+    variables: TemplateVariables
+  ): { subject?: string; content: string } {
+    const siteName = variables.site_name || 'AKY Digital';
     const name = variables.name || variables.first_name || 'there';
-
+    
     if (category === 'subscribers') {
       if (type === 'email') {
         return {
-          subject: `Welcome to ${siteName}!`,
-          content: `Hello ${name},\n\nThank you for subscribing to our newsletter!\n\nBest regards,\n${siteName} Team`
+          subject: `🎉 You're Now Subscribed to ${siteName}`,
+          content: `Dear ${name},
+
+Thank you for subscribing to ${siteName}.
+
+Best regards,
+The ${siteName} Team`
         };
       } else if (type === 'sms') {
         return {
-          content: `Welcome to ${siteName}, ${name}! Thank you for subscribing.`
+          content: `🎉 You're Now Subscribed to ${siteName}! Dear ${name}, thank you for subscribing. Best regards, The ${siteName} Team`
         };
       } else if (type === 'whatsapp') {
         return {
-          content: `Welcome to ${siteName}! Hello ${name}, thank you for subscribing to our newsletter.`
+          content: `🎉 *You're Now Subscribed to ${siteName}!* Dear *${name}*, thank you for subscribing. Best regards, *The ${siteName} Team*`
         };
       }
     } else if (category === 'contact-us') {
       if (type === 'email') {
         return {
-          subject: `Thank you for contacting ${siteName}`,
-          content: `Hello ${name},\n\nThank you for your message. We'll get back to you soon.\n\nBest regards,\n${siteName} Team`
+          subject: `📩 We've Received Your Message – ${siteName}`,
+          content: `Dear ${name},
+
+Thank you for reaching out to ${siteName}. Your message has been received.
+
+Best regards,
+The ${siteName} Team`
         };
-      } else if (type === 'sms') {
+      } else if (type === 'sms' || type === 'whatsapp') {
         return {
-          content: `Thank you for contacting ${siteName}, ${name}! We'll respond soon.`
+          content: `📩 *We've Received Your Message – ${siteName}*
+
+Dear *${name}*,
+
+Thank you for reaching out to ${siteName}. Your message has been received.
+
+Best regards,
+*The ${siteName} Team*`
         };
-      } else if (type === 'whatsapp') {
+      }
+    } else if (category === 'messages') {
+      if (type === 'email') {
         return {
-          content: `Thank you for contacting ${siteName}! Hello ${name}, we'll get back to you soon.`
+          subject: `Re: ${variables.original_subject || 'Your Message'} – ${siteName}`,
+          content: `Dear ${name},
+
+${variables.message_content || 'Thank you for your message.'}
+
+Best regards,
+The ${siteName} Team`
+        };
+      } else if (type === 'sms' || type === 'whatsapp') {
+        return {
+          content: `Re: ${variables.original_subject || 'Your Message'} – ${siteName}
+
+Dear ${name},
+
+${variables.message_content || 'Thank you for your message.'}
+
+Best regards,
+The ${siteName} Team`
         };
       }
     }
-
-    // Final fallback
+    
+    // Generic fallback
     return {
       subject: `Message from ${siteName}`,
-      content: `Hello ${name},\n\nThank you for your interest in ${siteName}.\n\nBest regards,\nThe Team`
+      content: `Dear ${name},
+
+Thank you for your message.
+
+Best regards,
+The ${siteName} Team`
     };
   }
 
   /**
-   * Create default templates in database if they don't exist
+   * Ensure default templates exist in database
    */
-  async ensureDefaultTemplates(): Promise<void> {
+  private async ensureDefaultTemplates(): Promise<void> {
+    if (!this.db) return;
+    
     try {
-      const { db } = await connectToDatabase();
-      const collection = db.collection('communication_templates');
-
       const defaultTemplates = this.getDefaultTemplates();
       
       for (const [key, template] of Object.entries(defaultTemplates)) {
         const [category, type] = key.split('-');
         
-        const existing = await collection.findOne({ category, type, name: `Default ${category} ${type}` });
+        // Check if template already exists
+        const existing = await this.db.collection<Template>('templates').findOne({
+          category,
+          type
+        });
         
         if (!existing) {
-          await collection.insertOne({
-            name: `Default ${category} ${type}`,
+          // Create default template
+          await this.db.collection<Template>('templates').insertOne({
             category,
             type,
             subject: template.subject || null,
@@ -443,7 +605,7 @@ Thank you for reaching out to us! 🙏`
    */
   getCommonVariables(): TemplateVariables {
     return {
-      site_name: process.env.SITE_NAME || 'AKY Media',
+      site_name: process.env.SITE_NAME || 'AKY Digital',
       website_url: process.env.NEXT_PUBLIC_BASE_URL || 'https://abbakabiryusuf.info',
       current_year: new Date().getFullYear().toString(),
       current_date: new Date().toLocaleDateString(),
