@@ -448,6 +448,7 @@ export default function AudioPage() {
   const [currentTime, setCurrentTime] = useState(0)
   const [duration, setDuration] = useState(0)
   const [volume, setVolume] = useState(1)
+  const [previousVolume, setPreviousVolume] = useState(1)
   const [isShuffled, setIsShuffled] = useState(false)
   const [isRepeating, setIsRepeating] = useState(false)
   const [favorites, setFavorites] = useState<number[]>([])
@@ -461,6 +462,12 @@ export default function AudioPage() {
   const [isLoaded, setIsLoaded] = useState(false)
   const [isFullScreen, setIsFullScreen] = useState(false)
   const [isBuffering, setIsBuffering] = useState(false)
+  const [playbackRate, setPlaybackRate] = useState(1)
+  const [showPlaybackMenu, setShowPlaybackMenu] = useState(false)
+  const [autoPlay, setAutoPlay] = useState(true)
+  const [crossfade, setCrossfade] = useState(false)
+  const [showKeyboardHelp, setShowKeyboardHelp] = useState(false)
+  const [isVolumeSliderDragging, setIsVolumeSliderDragging] = useState(false)
 
   const audioRef = useRef<Howl | null>(null)
   const playerRef = useRef<HTMLDivElement>(null)
@@ -509,6 +516,10 @@ export default function AudioPage() {
   // Update global volume when volume state changes
   useEffect(() => {
     Howler.volume(volume)
+    // Update previous volume when volume changes (but not when muting)
+    if (volume > 0) {
+      setPreviousVolume(volume)
+    }
   }, [volume])
 
   const createHowlInstance = useCallback(
@@ -837,6 +848,8 @@ export default function AudioPage() {
     }
   }, [])
 
+
+
   // Add event listener for fullscreen change
   useEffect(() => {
     const handleFullScreenChange = () => {
@@ -855,6 +868,94 @@ export default function AudioPage() {
       document.removeEventListener("MSFullscreenChange", handleFullScreenChange)
     }
   }, [])
+
+  // Keyboard shortcuts
+  useEffect(() => {
+    const handleKeyPress = (e: KeyboardEvent) => {
+      // Prevent shortcuts when typing in input fields or when volume slider is being dragged
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement || isVolumeSliderDragging) {
+        return
+      }
+
+      switch (e.code) {
+        case 'Space':
+          e.preventDefault()
+          togglePlay()
+          break
+        case 'ArrowLeft':
+          e.preventDefault()
+          if (e.shiftKey) {
+            // Shift + Left: Previous track
+            previousTrack()
+          } else {
+            // Left: Seek backward 10 seconds
+            if (audioRef.current) {
+              const newTime = Math.max(0, currentTime - 10)
+              audioRef.current.seek(newTime)
+              setCurrentTime(newTime)
+            }
+          }
+          break
+        case 'ArrowRight':
+          e.preventDefault()
+          if (e.shiftKey) {
+            // Shift + Right: Next track
+            nextTrack()
+          } else {
+            // Right: Seek forward 10 seconds
+            if (audioRef.current) {
+              const newTime = Math.min(duration, currentTime + 10)
+              audioRef.current.seek(newTime)
+              setCurrentTime(newTime)
+            }
+          }
+          break
+        case 'ArrowUp':
+          e.preventDefault()
+          // Up: Volume up
+          setVolume(prev => Math.min(1, prev + 0.1))
+          break
+        case 'ArrowDown':
+          e.preventDefault()
+          // Down: Volume down
+          setVolume(prev => Math.max(0, prev - 0.1))
+          break
+        case 'KeyM':
+          e.preventDefault()
+          // M: Mute/unmute
+          if (volume === 0) {
+            setVolume(previousVolume || 1)
+          } else {
+            setPreviousVolume(volume)
+            setVolume(0)
+          }
+          break
+        case 'KeyS':
+          e.preventDefault()
+          // S: Toggle shuffle
+          setIsShuffled(!isShuffled)
+          break
+        case 'KeyR':
+          e.preventDefault()
+          // R: Toggle repeat
+          setIsRepeating(!isRepeating)
+          break
+        case 'KeyF':
+          e.preventDefault()
+          // F: Toggle fullscreen
+          toggleFullScreen()
+          break
+        case 'KeyV':
+          e.preventDefault()
+          // V: Toggle visualizer
+          setShowVisualizer(!showVisualizer)
+          break
+      }
+    }
+
+    document.addEventListener('keydown', handleKeyPress)
+    return () => document.removeEventListener('keydown', handleKeyPress)
+  }, [togglePlay, previousTrack, nextTrack, currentTime, duration, volume, isShuffled, isRepeating, toggleFullScreen, showVisualizer, isVolumeSliderDragging])
 
   // Enhanced Ad Modal Component
   const AdModal = () => {
@@ -939,41 +1040,93 @@ export default function AudioPage() {
 
         {/* Enhanced Hero Section */}
         <section className="py-20 relative overflow-hidden">
+          {/* Animated Background Elements */}
+          <div className="absolute inset-0">
+            <div className="absolute top-20 left-10 w-32 h-32 bg-red-500/10 rounded-full blur-xl animate-pulse"></div>
+            <div className="absolute bottom-20 right-10 w-48 h-48 bg-blue-500/10 rounded-full blur-xl animate-pulse delay-1000"></div>
+            <div className="absolute top-1/2 left-1/3 w-24 h-24 bg-purple-500/10 rounded-full blur-xl animate-pulse delay-500"></div>
+          </div>
+          
           <div className="container mx-auto px-4 relative z-10">
             <div className="grid lg:grid-cols-2 gap-12 items-center">
               <div>
-                <div className="flex items-center mb-6">
-                  <div className="w-16 h-16 rounded-full bg-[#f87e7e] flex items-center justify-center mr-4 shadow-2xl">
-                    <Music className="w-8 h-8 text-white" />
+                <div className="flex items-center mb-8">
+                  <div className="relative">
+                    <div className="w-20 h-20 rounded-full bg-gradient-to-br from-red-500 to-pink-600 flex items-center justify-center mr-6 shadow-2xl transform hover:scale-110 transition-all duration-300">
+                      <Music className="w-10 h-10 text-white" />
+                    </div>
+                    <div className="absolute -top-1 -right-1 w-6 h-6 bg-green-500 rounded-full flex items-center justify-center animate-pulse">
+                      <div className="w-2 h-2 bg-white rounded-full"></div>
+                    </div>
                   </div>
-                  <h1 className="text-6xl lg:text-7xl font-bold text-white">Audio</h1>
+                  <div>
+                    <h1 className="text-6xl lg:text-8xl font-bold bg-gradient-to-r from-white via-red-200 to-white bg-clip-text text-transparent">
+                      Audio
+                    </h1>
+                    <div className="flex items-center mt-2">
+                      <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse mr-2"></div>
+                      <span className="text-red-300 text-sm font-medium">LIVE STREAMING</span>
+                    </div>
+                  </div>
                 </div>
-                <p className="text-xl text-white mb-8 leading-relaxed">
-                  Experience the rich political sounds and leadership messages from Kano State with our premium audio
-                  collection
-                </p>
+                
+                <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-6 mb-8 border border-white/20">
+                  <p className="text-xl text-white mb-4 leading-relaxed">
+                    Experience the rich political sounds and leadership messages from Kano State with our premium audio collection
+                  </p>
+                  <div className="flex items-center space-x-4 text-sm text-white/80">
+                    <div className="flex items-center">
+                      <div className="w-2 h-2 bg-green-500 rounded-full mr-2"></div>
+                      <span>High Quality Audio</span>
+                    </div>
+                    <div className="flex items-center">
+                      <div className="w-2 h-2 bg-blue-500 rounded-full mr-2"></div>
+                      <span>24/7 Available</span>
+                    </div>
+                    <div className="flex items-center">
+                      <div className="w-2 h-2 bg-purple-500 rounded-full mr-2"></div>
+                      <span>Free Access</span>
+                    </div>
+                  </div>
+                </div>
+                
                 <div className="flex items-center space-x-2 text-lg">
-                  <Link href="/" className="hover:text-white transition-colors">
+                  <Link href="/" className="text-white/80 hover:text-white transition-colors">
                     Home
                   </Link>
-                  <ArrowRight size={16} className="text-white" />
-                  <span className="text-white">Audio Collection</span>
+                  <ArrowRight size={16} className="text-white/60" />
+                  <span className="text-white font-medium">Audio Collection</span>
                 </div>
               </div>
+              
               <div className="relative">
-                <div>
-                  <div className="relative z-10">
+                <div className="relative">
+                  {/* Floating Elements */}
+                  <div className="absolute -top-8 -left-8 w-16 h-16 bg-gradient-to-br from-red-500/20 to-pink-500/20 rounded-2xl backdrop-blur-sm border border-white/10 flex items-center justify-center animate-float">
+                    <Music className="w-8 h-8 text-white" />
+                  </div>
+                  <div className="absolute -bottom-8 -right-8 w-20 h-20 bg-gradient-to-br from-blue-500/20 to-purple-500/20 rounded-2xl backdrop-blur-sm border border-white/10 flex items-center justify-center animate-float delay-1000">
+                    <Play className="w-10 h-10 text-white" />
+                  </div>
+                  
+                  <div className="relative z-10 transform hover:scale-105 transition-all duration-500">
                     <Image
                       src="/pictures/logo1.png"
                       alt="AKY Audio Collection"
                       width={500}
                       height={400}
-                      className="w-full h-auto"
+                      className="w-full h-auto drop-shadow-2xl"
                     />
-                    <div className="absolute -top-4 -right-4 bg-gradient-to-r from-red-500 to-pink-500 text-white px-6 py-3 rounded-full text-lg font-bold shadow-lg">
-                      {tracks.length} Tracks
+                    <div className="absolute -top-6 -right-6 bg-gradient-to-r from-red-500 to-pink-500 text-white px-8 py-4 rounded-2xl text-xl font-bold shadow-2xl transform rotate-3 hover:rotate-0 transition-all duration-300">
+                      <div className="flex items-center space-x-2">
+                        <Music className="w-5 h-5" />
+                        <span>{tracks.length} Tracks</span>
+                      </div>
                     </div>
                   </div>
+                  
+                  {/* Glow Effect */}
+                  <div className="absolute inset-0 bg-gradient-to-r from-red-500/20 to-pink-500/20 rounded-3xl blur-3xl -z-10"></div>
                 </div>
               </div>
             </div>
@@ -985,17 +1138,27 @@ export default function AudioPage() {
             {/* Enhanced Audio Player with Visualizer */}
             <Card
               ref={playerRef}
-              className={`mb-12 overflow-hidden border-0 shadow-2xl bg-gradient-to-br from-slate-800/90 to-slate-900/90 backdrop-blur-xl ${
-                isFullScreen ? "fixed inset-0 z-50 rounded-none" : ""
+              className={`mb-12 overflow-hidden border-0 shadow-2xl bg-gradient-to-br from-slate-800/95 to-slate-900/95 backdrop-blur-xl relative ${
+                isFullScreen ? "fixed inset-0 z-50 rounded-none" : "rounded-3xl"
               }`}
             >
+              {/* Animated Border */}
+              <div className="absolute inset-0 bg-gradient-to-r from-red-500/20 via-purple-500/20 to-blue-500/20 rounded-3xl blur-sm -z-10 animate-pulse"></div>
               <CardContent className="p-0">
                 <div
                   className={`bg-gradient-to-r ${
                     tracks[currentTrack].color || "from-red-500 to-pink-500"
                   } p-4 md:p-8 relative overflow-hidden`}
                 >
+                  {/* Animated Background Pattern */}
                   <div className="absolute inset-0 bg-black/20"></div>
+                  <div className="absolute inset-0 opacity-10">
+                    <div className="absolute top-0 left-0 w-full h-full">
+                      <div className="absolute top-10 left-10 w-32 h-32 bg-white/10 rounded-full animate-pulse"></div>
+                      <div className="absolute bottom-10 right-10 w-24 h-24 bg-white/10 rounded-full animate-pulse delay-1000"></div>
+                      <div className="absolute top-1/2 right-1/4 w-16 h-16 bg-white/10 rounded-full animate-pulse delay-500"></div>
+                    </div>
+                  </div>
                   <div className="relative z-10">
                     {/* Enhanced Now Playing Header */}
                     <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-6 gap-4">
@@ -1019,7 +1182,7 @@ export default function AudioPage() {
                       <div className="flex items-center space-x-2 md:space-x-3">
                         <Button
                           onClick={() => toggleFavorite(currentTrack)}
-                          className={`bg-white/20 hover:bg-white/30 border-0 transition-all duration-300 p-2 md:p-3 ${
+                          className={`bg-white/20 hover:bg-white/30 border-0 control-button p-2 md:p-3 ${
                             favorites.includes(currentTrack) ? "text-red-400 scale-110" : "text-white"
                           }`}
                           size="sm"
@@ -1032,14 +1195,76 @@ export default function AudioPage() {
                         </Button>
                         <Button
                           onClick={() => handleShare(tracks[currentTrack])}
-                          className="bg-white/20 hover:bg-white/30 border-0 text-white transition-all duration-300 hover:scale-105 p-2 md:p-3"
+                          className="bg-white/20 hover:bg-white/30 border-0 text-white control-button p-2 md:p-3"
                           size="sm"
                         >
                           <Share2 className="w-4 h-4 md:w-6 md:h-6" />
                         </Button>
+                        <DropdownMenu open={showPlaybackMenu} onOpenChange={setShowPlaybackMenu}>
+                          <DropdownMenuTrigger asChild>
+                            <Button
+                              className="bg-white/20 hover:bg-white/30 border-0 text-white control-button p-2 md:p-3"
+                              size="sm"
+                            >
+                              <MoreVertical className="w-4 h-4 md:w-6 md:h-6" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end" className="bg-slate-800 border-slate-600 text-slate-200 min-w-48">
+                            <DropdownMenuItem
+                              onClick={() => setShowVisualizer(!showVisualizer)}
+                              className="hover:bg-slate-700 focus:bg-slate-700"
+                            >
+                              <Music className="w-4 h-4 mr-2" />
+                              {showVisualizer ? 'Hide' : 'Show'} Visualizer
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() => setAutoPlay(!autoPlay)}
+                              className="hover:bg-slate-700 focus:bg-slate-700"
+                            >
+                              <Play className="w-4 h-4 mr-2" />
+                              Auto-play: {autoPlay ? 'On' : 'Off'}
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() => setCrossfade(!crossfade)}
+                              className="hover:bg-slate-700 focus:bg-slate-700"
+                            >
+                              <Shuffle className="w-4 h-4 mr-2" />
+                              Crossfade: {crossfade ? 'On' : 'Off'}
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() => setShowKeyboardHelp(true)}
+                              className="hover:bg-slate-700 focus:bg-slate-700"
+                            >
+                              <span className="w-4 h-4 mr-2 text-xs font-bold border border-slate-400 rounded flex items-center justify-center">?</span>
+                              Keyboard Shortcuts
+                            </DropdownMenuItem>
+                            <div className="px-2 py-1 text-xs text-slate-400 border-t border-slate-600 mt-1">
+                              Playback Speed
+                            </div>
+                            {[0.5, 0.75, 1, 1.25, 1.5, 2].map((rate) => (
+                              <DropdownMenuItem
+                                key={rate}
+                                onClick={() => {
+                                  setPlaybackRate(rate)
+                                  if (audioRef.current) {
+                                    audioRef.current.rate(rate)
+                                  }
+                                }}
+                                className={`hover:bg-slate-700 focus:bg-slate-700 ${
+                                  playbackRate === rate ? 'bg-slate-700 text-red-400' : ''
+                                }`}
+                              >
+                                <span className="w-4 h-4 mr-2 flex items-center justify-center text-xs">
+                                  {playbackRate === rate ? '•' : ''}
+                                </span>
+                                {rate}x {rate === 1 ? '(Normal)' : ''}
+                              </DropdownMenuItem>
+                            ))}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                         <Button
                           onClick={toggleFullScreen}
-                          className="bg-white/20 hover:bg-white/30 border-0 text-white transition-all duration-300 p-2 md:p-3"
+                          className="bg-white/20 hover:bg-white/30 border-0 text-white control-button p-2 md:p-3"
                           size="sm"
                         >
                           {isFullScreen ? (
@@ -1071,6 +1296,11 @@ export default function AudioPage() {
                         >
                           {tracks[currentTrack].genre}
                         </Badge>
+                        {playbackRate !== 1 && (
+                          <Badge className="bg-blue-500/20 text-blue-300 text-sm px-3 py-1 self-start">
+                            {playbackRate}x Speed
+                          </Badge>
+                        )}
                       </div>
                     </div>
 
@@ -1134,7 +1364,7 @@ export default function AudioPage() {
                     <div className="flex items-center justify-center space-x-4 md:space-x-8 mb-8">
                       <Button
                         onClick={() => setIsShuffled(!isShuffled)}
-                        className={`bg-white/20 hover:bg-white/30 border-0 transition-all duration-300 p-2 md:p-3 ${
+                        className={`bg-white/20 hover:bg-white/30 border-0 control-button p-2 md:p-3 ${
                           isShuffled ? "text-red-400 scale-110" : "text-white"
                         }`}
                         size="sm"
@@ -1144,7 +1374,7 @@ export default function AudioPage() {
                       <Button
                         onClick={previousTrack}
                         disabled={currentTrack === 0}
-                        className="bg-white/20 hover:bg-white/30 border-0 text-white disabled:opacity-50 transition-all duration-300 hover:scale-105 p-2 md:p-3"
+                        className="bg-white/20 hover:bg-white/30 border-0 text-white disabled:opacity-50 control-button p-2 md:p-3"
                         size="sm"
                       >
                         <SkipBack size={24} className="md:w-7 md:h-7" />
@@ -1166,14 +1396,14 @@ export default function AudioPage() {
                       <Button
                         onClick={nextTrack}
                         disabled={currentTrack === tracks.length - 1}
-                        className="bg-white/20 hover:bg-white/30 border-0 text-white disabled:opacity-50 transition-all duration-300 hover:scale-105 p-2 md:p-3"
+                        className="bg-white/20 hover:bg-white/30 border-0 text-white disabled:opacity-50 control-button p-2 md:p-3"
                         size="sm"
                       >
                         <SkipForward size={24} className="md:w-7 md:h-7" />
                       </Button>
                       <Button
                         onClick={() => setIsRepeating(!isRepeating)}
-                        className={`bg-white/20 hover:bg-white/30 border-0 transition-all duration-300 p-2 md:p-3 ${
+                        className={`bg-white/20 hover:bg-white/30 border-0 control-button p-2 md:p-3 ${
                           isRepeating ? "text-red-400 scale-110" : "text-white"
                         }`}
                         size="sm"
@@ -1185,9 +1415,19 @@ export default function AudioPage() {
                     {/* Enhanced Volume Control */}
                     <div className="flex items-center justify-center space-x-4 md:space-x-6">
                       <Button
-                        onClick={() => setVolume(volume === 0 ? 1 : 0)}
-                        className="bg-white/20 hover:bg-white/30 border-0 text-white transition-all duration-300 p-2"
+                        onClick={(e) => {
+                          e.preventDefault()
+                          e.stopPropagation()
+                          if (volume === 0) {
+                            setVolume(previousVolume || 1)
+                          } else {
+                            setPreviousVolume(volume)
+                            setVolume(0)
+                          }
+                        }}
+                        className="bg-white/20 hover:bg-white/30 border-0 text-white control-button p-2"
                         size="sm"
+                        type="button"
                       >
                         {volume === 0 ? (
                           <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
@@ -1206,8 +1446,25 @@ export default function AudioPage() {
                           step="0.01"
                           value={volume}
                           onChange={(e) => {
+                            e.stopPropagation()
                             const newVolume = Number.parseFloat(e.target.value)
                             setVolume(newVolume)
+                          }}
+                          onMouseDown={(e) => {
+                            e.stopPropagation()
+                            setIsVolumeSliderDragging(true)
+                          }}
+                          onMouseUp={(e) => {
+                            e.stopPropagation()
+                            setIsVolumeSliderDragging(false)
+                          }}
+                          onTouchStart={(e) => {
+                            e.stopPropagation()
+                            setIsVolumeSliderDragging(true)
+                          }}
+                          onTouchEnd={(e) => {
+                            e.stopPropagation()
+                            setIsVolumeSliderDragging(false)
                           }}
                           className="w-full h-2 md:h-3 bg-white/20 rounded-lg appearance-none cursor-pointer slider border border-white/30 volume-slider"
                           style={{
@@ -1225,25 +1482,76 @@ export default function AudioPage() {
             </Card>
 
             {/* Enhanced Responsive Playlist */}
-            <Card className="overflow-hidden border-0 shadow-2xl bg-slate-800/90 backdrop-blur-xl">
+            <Card className="overflow-hidden border-0 shadow-2xl bg-slate-800/95 backdrop-blur-xl rounded-3xl relative">
+              {/* Animated Border */}
+              <div className="absolute inset-0 bg-gradient-to-r from-blue-500/20 via-purple-500/20 to-red-500/20 rounded-3xl blur-sm -z-10 animate-pulse delay-500"></div>
+              
               <CardContent className="p-0">
-                <div className="bg-gradient-to-r from-red-700 to-red-800 p-4 md:p-8 border-b border-red-600">
-                  <h2 className="text-xl md:text-3xl font-bold text-white flex items-center">
-                    <Music className="w-6 h-6 md:w-8 md:h-8 mr-2 md:mr-4 text-red-400" />
-                    Political Audio Collection ({tracks.length} tracks)
-                  </h2>
-                  <p className="text-white/80 mt-2 text-sm md:text-base">
-                    Leadership messages and political content from Kano State
-                  </p>
+                <div className="bg-gradient-to-r from-red-700 via-red-800 to-red-700 p-4 md:p-8 border-b border-red-600/50 relative overflow-hidden">
+                  {/* Background Pattern */}
+                  <div className="absolute inset-0 opacity-10">
+                    <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full -translate-y-32 translate-x-32"></div>
+                    <div className="absolute bottom-0 left-0 w-48 h-48 bg-white/10 rounded-full translate-y-24 -translate-x-24"></div>
+                  </div>
+                  
+                  <div className="relative z-10">
+                    <div className="flex flex-col md:flex-row md:items-center md:justify-between">
+                      <div>
+                        <h2 className="text-xl md:text-3xl font-bold text-white flex items-center mb-2">
+                          <div className="w-8 h-8 md:w-10 md:h-10 bg-white/20 rounded-2xl flex items-center justify-center mr-3 md:mr-4 backdrop-blur-sm">
+                            <Music className="w-4 h-4 md:w-6 md:h-6 text-white" />
+                          </div>
+                          Political Audio Collection
+                        </h2>
+                        <p className="text-white/80 text-sm md:text-base leading-relaxed">
+                          Leadership messages and political content from Kano State
+                        </p>
+                      </div>
+                      
+                      <div className="mt-4 md:mt-0">
+                        <div className="bg-white/10 backdrop-blur-sm rounded-2xl px-6 py-3 border border-white/20">
+                          <div className="text-center">
+                            <div className="text-2xl md:text-3xl font-bold text-white">{tracks.length}</div>
+                            <div className="text-xs md:text-sm text-white/80 font-medium">Total Tracks</div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    {/* Stats Row */}
+                    <div className="grid grid-cols-3 gap-4 mt-6">
+                      <div className="text-center">
+                        <div className="text-lg md:text-xl font-bold text-white">
+                          {tracks.filter(t => t.genre === 'Tijjani Gandu').length}
+                        </div>
+                        <div className="text-xs text-white/70">Tijjani Gandu</div>
+                      </div>
+                      <div className="text-center">
+                        <div className="text-lg md:text-xl font-bold text-white">
+                          {Math.floor(tracks.reduce((sum, t) => {
+                            const [min, sec] = t.duration.split(':').map(Number)
+                            return sum + min + (sec / 60)
+                          }, 0) / 60)}h
+                        </div>
+                        <div className="text-xs text-white/70">Total Duration</div>
+                      </div>
+                      <div className="text-center">
+                        <div className="text-lg md:text-xl font-bold text-white">
+                          {new Set(tracks.map(t => t.genre)).size}
+                        </div>
+                        <div className="text-xs text-white/70">Genres</div>
+                      </div>
+                    </div>
+                  </div>
                 </div>
                 <div className="">
                   {tracks.map((track, index) => (
                     <div
                       key={track.track}
-                      className={`flex flex-col md:flex-row items-start md:items-center justify-between p-3 md:p-6 border-b border-slate-700/50 last:border-b-0 cursor-pointer transition-all duration-300 hover:bg-slate-700/50 ${
+                      className={`playlist-item flex flex-col md:flex-row items-start md:items-center justify-between p-3 md:p-6 border-b border-slate-700/50 last:border-b-0 cursor-pointer ${
                         index === currentTrack
                           ? "bg-gradient-to-r from-red-900/50 to-pink-900/50 border-l-4 border-l-red-400"
-                          : ""
+                          : "hover:bg-slate-700/30"
                       }`}
                     >
                       {/* Main track info - clickable area */}
@@ -1380,7 +1688,260 @@ export default function AudioPage() {
 
         {/* Enhanced Ad Components */}
         <AdModal />
+        
+        {/* Keyboard Shortcuts Help Modal */}
+        <Dialog open={showKeyboardHelp} onOpenChange={setShowKeyboardHelp}>
+          <DialogContent className="max-w-2xl bg-slate-800 border-slate-600 text-slate-200">
+            <DialogHeader>
+              <DialogTitle className="text-white text-xl flex items-center gap-2">
+                <span className="w-6 h-6 text-sm font-bold border border-slate-400 rounded flex items-center justify-center">?</span>
+                Keyboard Shortcuts
+              </DialogTitle>
+            </DialogHeader>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
+              <div>
+                <h3 className="text-lg font-semibold text-white mb-3">Playback Controls</h3>
+                <div className="space-y-2 text-sm">
+                  <div className="flex justify-between items-center">
+                    <span>Play/Pause</span>
+                    <kbd className="px-2 py-1 bg-slate-700 rounded text-xs">Space</kbd>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span>Previous Track</span>
+                    <kbd className="px-2 py-1 bg-slate-700 rounded text-xs">Shift + ←</kbd>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span>Next Track</span>
+                    <kbd className="px-2 py-1 bg-slate-700 rounded text-xs">Shift + →</kbd>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span>Seek Backward (10s)</span>
+                    <kbd className="px-2 py-1 bg-slate-700 rounded text-xs">←</kbd>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span>Seek Forward (10s)</span>
+                    <kbd className="px-2 py-1 bg-slate-700 rounded text-xs">→</kbd>
+                  </div>
+                </div>
+              </div>
+              
+              <div>
+                <h3 className="text-lg font-semibold text-white mb-3">Audio Controls</h3>
+                <div className="space-y-2 text-sm">
+                  <div className="flex justify-between items-center">
+                    <span>Volume Up</span>
+                    <kbd className="px-2 py-1 bg-slate-700 rounded text-xs">↑</kbd>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span>Volume Down</span>
+                    <kbd className="px-2 py-1 bg-slate-700 rounded text-xs">↓</kbd>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span>Mute/Unmute</span>
+                    <kbd className="px-2 py-1 bg-slate-700 rounded text-xs">M</kbd>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span>Toggle Shuffle</span>
+                    <kbd className="px-2 py-1 bg-slate-700 rounded text-xs">S</kbd>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span>Toggle Repeat</span>
+                    <kbd className="px-2 py-1 bg-slate-700 rounded text-xs">R</kbd>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="md:col-span-2">
+                <h3 className="text-lg font-semibold text-white mb-3">Display Controls</h3>
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div className="flex justify-between items-center">
+                    <span>Toggle Fullscreen</span>
+                    <kbd className="px-2 py-1 bg-slate-700 rounded text-xs">F</kbd>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span>Toggle Visualizer</span>
+                    <kbd className="px-2 py-1 bg-slate-700 rounded text-xs">V</kbd>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <div className="mt-6 p-4 bg-slate-700/50 rounded-lg">
+              <p className="text-xs text-slate-300">
+                <strong>Note:</strong> Keyboard shortcuts work when not typing in input fields. 
+                Use these shortcuts for quick control of your audio experience.
+              </p>
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
+      
+      {/* Custom CSS for enhanced audio controls and animations */}
+      <style jsx>{`
+        @keyframes float {
+          0%, 100% {
+            transform: translateY(0px);
+          }
+          50% {
+            transform: translateY(-10px);
+          }
+        }
+        
+        @keyframes glow {
+          0%, 100% {
+            box-shadow: 0 0 20px rgba(239, 68, 68, 0.3);
+          }
+          50% {
+            box-shadow: 0 0 40px rgba(239, 68, 68, 0.6);
+          }
+        }
+        
+        @keyframes shimmer {
+          0% {
+            background-position: -200% 0;
+          }
+          100% {
+            background-position: 200% 0;
+          }
+        }
+        
+        .animate-float {
+          animation: float 3s ease-in-out infinite;
+        }
+        
+        .animate-glow {
+          animation: glow 2s ease-in-out infinite;
+        }
+        
+        .animate-shimmer {
+          background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
+          background-size: 200% 100%;
+          animation: shimmer 2s infinite;
+        }
+        
+        .volume-slider::-webkit-slider-thumb {
+          appearance: none;
+          width: 18px;
+          height: 18px;
+          border-radius: 50%;
+          background: linear-gradient(135deg, #ffffff, #f1f5f9);
+          cursor: pointer;
+          border: 2px solid rgba(255, 255, 255, 0.3);
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3), 0 0 0 0 rgba(239, 68, 68, 0.4);
+          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        .volume-slider::-webkit-slider-thumb:hover {
+          transform: scale(1.3);
+          box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4), 0 0 0 4px rgba(239, 68, 68, 0.2);
+          background: linear-gradient(135deg, #ffffff, #fef2f2);
+        }
+        
+        .volume-slider::-webkit-slider-thumb:active {
+          transform: scale(1.1);
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4), 0 0 0 6px rgba(239, 68, 68, 0.3);
+        }
+        
+        .volume-slider::-moz-range-thumb {
+          width: 18px;
+          height: 18px;
+          border-radius: 50%;
+          background: linear-gradient(135deg, #ffffff, #f1f5f9);
+          cursor: pointer;
+          border: 2px solid rgba(255, 255, 255, 0.3);
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        .volume-slider::-moz-range-thumb:hover {
+          transform: scale(1.3);
+          box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
+        }
+        
+        .slider::-webkit-slider-thumb {
+          appearance: none;
+          width: 22px;
+          height: 22px;
+          border-radius: 50%;
+          background: linear-gradient(135deg, #ffffff, #f8fafc);
+          cursor: pointer;
+          border: 3px solid rgba(255, 255, 255, 0.4);
+          box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3), 0 0 0 0 rgba(239, 68, 68, 0.3);
+          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        .slider::-webkit-slider-thumb:hover {
+          transform: scale(1.2);
+          box-shadow: 0 6px 24px rgba(0, 0, 0, 0.4), 0 0 0 4px rgba(239, 68, 68, 0.2);
+          background: linear-gradient(135deg, #ffffff, #fef2f2);
+        }
+        
+        .slider::-webkit-slider-thumb:active {
+          transform: scale(1.05);
+          box-shadow: 0 2px 12px rgba(0, 0, 0, 0.4), 0 0 0 6px rgba(239, 68, 68, 0.3);
+        }
+        
+        .slider::-moz-range-thumb {
+          width: 22px;
+          height: 22px;
+          border-radius: 50%;
+          background: linear-gradient(135deg, #ffffff, #f8fafc);
+          cursor: pointer;
+          border: 3px solid rgba(255, 255, 255, 0.4);
+          box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        .slider::-moz-range-thumb:hover {
+          transform: scale(1.2);
+          box-shadow: 0 6px 24px rgba(0, 0, 0, 0.4);
+        }
+        
+        /* Track styling */
+        .volume-slider::-webkit-slider-track {
+          background: transparent;
+        }
+        
+        .slider::-webkit-slider-track {
+          background: transparent;
+        }
+        
+        /* Playlist item hover effects */
+        .playlist-item {
+          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        .playlist-item:hover {
+          transform: translateX(4px);
+          background: linear-gradient(90deg, rgba(239, 68, 68, 0.1), rgba(239, 68, 68, 0.05));
+        }
+        
+        /* Button hover effects */
+        .control-button {
+          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        .control-button:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+        }
+        
+        .control-button:active {
+          transform: translateY(0px);
+        }
+        
+        @media (max-width: 768px) {
+          .volume-slider::-webkit-slider-thumb {
+            width: 16px;
+            height: 16px;
+          }
+          
+          .slider::-webkit-slider-thumb {
+            width: 20px;
+            height: 20px;
+          }
+        }
+      `}</style>
     </PageLoader>
   )
 }
