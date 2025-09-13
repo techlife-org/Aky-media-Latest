@@ -56,6 +56,10 @@ export class EnhancedNotificationService {
 
   constructor() {
     this.templateService = TemplateService;
+    // Initialize template service
+    this.templateService.initialize().catch(error => {
+      console.error('Failed to initialize template service:', error);
+    });
   }
 
   /**
@@ -237,15 +241,17 @@ export class EnhancedNotificationService {
       category: 'news',
       additionalVariables: {
         news_title: newsTitle,
-        news_content: newsContent.substring(0, 200) + (newsContent.length > 200 ? '...' : ''),
+        news_content: newsContent.substring(0, 300) + (newsContent.length > 300 ? '...' : ''),
         news_category: newsCategory,
         news_url: newsUrl,
         news_image: newsImage || '',
+        news_image_display: newsImage && newsImage.trim() !== '' ? 'block' : 'none',
         article_title: newsTitle,
         article_content: newsContent,
         article_category: newsCategory,
         article_url: newsUrl,
-        read_more_url: newsUrl
+        read_more_url: newsUrl,
+        website_url: process.env.NEXT_PUBLIC_BASE_URL || 'https://abbakabiryusuf.com'
       }
     });
 
@@ -338,19 +344,22 @@ export class EnhancedNotificationService {
       category: 'achievements',
       additionalVariables: {
         achievement_title: achievementTitle,
-        achievement_description: achievementDescription.substring(0, 200) + (achievementDescription.length > 200 ? '...' : ''),
+        achievement_description: achievementDescription.substring(0, 300) + (achievementDescription.length > 300 ? '...' : ''),
         achievement_category: achievementCategory,
         achievement_progress: achievementProgress.toString(),
         achievement_location: achievementLocation,
         achievement_date: achievementDate,
         achievement_url: achievementUrl || '',
+        achievement_url_display: achievementUrl && achievementUrl.trim() !== '' ? 'block' : 'none',
         achievement_image: achievementImage || '',
+        achievement_image_display: achievementImage && achievementImage.trim() !== '' ? 'block' : 'none',
         project_title: achievementTitle,
         project_description: achievementDescription,
         project_category: achievementCategory,
         project_progress: achievementProgress.toString(),
         project_location: achievementLocation,
-        project_date: achievementDate
+        project_date: achievementDate,
+        website_url: process.env.NEXT_PUBLIC_BASE_URL || 'https://abbakabiryusuf.com'
       }
     });
 
@@ -410,7 +419,7 @@ export class EnhancedNotificationService {
   private async sendEmailNotification(category: string, email: string, variables: TemplateVariables): Promise<NotificationResult> {
     try {
       // Get template with fallback
-      const template = await this.templateService.getTemplateWithFallback(category, 'email', variables);
+      const template = await this.templateService.renderTemplate(category, 'email', variables);
       
       // Prepare email payload
       const emailPayload = {
@@ -460,7 +469,7 @@ export class EnhancedNotificationService {
   private async sendSMSNotification(category: string, phone: string, variables: TemplateVariables): Promise<NotificationResult> {
     try {
       // Get template with fallback
-      const template = await this.templateService.getTemplateWithFallback(category, 'sms', variables);
+      const template = await this.templateService.renderTemplate(category, 'sms', variables);
       
       // Prepare SMS payload
       const smsPayload = {
@@ -514,7 +523,7 @@ export class EnhancedNotificationService {
   private async sendWhatsAppNotification(category: string, phone: string, variables: TemplateVariables): Promise<NotificationResult> {
     try {
       // Get template with fallback
-      const template = await this.templateService.getTemplateWithFallback(category, 'whatsapp', variables);
+      const template = await this.templateService.renderTemplate(category, 'whatsapp', variables);
       
       // Prepare WhatsApp payload
       const whatsappPayload = {

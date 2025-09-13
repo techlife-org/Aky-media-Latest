@@ -35,8 +35,8 @@ export const metadata: Metadata = {
     images: ["https://res.cloudinary.com/sirdurx/image/upload/v1751198131/ws9mxanccjnahx9oz6zx.png"],
   },
   icons: {
-    icon: "/pictures/logo.png",
-    apple: "/pictures/logo.png",
+    icon: "/logo1.png",
+    apple: "/logo1.png",
   },
 }
 

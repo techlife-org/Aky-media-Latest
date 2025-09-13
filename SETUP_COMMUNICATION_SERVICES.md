@@ -60,7 +60,7 @@ Your AKY Media project now uses **professional communication services** that acc
 ```env
 # Termii Configuration (Both SMS and WhatsApp)
 TERMII_API_KEY=your_termii_api_key_here
-TERMII_SENDER_ID=AKY Media
+TERMII_SENDER_ID=AKY Digital Hub
 TERMII_WHATSAPP_SENDER_ID=AKY Media
 
 # Email Configuration (Gmail Example)

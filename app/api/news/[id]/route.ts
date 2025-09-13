@@ -64,7 +64,12 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
       ...news,
       _id: news._id.toString(),
       id: news._id.toString(),
-      attachments: Array.isArray(news.attachments) ? news.attachments : [],
+      // Handle both old single attachment and new multiple attachments
+      attachments: Array.isArray(news.attachments)
+        ? news.attachments
+        : news.attachment
+          ? [news.attachment]
+          : [],
       created_at: news.created_at || new Date().toISOString(),
       doc_type: news.doc_type || "News",
       author: news.author || "AKY Media Team",

@@ -99,6 +99,17 @@ export async function POST(request: Request) {
       
       const batchPromises = batch.map(async (subscriber) => {
         try {
+          // Get the first image from attachments or attachment
+          let newsImage = '';
+          if (news.attachments && news.attachments.length > 0) {
+            // Use first image from attachments array (newer format)
+            const firstImage = news.attachments.find(att => att.type === 'image');
+            newsImage = firstImage?.url || '';
+          } else if (news.attachment && news.attachment.type === 'image') {
+            // Use single attachment (older format)
+            newsImage = news.attachment.url;
+          }
+
           // Send news notifications using the enhanced service
           const notificationResults = await notificationService.sendNewsNotifications({
             email: subscriber.email,
@@ -108,7 +119,7 @@ export async function POST(request: Request) {
             newsContent: news.content,
             newsCategory: news.doc_type,
             newsUrl: `${process.env.NEXT_PUBLIC_BASE_URL}/news/${newsId}`,
-            newsImage: news.attachment?.url
+            newsImage: newsImage
           });
 
           // Track successful notifications

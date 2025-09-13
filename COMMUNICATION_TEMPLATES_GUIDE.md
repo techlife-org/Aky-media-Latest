@@ -162,7 +162,7 @@ Read the full article on our website: {{link}}
 Stay informed with AKY Media.
 
 Best regards,
-AKY Media Editorial Team
+AKY Media Digital Hub
 ```
 
 ### Achievements Templates
@@ -208,14 +208,14 @@ Date Achieved: {{date}}
 Category: {{category}}
 Level: {{level}}
 
-This achievement reflects your dedication, hard work, and commitment to excellence. We are proud to have you as part of the AKY Media community.
+This achievement reflects your dedication, hard work, and commitment to excellence. We are proud to have you as part of the AKY Digital Hub community.
 
 Your achievement certificate is attached to this email. You can also view and download it from your dashboard.
 
 Keep up the excellent work!
 
 Best regards,
-AKY Media Achievement Team
+AKY Digital Hub Team
 
 Website: https://abbakabiryusuf.com
 Email: notify@abbakabiryusuf.info
