@@ -225,6 +225,7 @@ export class EnhancedNotificationService {
     console.log('Phone:', phone);
     console.log('Name:', name);
     console.log('News:', newsTitle);
+    console.log('News Image:', newsImage);
     
     const results: NotificationResults = {
       email: null,
@@ -259,6 +260,11 @@ export class EnhancedNotificationService {
     if (email) {
       try {
         console.log('\n--- Sending News Email ---');
+        console.log('Variables being passed:', {
+          news_title: variables.news_title,
+          news_image: variables.news_image,
+          news_image_display: variables.news_image_display
+        });
         results.email = await this.sendEmailNotification('news', email, variables);
         console.log('Email result:', results.email);
       } catch (error) {
