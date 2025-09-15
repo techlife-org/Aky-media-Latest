@@ -13,6 +13,11 @@ interface NewsArticle extends WithId<Document> {
     type: string
     name?: string
   }
+  attachments?: {
+    url: string
+    type: string
+    name?: string
+  }[]
   
   created_at?: string
   updated_at?: string
@@ -45,10 +50,20 @@ export async function GET(
       )
     }
 
-    // Convert _id to string for the response
+    // Convert _id to string for the response and ensure both attachment formats are available
     const { _id, ...articleData } = article
+    
+    // Ensure backward compatibility by providing both attachment and attachments
+    const attachments = articleData.attachments || (articleData.attachment ? [articleData.attachment] : [])
+    const attachment = articleData.attachment || (articleData.attachments && articleData.attachments.length > 0 ? articleData.attachments[0] : undefined)
+    
     return new NextResponse(
-      JSON.stringify({ id: _id.toString(), ...articleData }),
+      JSON.stringify({ 
+        id: _id.toString(), 
+        ...articleData,
+        attachment,
+        attachments
+      }),
       { headers: corsHeaders() }
     )
   } catch (error) {

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import { ObjectId } from "mongodb"
 import clientPromise from "@/lib/mongodb"
+import { instagramService } from "@/lib/instagram-service"
 
 interface Attachment {
   url: string
@@ -14,6 +15,7 @@ interface NewsArticle {
   content: string
   doc_type: string
   attachment?: Attachment
+  attachments?: Attachment[]
   created_at: Date
   updated_at: Date
   views: number
@@ -44,13 +46,21 @@ export async function GET() {
       .sort({ created_at: -1 })
       .toArray();
 
-    // Convert _id to string for each document
-    const formattedNews = news.map(({ _id, ...doc }) => ({
-      id: _id.toString(),
-      ...doc,
-      created_at: doc.created_at ? new Date(doc.created_at).toISOString() : new Date().toISOString(),
-      updated_at: doc.updated_at ? new Date(doc.updated_at).toISOString() : new Date().toISOString(),
-    }));
+    // Convert _id to string for each document and ensure both attachment formats are available
+    const formattedNews = news.map(({ _id, ...doc }) => {
+      // Ensure backward compatibility by providing both attachment and attachments
+      const attachments = doc.attachments || (doc.attachment ? [doc.attachment] : [])
+      const attachment = doc.attachment || (doc.attachments && doc.attachments.length > 0 ? doc.attachments[0] : undefined)
+      
+      return {
+        id: _id.toString(),
+        ...doc,
+        attachment,
+        attachments,
+        created_at: doc.created_at ? new Date(doc.created_at).toISOString() : new Date().toISOString(),
+        updated_at: doc.updated_at ? new Date(doc.updated_at).toISOString() : new Date().toISOString(),
+      }
+    });
 
     return NextResponse.json(formattedNews);
   } catch (error) {
@@ -87,7 +97,7 @@ export async function GET() {
 export async function POST(request: Request) {
   try {
     const data = await request.json()
-    const { title, content, doc_type, attachment } = data as Omit<
+    const { title, content, doc_type, attachment, attachments } = data as Omit<
       NewsArticle,
       "_id" | "created_at" | "updated_at" | "views"
     >
@@ -103,6 +113,10 @@ export async function POST(request: Request) {
     const client = await clientPromise
     const db = client.db()
 
+    // Handle both attachment formats for backward compatibility
+    const processedAttachments = Array.isArray(attachments) ? attachments : []
+    const mainAttachment = processedAttachments.length > 0 ? processedAttachments[0] : attachment
+
     const now = new Date()
     const newArticle: Omit<NewsArticle, "_id"> = {
       title,
@@ -111,7 +125,8 @@ export async function POST(request: Request) {
       created_at: now,
       updated_at: now,
       views: 0,
-      ...(attachment && { attachment }),
+      ...(processedAttachments.length > 0 && { attachments: processedAttachments }),
+      ...(mainAttachment && { attachment: mainAttachment }),
     }
 
     const result = await db.collection<NewsArticle>("news").insertOne(newArticle)
@@ -131,8 +146,73 @@ export async function POST(request: Request) {
     }
     
     const { _id, ...articleData } = createdArticle
+    const newsId = _id.toString()
+    
+    // Initialize Instagram post status
+    let instagramPostStatus = {
+      attempted: false,
+      success: false,
+      error: null as string | null,
+      postId: null as string | null,
+    }
+
+    // Attempt to post to Instagram if image is available
+    const imageAttachment = mainAttachment || attachment
+    if (imageAttachment?.url && imageAttachment.type === "image") {
+      try {
+        console.log('Attempting to post news to Instagram...', { newsId, title })
+        
+        // Get base URL from environment or request headers
+        const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 
+                       `${request.headers.get('x-forwarded-proto') || 'http'}://${request.headers.get('host')}`
+        
+        const instagramResult = await instagramService.postToInstagram({
+          title,
+          content,
+          imageUrl: imageAttachment.url,
+          newsId,
+          baseUrl,
+        })
+        
+        instagramPostStatus = {
+          attempted: true,
+          success: instagramResult.success,
+          error: instagramResult.error || null,
+          postId: instagramResult.postId || null,
+        }
+        
+        if (instagramResult.success) {
+          console.log('News successfully posted to Instagram:', {
+            newsId,
+            instagramPostId: instagramResult.postId,
+          })
+        } else {
+          console.warn('Instagram posting failed:', {
+            newsId,
+            error: instagramResult.error,
+          })
+        }
+      } catch (instagramError) {
+        console.error('Instagram posting error:', instagramError)
+        instagramPostStatus = {
+          attempted: true,
+          success: false,
+          error: instagramError instanceof Error ? instagramError.message : 'Unknown Instagram error',
+          postId: null,
+        }
+      }
+    } else {
+      console.log('Skipping Instagram post - no image attachment available', { newsId })
+      instagramPostStatus.error = 'No image attachment available for Instagram posting'
+    }
+
+    // Return success response with both news data and Instagram status
     return NextResponse.json(
-      { id: _id.toString(), ...articleData },
+      { 
+        id: newsId, 
+        ...articleData,
+        instagramPostStatus,
+      },
       { status: 201 }
     )
   } catch (error) {

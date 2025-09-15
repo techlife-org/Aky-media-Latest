@@ -16,31 +16,21 @@ async function handler(request: NextRequest) {
     }
 
     if (email === adminEmail && password === adminPassword) {
-      // Create temporary token for 2FA step
-      const tempToken = jwt.sign(
-        { 
-          email, 
-          role: "admin", 
-          step: "awaiting_2fa",
-          timestamp: Date.now()
-        }, 
-        jwtSecret, 
-        { expiresIn: "10m" } // Short expiry for 2FA step
-      )
+      // Create JWT token
+      const token = jwt.sign({ email, role: "admin" }, jwtSecret, { expiresIn: "24h" })
 
       const response = NextResponse.json({
-        message: "Credentials verified. Please enter your 2FA code.",
-        requiresTwoFactor: true,
+        message: "Login successful",
         user: { email, role: "admin" },
         success: true,
       })
 
-      // Set temporary cookie for 2FA step
-      response.cookies.set("temp-auth-token", tempToken, {
+      // Set HTTP-only cookie
+      response.cookies.set("auth-token", token, {
         httpOnly: true,
         secure: process.env.NODE_ENV === "production",
         sameSite: "lax",
-        maxAge: 600, // 10 minutes
+        maxAge: 86400, // 24 hours
         path: "/",
       })
 

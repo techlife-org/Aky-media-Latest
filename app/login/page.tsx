@@ -4,7 +4,6 @@ import type React from "react"
 
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
-import TwoFactorVerification from "@/components/two-factor-verification"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -25,20 +24,7 @@ export default function LoginPage() {
   const [password, setPassword] = useState("")
   const [showPassword, setShowPassword] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
-  const [showTwoFactor, setShowTwoFactor] = useState(false)
-  const [userEmail, setUserEmail] = useState("")
   const router = useRouter()
-
-  const handleTwoFactorSuccess = () => {
-    router.push("/dashboard")
-  }
-
-  const handleBackToLogin = () => {
-    setShowTwoFactor(false)
-    setEmail("")
-    setPassword("")
-    setUserEmail("")
-  }
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -65,20 +51,11 @@ export default function LoginPage() {
       const data = await response.json()
 
       if (response.ok) {
-        if (data.requiresTwoFactor) {
-          setUserEmail(data.user.email)
-          setShowTwoFactor(true)
-          toast({
-            title: "2FA Required",
-            description: data.message,
-          })
-        } else {
-          toast({
-            title: "Login Successful",
-            description: "Welcome to the dashboard!",
-          })
-          router.push("/dashboard")
-        }
+        toast({
+          title: "Login Successful",
+          description: "Welcome to the dashboard!",
+        })
+        router.push("/dashboard")
       } else {
         toast({
           title: "Login Failed",
@@ -97,27 +74,7 @@ export default function LoginPage() {
     }
   }
 
-  // Show 2FA verification if required
-  if (showTwoFactor) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 relative overflow-hidden">
-        {/* Background Elements */}
-        <div className="absolute inset-0">
-          <div className="absolute top-20 left-20 w-72 h-72 bg-gradient-to-r from-blue-400/20 to-purple-400/20 rounded-full blur-3xl animate-pulse"></div>
-          <div className="absolute bottom-20 right-20 w-96 h-96 bg-gradient-to-r from-red-400/20 to-pink-400/20 rounded-full blur-3xl animate-pulse delay-1000"></div>
-          <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-64 h-64 bg-gradient-to-r from-green-400/20 to-blue-400/20 rounded-full blur-3xl animate-pulse delay-500"></div>
-        </div>
-        
-        <div className="relative z-10 flex items-center justify-center min-h-screen py-12 px-4">
-          <TwoFactorVerification
-            onVerificationSuccess={handleTwoFactorSuccess}
-            onBack={handleBackToLogin}
-            userEmail={userEmail}
-          />
-        </div>
-      </div>
-    )
-  }
+
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 relative overflow-hidden">
