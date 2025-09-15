@@ -68,7 +68,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
 
   const handleLogout = async () => {
     try {
-      await fetch("/api/auth/logout", { method: "POST" })
+      // Simple logout - just redirect to login
       router.push("/login")
     } catch (error) {
       console.error("Logout error:", error)

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { connectToDatabase } from "@/lib/mongodb"
+import { EnhancedNotificationService } from '@/lib/enhanced-notification-service'
 
 export async function POST(request: NextRequest) {
   try {
@@ -49,6 +50,61 @@ export async function POST(request: NextRequest) {
     const result = await db.collection("contacts").insertOne(contactMessage)
 
     if (result.insertedId) {
+      // Send auto-response email to the contact
+      try {
+        const notificationService = new EnhancedNotificationService();
+        const notificationResults = await notificationService.sendContactNotifications({
+          email,
+          phone: mobile,
+          firstName,
+          lastName,
+          subject,
+          additionalVariables: {
+            original_message: message,
+            contact_subject: subject,
+            contact_message: message,
+            response_time: '3 working days'
+          }
+        });
+
+        // Update contact message with notification status
+        const updateData: any = {
+          updatedAt: new Date()
+        };
+
+        if (notificationResults.email?.success) {
+          updateData.confirmationEmailSent = true;
+          updateData.confirmationEmailSentAt = new Date();
+        }
+
+        if (notificationResults.sms?.success) {
+          updateData.confirmationSMSSent = true;
+          updateData.confirmationSMSSentAt = new Date();
+        }
+
+        if (notificationResults.whatsapp?.success) {
+          updateData.confirmationWhatsAppSent = true;
+          updateData.confirmationWhatsAppSentAt = new Date();
+        }
+
+        await db.collection("contacts").updateOne(
+          { _id: result.insertedId },
+          { $set: updateData }
+        );
+
+        console.log('Contact auto-response sent:', {
+          email: !!notificationResults.email?.success,
+          sms: !!notificationResults.sms?.success,
+          whatsapp: !!notificationResults.whatsapp?.success,
+          errors: notificationResults.errors
+        });
+
+      } catch (notificationError) {
+        console.error('Failed to send contact auto-response:', notificationError);
+        // Don't fail the request if notification fails
+      }
+
+      // Add to subscribers
       try {
         await addToSubscribers(db, {
           firstName,
@@ -62,8 +118,8 @@ export async function POST(request: NextRequest) {
       }
 
       const notificationMessage = mobile 
-        ? "Thank you for your message! We will get back to you within 30 minutes during business hours. Please check your email, SMS, and WhatsApp for confirmation. You have also been added to our subscriber list."
-        : "Thank you for your message! We will get back to you within 30 minutes during business hours. Please check your email for confirmation. You have also been added to our subscriber list."
+        ? "Thank you for your message! We will get back to you within 3 working days. Please check your email, SMS, and WhatsApp for confirmation. You have also been added to our subscriber list."
+        : "Thank you for your message! We will get back to you within 3 working days. Please check your email for confirmation. You have also been added to our subscriber list."
 
       return NextResponse.json({
         success: true,

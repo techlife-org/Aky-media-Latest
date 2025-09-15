@@ -12,7 +12,7 @@ interface EmailData {
 }
 
 // Enhanced email template with proper image handling and styled social media icons
-function generateEmailHtml(content: string, recipientName: string, subject: string) {
+function generateEmailHtml(content: string, recipientName: string, subject: string, originalMessage?: any) {
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "https://abbakabiryusuf.com"
 
   return `
@@ -286,6 +286,18 @@ function generateEmailHtml(content: string, recipientName: string, subject: stri
             ${content.replace(/\n/g, "<br>")}
           </div>
           
+          ${originalMessage ? `
+          <div style="margin-top: 40px; padding: 25px; background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%); border-radius: 12px; border: 1px solid #e2e8f0;">
+            <h3 style="color: #374151; margin: 0 0 20px 0; font-size: 18px; font-weight: 600; border-bottom: 2px solid #dc2626; padding-bottom: 10px;">📧 Your Original Message</h3>
+            <div style="background: white; padding: 20px; border-radius: 8px; border-left: 4px solid #dc2626; margin-bottom: 15px;">
+              <p style="margin: 0 0 10px 0; color: #6b7280; font-size: 14px;"><strong>Subject:</strong> ${originalMessage.subject || 'No subject'}</p>
+              <p style="margin: 0 0 10px 0; color: #6b7280; font-size: 14px;"><strong>Sent on:</strong> ${originalMessage.createdAt ? new Date(originalMessage.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'Unknown date'}</p>
+              <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #e5e7eb;">
+                <p style="color: #374151; line-height: 1.7; margin: 0; font-size: 15px;">${originalMessage.message ? originalMessage.message.replace(/\n/g, '<br>') : 'Message content not available'}</p>
+              </div>
+            </div>
+          </div>` : ''}
+          
           <div class="signature">
             <p><strong>Best regards,</strong></p>
             <p><strong>AKY Media Center</strong><br>
@@ -328,6 +340,23 @@ export async function POST(request: Request) {
     const { to, subject, html, replyTo, recipientName, messageId } = (await request.json()) as EmailData & {
       messageId?: string
     }
+    
+    // Get original message details if messageId is provided
+    let originalMessage = null;
+    if (messageId) {
+      try {
+        const { db } = await connectToDatabase();
+        originalMessage = await db.collection("contacts").findOne({ _id: new ObjectId(messageId) });
+        console.log('Original message found:', {
+          messageId,
+          found: !!originalMessage,
+          subject: originalMessage?.subject,
+          hasMessage: !!originalMessage?.message
+        });
+      } catch (error) {
+        console.error('Failed to fetch original message:', error);
+      }
+    }
 
     // Validate required fields
     if (!to || !subject || !html) {
@@ -344,10 +373,21 @@ export async function POST(request: Request) {
     }
 
     // Generate the enhanced email template
-    const emailHtml = generateEmailHtml(html, recipientName || "Valued Contact", subject)
+    console.log('Generating email template with:', {
+      hasOriginalMessage: !!originalMessage,
+      originalSubject: originalMessage?.subject,
+      originalCreatedAt: originalMessage?.createdAt,
+      originalMessageLength: originalMessage?.message?.length
+    });
+    
+    const emailHtml = generateEmailHtml(html, recipientName || "Valued Contact", subject, originalMessage)
 
     // Use the enhanced communication API instead of nodemailer directly
-    const response = await fetch("/api/communication/email", {
+    const communicationApiUrl = process.env.NODE_ENV === 'production' 
+      ? `${process.env.NEXT_PUBLIC_BASE_URL}/api/communication/email`
+      : 'http://localhost:3000/api/communication/email';
+      
+    const response = await fetch(communicationApiUrl, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",

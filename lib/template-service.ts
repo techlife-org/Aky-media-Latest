@@ -473,7 +473,7 @@ Best regards,
         </p>
         
         <p style="color: #374151; line-height: 1.7; margin: 0 0 20px 0; font-size: 16px;">
-          You can expect a response from us within 2 working days. If your matter is urgent, please indicate this in your subject line or reach us through our official phone number.
+          You can expect a response from us within 3 working days. If your matter is urgent, please indicate this in your subject line or reach us through our official phone number.
         </p>
         
         <p style="color: #374151; line-height: 1.7; margin: 0 0 30px 0; font-size: 16px;">
@@ -490,7 +490,12 @@ Best regards,
         <h3 style="color: #1f2937; margin: 0 0 15px 0; font-size: 18px;">📋 Your message details:</h3>
         <p style="color: #4b5563; margin: 5px 0;"><strong>Subject:</strong> {{subject}}</p>
         <p style="color: #4b5563; margin: 5px 0;"><strong>Email:</strong> {{email}}</p>
-        {{#mobile}}<p style="color: #4b5563; margin: 5px 0;"><strong>Mobile:</strong> {{mobile}}</p>{{/mobile}}
+        <p style="color: #4b5563; margin: 5px 0;"><strong>Mobile:</strong> {{mobile}}</p>
+        <div style="margin-top: 15px; padding: 15px; background: white; border-radius: 8px; border-left: 4px solid #dc2626;">
+          <p style="color: #4b5563; margin: 0; font-weight: 600;">Your Message:</p>
+          <p style="color: #374151; margin: 10px 0 0 0; line-height: 1.6;">{{contact_message}}</p>
+        </div>
+        <p style="color: #6b7280; margin: 15px 0 0 0; font-size: 13px; font-style: italic;">This is an automated confirmation. We will respond to your message within 3 working days.</p>
       </div>
       
       <div style="text-align: center; margin: 40px 0;">
@@ -762,7 +767,7 @@ Best regards,
         </p>
         
         <p style="color: #374151; line-height: 1.7; margin: 0 0 20px 0; font-size: 16px;">
-          You can expect a response from us within 2 working days. If your matter is urgent, please indicate this in your subject line or reach us through our official phone number.
+          You can expect a response from us within 3 working days. If your matter is urgent, please indicate this in your subject line or reach us through our official phone number.
         </p>
         
         <p style="color: #374151; line-height: 1.7; margin: 0 0 30px 0; font-size: 16px;">
@@ -773,6 +778,18 @@ Best regards,
           Best regards,<br>
           <strong>The ${siteName} Team</strong>
         </p>
+      </div>
+      
+      <div style="background: #f8fafc; padding: 25px; border-radius: 10px; margin: 35px 0; border: 1px solid #e5e7eb;">
+        <h3 style="color: #1f2937; margin: 0 0 15px 0; font-size: 18px;">📋 Your message details:</h3>
+        <p style="color: #4b5563; margin: 5px 0;"><strong>Subject:</strong> ${variables.subject || variables.contact_subject || 'No subject'}</p>
+        <p style="color: #4b5563; margin: 5px 0;"><strong>Email:</strong> ${variables.email || 'Not provided'}</p>
+        <p style="color: #4b5563; margin: 5px 0;"><strong>Mobile:</strong> ${variables.mobile || variables.phone || 'Not provided'}</p>
+        <div style="margin-top: 15px; padding: 15px; background: white; border-radius: 8px; border-left: 4px solid #dc2626;">
+          <p style="color: #4b5563; margin: 0; font-weight: 600;">Your Message:</p>
+          <p style="color: #374151; margin: 10px 0 0 0; line-height: 1.6;">${variables.contact_message || variables.original_message || 'Message content not available'}</p>
+        </div>
+        <p style="color: #6b7280; margin: 15px 0 0 0; font-size: 13px; font-style: italic;">This is an automated confirmation. We will respond to your message within 3 working days.</p>
       </div>
       
       <div style="text-align: center; margin: 40px 0;">
